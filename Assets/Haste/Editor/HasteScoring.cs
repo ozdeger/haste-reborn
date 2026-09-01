@@ -7,17 +7,7 @@ namespace Haste {
     public static float Score(HasteItem item, string queryLower, int queryLen) {
       float score = 0.0f;
 
-      #if !IS_HASTE_PRO
-      // Force menu item matches to the bottom in free version
-      if (item.source == HasteMenuItemSource.NAME || item.source == HasteLayoutSource.NAME) {
-        return score;
-      }
-      #endif
-
-      var userScore = 1.0f;
-      #if IS_HASTE_PRO
-        userScore += item.userScore / 10.0f;
-      #endif
+      var userScore = 1.0f + (item.userScore / 10.0f);
 
       var boundaryMatchCount = HasteStringUtils.LongestCommonSubsequenceLength(queryLower, item.boundariesLower);
       var boundaryQueryRatio = boundaryMatchCount / (float)queryLen;

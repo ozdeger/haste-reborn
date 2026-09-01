@@ -27,10 +27,6 @@ namespace Haste {
       }
     }
 
-    public static readonly string ASSET_STORE_PRO_URL = "content/18584";
-    public static readonly string ASSET_STORE_FREE_URL = "content/28390";
-    // public static readonly string DEFAULT_SHORTCUT = "%k";
-
     public static event SceneChangedHandler SceneChanged;
     public static event SelectionChangedHandler SelectionChanged;
 
@@ -38,8 +34,6 @@ namespace Haste {
     public static HasteIndex Index;
     public static HasteSearch Search;
     public static HasteWatcherManager Watchers;
-
-    public static HasteUpdateChecker UpdateChecker;
 
     internal static event HasteWindowAction WindowAction;
 
@@ -99,8 +93,6 @@ namespace Haste {
         () => new HasteLayoutSource());
 
       lastLayoutCheck = EditorApplication.timeSinceStartup;
-
-      UpdateChecker = new HasteUpdateChecker();
 
       HasteSettings.ChangedBool += BoolSettingChanged;
       HasteSettings.ChangedString += StringSettingChanged;
@@ -189,9 +181,7 @@ namespace Haste {
     }
 
     static void OnScriptsCompiled() {
-      #if IS_HASTE_PRO
-        Watchers.RestartSource(HasteMenuItemSource.NAME);
-      #endif
+      Watchers.RestartSource(HasteMenuItemSource.NAME);
     }
 
     // static void HasteShortcutHandler() {
@@ -210,12 +200,6 @@ namespace Haste {
 
     // Main update loop in Haste—run's scheduler
     static void Update() {
-      if (HasteSettings.CheckForUpdates) {
-        if (DateTime.Now >= HasteSettings.LastUpdateCheckDate.Add(UpdateChecker.Interval)) {
-          Scheduler.Start(UpdateChecker.Check());
-        }
-      }
-
       // We must delay the window action to handle actions
       // that affect layout state to prevent bugs in Unity.
       if (WindowAction != null && HasteWindow.Instance == null) {

@@ -46,7 +46,6 @@ namespace Haste {
 
     Rect selectionPosition;
 
-    HasteUpdateStatus prevUpdateStatus = HasteUpdateStatus.UpToDate;
     bool wasIndexing = false;
     bool wasSearching = false;
 
@@ -131,9 +130,7 @@ namespace Haste {
       this.resultList.ItemClick += OnItemSelect;
       this.resultList.ItemDoubleClick += OnItemAction;
 
-      #if IS_HASTE_PRO
       RestoreRecommendations();
-      #endif
 
       var tip = HasteTips.Random;
       this.intro = ScriptableObject.CreateInstance<HasteIntro>().Init(tip);
@@ -193,9 +190,7 @@ namespace Haste {
       Selection.objects = prevSelection;
 
       if (this.resultList.HighlightedItem != null) {
-        #if IS_HASTE_PRO
-          HasteRecommendations.Instance.Add(this.resultList.HighlightedItem.Item);
-        #endif
+        HasteRecommendations.Instance.Add(this.resultList.HighlightedItem.Item);
 
         // Register action to occur after the window is closed and destroyed.
         // This is done to prevent errors when modifying window layouts and
@@ -249,9 +244,7 @@ namespace Haste {
     }
 
     void OnItemAction(IHasteResult item) {
-      #if IS_HASTE_PRO
-        HasteRecommendations.Instance.Add(item.Item);
-      #endif
+      HasteRecommendations.Instance.Add(item.Item);
 
       Selection.objects = prevSelection;
       Haste.WindowAction += item.Action;
@@ -378,13 +371,6 @@ namespace Haste {
         needsRepaint = true;
       }
 
-      // Repaint window if update state changes
-      if (Haste.UpdateChecker.Status != prevUpdateStatus) {
-        needsRepaint = true;
-      }
-
-      prevUpdateStatus = Haste.UpdateChecker.Status;
-
       if (needsRepaint) {
         Repaint();
       }
@@ -420,7 +406,6 @@ namespace Haste {
       }
     }
 
-    #if IS_HASTE_PRO
     void RestoreRecommendations() {
       var recommendations = HasteRecommendations.Instance.Get();
       if (recommendations.Length > 0) {
@@ -429,7 +414,6 @@ namespace Haste {
         this.resultList.ClearItems();
       }
     }
-    #endif
 
     void OnQueryChanged(string query) {
       if (searching != null) {
@@ -437,9 +421,7 @@ namespace Haste {
       }
 
       if (query == "") {
-        #if IS_HASTE_PRO
         RestoreRecommendations();
-        #endif
       } else {
         searching = Haste.Scheduler.Start(BeginSearch(query));
       }
@@ -453,15 +435,11 @@ namespace Haste {
 
       if (!isSearching || isLong) { // Don't update right away if we're searching
         if (this.queryInput.Query == "") {
-          #if IS_HASTE_PRO
-            if (this.resultList.IsEmpty) {
-              this.windowState = HasteWindowState.Intro;
-            } else {
-              this.windowState = HasteWindowState.Results;
-            }
-          #else
+          if (this.resultList.IsEmpty) {
             this.windowState = HasteWindowState.Intro;
-          #endif
+          } else {
+            this.windowState = HasteWindowState.Results;
+          }
         } else if (isSearching) {
           this.windowState = HasteWindowState.Loading;
         } else if (this.resultList.Size > 0) {

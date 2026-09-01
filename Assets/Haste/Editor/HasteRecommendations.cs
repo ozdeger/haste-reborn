@@ -9,7 +9,6 @@ using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Haste {
 
-  #if IS_HASTE_PRO
   public class HasteRecommendations : ScriptableObject {
 
     private static HasteRecommendations instance = null;
@@ -93,5 +92,4 @@ namespace Haste {
       EditorUtility.SetDirty(this);
     }
   }
-  #endif
 }

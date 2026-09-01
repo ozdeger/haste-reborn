@@ -13,8 +13,6 @@ namespace Haste {
     IgnorePaths,
     UsageCount,
     UsageSince,
-    LastUpdateCheck,
-    CheckForUpdates,
     ShowHandle,
     WindowX,
     WindowY,
@@ -87,35 +85,6 @@ namespace Haste {
       }
       set {
         HasteSettings.SetString(HasteSetting.UsageSince, value.ToString());
-      }
-    }
-
-    public static long LastUpdateCheck {
-      get {
-        var str = HasteSettings.GetString(HasteSetting.LastUpdateCheck);
-        if (String.IsNullOrEmpty(str)) {
-          return 0L;
-        }
-        return Convert.ToInt64(str);
-      }
-      set {
-        HasteSettings.SetString(HasteSetting.LastUpdateCheck, value.ToString());
-      }
-    }
-
-    public static DateTime LastUpdateCheckDate {
-      get {
-        return new DateTime(LastUpdateCheck);
-      }
-    }
-
-    public static bool CheckForUpdates {
-      get {
-        // Off by default so it's opt-in
-        return HasteSettings.GetBool(HasteSetting.CheckForUpdates, false);
-      }
-      set {
-        HasteSettings.SetBool(HasteSetting.CheckForUpdates, value);
       }
     }
 

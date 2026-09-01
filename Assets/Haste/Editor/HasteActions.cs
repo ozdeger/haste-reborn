@@ -9,7 +9,6 @@ using System.Reflection;
 
 namespace Haste {
 
-  #if IS_HASTE_PRO
   public static class HasteActions {
 
     public delegate void MenuItemFallbackDelegate();
@@ -352,5 +351,4 @@ namespace Haste {
       } }
     };
   }
-  #endif
 }

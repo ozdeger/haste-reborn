@@ -26,8 +26,6 @@ Features
     - Search faster with "fuzzy" matching: just type “mc” for "Main Camera".
 - Get intelligent search recommendations based on what you search for the most.
 - Execute native Unity menu items or extend Haste using custom “MenuItem” attributes
-- Access Haste’s source.
-    - Works with Unity Pro and Free.
 - Selectively ignore assets from search results.
 
 Reference
@@ -105,7 +103,7 @@ Note how Haste highlights the capital letters in the GameObject's name. Haste ca
 
 You can do this at any time when Haste is open without performing any actions.
 
-Next lets use some MenuItem actions... (requires Haste Pro.)
+Next lets use some MenuItem actions...
 
 ##### Step 9. Open Haste and search for `TutorialPrefab` (or `tutp` or even `tp`).
 
@@ -115,7 +113,7 @@ This brings up the `TutorialPrefab.prefab` in the project's assets.
 
 ##### Step 11. Now search for `Instantiate Prefab` (or `ip`) in Haste and press Enter (↵).
 
-Haste Pro provides access to as many built-in MenuItems as possible with Unity's exposed APIs. Haste Pro also indexes custom MenuItems from other editor extensions making it easy to extend Haste's capabilities.
+Haste provides access to as many built-in MenuItems as possible with Unity's exposed APIs. Haste also indexes custom MenuItems from other editor extensions making it easy to extend Haste's capabilities.
 
 Ignoring Assets
 ---

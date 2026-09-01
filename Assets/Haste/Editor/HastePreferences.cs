@@ -15,17 +15,6 @@ namespace Haste {
 
         EditorGUILayout.Space();
 
-        #if !IS_HASTE_PRO
-        EditorGUILayout.HelpBox("Upgrade to Haste Pro to enable more features (like actions).", MessageType.Warning);
-        EditorGUILayout.Space();
-        if (GUILayout.Button("Upgrade to Haste Pro", GUILayout.Width(128))) {
-          UnityEditorInternal.AssetStore.Open(Haste.ASSET_STORE_PRO_URL);
-        }
-
-        EditorGUILayout.Space();
-        EditorGUILayout.Space();
-        #endif
-
         EditorGUILayout.LabelField(String.Format("Haste has been opened {0:N0} times since {1} (about {2:N0} times per day).",
           HasteSettings.UsageCount,
           HasteSettings.UsageSinceDate.ToLongDateString(),
@@ -39,16 +28,6 @@ namespace Haste {
         EditorGUILayout.Space();
 
         EditorGUILayout.LabelField("Current Version", Haste.VERSION);
-        bool checkForUpdates = EditorGUILayout.Toggle("Check For Updates", HasteSettings.CheckForUpdates);
-        if (checkForUpdates != HasteSettings.CheckForUpdates) {
-          HasteSettings.CheckForUpdates = checkForUpdates;
-          HasteSettings.LastUpdateCheck = 0L;
-          if (checkForUpdates) {
-            Haste.Scheduler.Start(Haste.UpdateChecker.Check());
-          }
-        }
-        EditorGUILayout.Space();
-        HasteUpdates.DrawPreferences();
 
         EditorGUILayout.Space();
         EditorGUILayout.Space();

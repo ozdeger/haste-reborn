@@ -1,16 +1,66 @@
-.DS_Store
-packages/
-Library/
-Temp/
-Assets/UnityTestTools/Examples/
-Assets/UnityTestTools/Examples.meta
-Assets/ShaderForge/
-Assets/ShaderForge.meta
+# Unity generated
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]serSettings/
+MemoryCaptures/
+Recordings/
+
+# Never ignore Packages/ — it holds the manifest and this repo's embedded package.
+!/Packages/
+!/Packages/**
+
+# Asset meta data should only be ignored when the corresponding asset is also ignored
+!/[Aa]ssets/**/*.meta
+
+# Visual Studio / Rider / VS Code generated
+.vs/
+.idea/
+.vscode/
 *.csproj
-*.pidb
 *.unityproj
 *.sln
+*.suo
+*.tmp
+*.user
 *.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# Unity3D generated meta files
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+
+# Unity3D generated file on crash reports
+sysinfo.txt
+
+# Builds
+*.apk
+*.aab
+*.unitypackage
+*.app
+
+# Crashlytics generated file
+crashlytics-build.properties
+
+# OS generated
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editors
 *.sublime-project
 *.sublime-workspace
-Assets/Haste/Editor/InternalResources/Recommendations.asset*

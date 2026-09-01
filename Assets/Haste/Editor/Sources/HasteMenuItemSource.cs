@@ -12,7 +12,13 @@ namespace Haste {
 
   public class HasteMenuItemSource : IEnumerable<HasteItem> {
 
-    static readonly Regex modifiers = new Regex(@"\s+[\%\#\&\_]+\w$", RegexOptions.IgnoreCase);
+    // Strips a MenuItem attribute's keyboard-shortcut suffix, e.g. the " %k" in
+    // "Window/Haste %k". Inside a character class none of these need escaping, and
+    // "\_" in particular is not a legal escape sequence: modern .NET throws
+    // ArgumentException("Unrecognized escape sequence: \_") while constructing the
+    // Regex, which took this whole source down with a TypeInitializationException on
+    // every scheduler tick. Unity 5's older Mono tolerated it; Unity 6 does not.
+    static readonly Regex modifiers = new Regex(@"\s+[%#&_]+\w$", RegexOptions.IgnoreCase);
 
     public const string NAME = "Menu Item";
 

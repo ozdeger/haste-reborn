@@ -49,23 +49,70 @@ namespace Haste {
 
     public HasteHierarchyResult(HasteItem item, float score, string queryLower) : base(item, score, queryLower) {}
 
+    // How a hierarchy row is coloured. The names match Unity's own vocabulary for the
+    // same three states -- HierarchyProperty.colorCode is {0 Normal, 1 Prefab,
+    // 2 BrokenPrefab} -- because this is deliberately the same distinction the editor's
+    // Hierarchy window draws.
+    public enum PrefabDisplay {
+      Normal,
+      Prefab,
+      BrokenPrefab,
+    }
+
+    // Split out from the style lookup so the decision is testable: GUIStyle needs an
+    // interactive editor, this does not.
+    //
+    // Replaces PrefabUtility.GetPrefabType, whose PrefabType enum went obsolete when Unity
+    // 2018.3 split "what kind of prefab asset is this" from "what is this instance's
+    // relationship to its asset". Measured on 6000.3.17f1, which is why the mapping below
+    // is exact rather than inferred:
+    //
+    //   object            GetPrefabAssetType   GetPrefabInstanceStatus
+    //   prefab asset      Regular              NotAPrefab
+    //   prefab instance   Regular              Connected
+    //   plain GameObject  NotAPrefab           NotAPrefab
+    //
+    // Note GetPrefabAssetType answers "Regular" for an asset AND an instance, so it is the
+    // wrong question to ask here. Instance status is the right one.
+    public static PrefabDisplay ClassifyPrefab(GameObject go) {
+      if (go == null) {
+        return PrefabDisplay.Normal;
+      }
+
+      switch (PrefabUtility.GetPrefabInstanceStatus(go)) {
+        case PrefabInstanceStatus.MissingAsset:
+          // Was PrefabType.MissingPrefabInstance.
+          return PrefabDisplay.BrokenPrefab;
+        case PrefabInstanceStatus.Connected:
+          // Was PrefabType.PrefabInstance / ModelPrefabInstance.
+          return PrefabDisplay.Prefab;
+        default:
+          // NotAPrefab, and the legacy Disconnected the modern prefab system never
+          // produces. Disconnected instances fell through to Normal before this change
+          // too, so leaving it here keeps the colouring identical.
+          return PrefabDisplay.Normal;
+      }
+    }
+
     GUIStyle GetLabelStyle(GameObject go, bool isHighlighted) {
       if (go == null) {
         return isHighlighted ? HasteStyles.GetStyle("HighlightedDisabledName") :
           HasteStyles.GetStyle("DisabledName");
       }
-      switch (PrefabUtility.GetPrefabType(go)) {
-        case PrefabType.PrefabInstance:
-        case PrefabType.ModelPrefabInstance:
-          if (go.activeInHierarchy) {
+
+      var active = go.activeInHierarchy;
+
+      switch (ClassifyPrefab(go)) {
+        case PrefabDisplay.Prefab:
+          if (active) {
             return isHighlighted ? HasteStyles.GetStyle("HighlightedPrefabName") :
               HasteStyles.GetStyle("PrefabName");
           } else {
             return isHighlighted ? HasteStyles.GetStyle("HighlightedDisabledPrefabName") :
               HasteStyles.GetStyle("DisabledPrefabName");
           }
-        case PrefabType.MissingPrefabInstance:
-          if (go.activeInHierarchy) {
+        case PrefabDisplay.BrokenPrefab:
+          if (active) {
             return isHighlighted ? HasteStyles.GetStyle("HighlightedBrokenPrefabName") :
               HasteStyles.GetStyle("BrokenPrefabName");
           } else {
@@ -73,7 +120,7 @@ namespace Haste {
               HasteStyles.GetStyle("DisabledBrokenPrefabName");
           }
         default:
-          if (go.activeInHierarchy) {
+          if (active) {
             return isHighlighted ? HasteStyles.GetStyle("HighlightedName") :
               HasteStyles.GetStyle("Name");
           } else {

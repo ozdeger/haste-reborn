@@ -18,6 +18,10 @@ changelog for those releases is in the repository root.
   fuzzy-match highlighting, so behaviour changes are visible rather than silent.
 
 ### Changed
+- Prefab handling moved onto Unity's current prefab API. Prefab **variants** are now
+  handled like any other prefab — they are kept out of the hierarchy results the way plain
+  prefabs always were, and `Instantiate Prefab` works on them. Variants did not exist when
+  the old code was written, so it did neither.
 - **Menu search now reads the editor's live menus** instead of a list of menu paths
   captured from Unity 5. On Unity 6 that list was 45% wrong: 109 of its 241 paths no
   longer existed, so Haste offered menu items that looked real and did nothing when you
@@ -81,6 +85,10 @@ changelog for those releases is in the repository root.
   every scheduler tick. Unity 5's older Mono tolerated it.
 
 ### Removed
+- The `Reconnect to Prefab` action. Unity 2018.3 rebuilt the prefab system and removed
+  disconnected prefab instances, so there is nothing left to reconnect — the API behind it
+  does nothing at all, and the action was a row in the palette that silently did nothing
+  when you pressed Enter.
 - An unread extension field on every indexed item, which cost a string scan and an
   allocation per item during indexing and misleadingly implied that searching by extension
   worked differently from any other search. It does not: `.cs` matches the same way

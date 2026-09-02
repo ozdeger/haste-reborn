@@ -693,7 +693,7 @@ namespace Haste {
         "Assets/Instantiate Prefab", "GameObject/Lock", "GameObject/Unlock",
         "GameObject/Activate", "GameObject/Deactivate", "GameObject/Reset Transform",
         "GameObject/Select Parent", "GameObject/Select Children", "GameObject/Select Prefab",
-        "GameObject/Revert to Prefab", "GameObject/Reconnect to Prefab",
+        "GameObject/Revert to Prefab",
       });
 
       var phantom = SourcePaths().Where(p => !custom.Contains(p) && !live.Contains(p)).ToArray();

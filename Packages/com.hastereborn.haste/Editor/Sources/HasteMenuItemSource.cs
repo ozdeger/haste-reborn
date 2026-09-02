@@ -52,10 +52,10 @@ namespace Haste {
       "GameObject/Select Parent",
       "GameObject/Select Children",
 
-      // Prefab
+      // Prefab. "GameObject/Reconnect to Prefab" used to be here; see the note in
+      // HasteActions for why the modern prefab system makes it meaningless.
       "GameObject/Select Prefab",
       "GameObject/Revert to Prefab",
-      "GameObject/Reconnect to Prefab",
     };
 
     // Reads every menu path under one root. Resolved once per domain.

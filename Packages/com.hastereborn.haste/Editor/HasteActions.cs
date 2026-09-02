@@ -37,8 +37,10 @@ namespace Haste {
 
         using (new HasteUndoStack("Instantiate Prefabs")) {
           foreach (var selectedObject in Selection.objects) {
-            PrefabType prefabType = PrefabUtility.GetPrefabType(selectedObject);
-            if (prefabType == PrefabType.Prefab || prefabType == PrefabType.ModelPrefab) {
+            // Was a PrefabType.Prefab/ModelPrefab check. IsPartOfPrefabAsset is the exact
+            // replacement -- GetPrefabAssetType answers "Regular" for instances too --
+            // and it additionally covers prefab variants, which the old check predated.
+            if (PrefabUtility.IsPartOfPrefabAsset(selectedObject)) {
               var instantiatedPrefab = PrefabUtility.InstantiatePrefab(selectedObject);
               instantiatedPrefabs.Add(instantiatedPrefab);
               Undo.RegisterCreatedObjectUndo(instantiatedPrefab, "Instantiate Prefab");
@@ -146,7 +148,8 @@ namespace Haste {
 
         var objects = new List<UnityEngine.Object>(Selection.objects.Length);
         foreach (var selectedObject in Selection.gameObjects) {
-          var parentObject = PrefabUtility.GetPrefabParent(selectedObject);
+          // GetPrefabParent's replacement. Generic, so this stays a GameObject.
+          var parentObject = PrefabUtility.GetCorrespondingObjectFromSource(selectedObject);
           if (parentObject != null) {
             objects.Add(parentObject);
           }
@@ -163,23 +166,21 @@ namespace Haste {
         using (new HasteUndoStack("Revert to Prefabs")) {
           foreach (var selectedObject in Selection.gameObjects) {
             Undo.RegisterFullObjectHierarchyUndo(selectedObject, "Revert to Prefab");
-            PrefabUtility.RevertPrefabInstance(selectedObject);
-          }
-        }
-      } },
-
-      { "GameObject/Reconnect to Prefab", () => {
-        if (Selection.gameObjects.Length == 0) {
-          return;
-        }
-
-        using (new HasteUndoStack("Reconnect to Prefabs")) {
-          foreach (var selectedObject in Selection.gameObjects) {
-            Undo.RegisterFullObjectHierarchyUndo(selectedObject, "Reconnect to Prefab");
-            PrefabUtility.ReconnectToLastPrefab(selectedObject);
+            // AutomatedAction, not UserAction: undo is already registered on the line
+            // above, exactly as it was when this called the obsolete overload, and
+            // UserAction would record a second entry and can raise its own dialogs.
+            PrefabUtility.RevertPrefabInstance(selectedObject, InteractionMode.AutomatedAction);
           }
         }
       } }
+      // "GameObject/Reconnect to Prefab" used to live here and is deliberately gone.
+      //
+      // It called PrefabUtility.ReconnectToLastPrefab, whose own obsolete message is
+      // "This method does nothing." Unity 2018.3 rebuilt the prefab system and removed
+      // disconnected instances entirely -- an instance cannot be disconnected, so there is
+      // nothing to reconnect, and PrefabInstanceStatus.Disconnected survives only as a
+      // legacy enum value the editor never returns. Offering the action would put a row in
+      // the palette that silently does nothing when you press Enter.
       #endregion
     };
   }

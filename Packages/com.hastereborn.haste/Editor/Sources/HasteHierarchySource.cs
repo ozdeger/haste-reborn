@@ -56,8 +56,15 @@ namespace Haste {
           continue;
         }
 
-        var prefabType = PrefabUtility.GetPrefabType(go);
-        if (prefabType == PrefabType.Prefab || prefabType == PrefabType.ModelPrefab) {
+        // Resources.FindObjectsOfTypeAll returns prefab ASSETS as well as scene objects
+        // (measured: 1 of the 6 GameObjects in a bare test project), and the Project
+        // source already indexes those. Skip them.
+        //
+        // This replaces a PrefabType.Prefab/ModelPrefab check. GetPrefabAssetType would
+        // be the wrong replacement -- it answers "Regular" for an instance as well as an
+        // asset. IsPartOfPrefabAsset is true only for the asset, and unlike the old check
+        // it also covers prefab variants, which did not exist when that check was written.
+        if (PrefabUtility.IsPartOfPrefabAsset(go)) {
           continue;
         }
 

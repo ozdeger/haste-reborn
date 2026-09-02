@@ -464,6 +464,13 @@ Part 5 — Current state and what is next
   by damping rather than filtering, and the golden tables were re-baselined as a
   deliberate diff.
 - **The trailing-ellipsis fix (4.2)**, and a correction to what that bug actually cost.
+- **The prefab-API migration** off the obsolete `PrefabType`, which cleared 14 of the 25
+  obsolete warnings. Measured mapping, because the obvious replacement is the wrong one:
+  `GetPrefabAssetType` answers `Regular` for a prefab *instance* as well as for the asset,
+  so "is this an asset?" is `IsPartOfPrefabAsset`, and "how should this row be coloured?"
+  is `GetPrefabInstanceStatus`. Prefab variants, which postdate the original code, are now
+  handled like any other prefab. `GameObject/Reconnect to Prefab` was deleted: its API's
+  own obsolete message is "This method does nothing."
 - **The live-menu rewrite.** `HasteMenuItemSource` reads the editor's menu tree instead of
   shipping hardcoded tables. This was the tool's biggest correctness problem and it was
   measured, not guessed: of the 241 Unity 5 paths being indexed on 6000.3.17f1, **109
@@ -475,18 +482,30 @@ Part 5 — Current state and what is next
 5.2 Not done
 ---
 
-The remaining phases, in order: the obsolete-API burn-down (**25 warnings left**, down
-from 32 — the menu work cleared 7); event-driven incremental indexing with stable identity
-keys; the rest of the search-core rewrite; the UI Toolkit palette; and settings
-consolidation.
+The remaining phases, in order: finishing the obsolete-API burn-down (**11 warnings left**,
+down from 32 — the menu work cleared 7 and the prefab migration 14); event-driven
+incremental indexing with stable identity keys; the rest of the search-core rewrite; the UI
+Toolkit palette; and settings consolidation.
 
-The remaining 25 obsolete warnings sit in four places, and they are not one job:
-`Haste.cs` (7 — `currentScene`, `projectWindowChanged`, `hierarchyWindowChanged`,
-`activeInstanceID`), `HasteHierarchyResult.cs` (6) and `HasteHierarchySource.cs` (3) — all
-`PrefabType`/`GetPrefabType`, which is a real behavioural migration to
-`GetPrefabAssetType` + `GetPrefabInstanceStatus`, not a rename — `HasteActions.cs` (7, the
-same prefab APIs inside the 11 surviving custom actions), plus one `EditorWindow.title` and
-one `[PreferenceItem]`.
+The 11 remaining warnings are two separate jobs plus two one-liners:
+
+- **Editor-state tracking** (9): `Haste.cs` polls `EditorApplication.currentScene` (×3) and
+  `Selection.activeInstanceID` (×2) from its update loop and subscribes to
+  `projectWindowChanged`/`hierarchyWindowChanged`; `HasteHierarchyResult.Action` sets
+  `Selection.instanceIDs` and pings `Selection.activeInstanceID`. The two event names are
+  pure renames (`projectChanged`, `hierarchyChanged`). The rest is not: per 3.3,
+  `activeEntityId`/`entityIds` **do not exist in 6000.0**, so the replacement is
+  `Selection.objects` plus `Selection.selectionChanged`, which is clean on both — and that
+  turns two polled comparisons in `Update` into an event subscription. `currentScene` wants
+  `EditorSceneManager` and multi-scene awareness, which is a behavioural change, not a
+  substitution.
+- **`[PreferenceItem]` → `[SettingsProvider]`** (1): a rewrite of the preferences page, and
+  the natural moment to do the settings consolidation that is already on this list.
+- **`EditorWindow.title` → `titleContent`** (1): a genuine one-liner.
+
+3.2's `HierarchyProperty` note is worth reading before the hierarchy work: it is public in
+Unity 6 and gives name, depth, instanceID and `colorCode` with no managed object loads,
+which is what `HasteHierarchySource` and `ClassifyPrefab` are doing the slow way.
 
 The UI decision is settled — **UI Toolkit**, added alongside the working IMGUI window and
 made default only once its own tests pass. See `Documentation~/activation-design.md` for the

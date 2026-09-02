@@ -21,7 +21,7 @@ namespace Haste {
     static readonly Dictionary<HasteKind, string> names = new Dictionary<HasteKind, string> {
       // The kinds that actually reach this fallback.
       { HasteKind.Menu,      "GUISkin Icon" },
-      { HasteKind.Component, "UnityEditor.InspectorWindow" }, // where components live
+      { HasteKind.Component, "Collab.Build" },
       { HasteKind.Layout,    "Layout" },
 
       // Reached only when the lookups above fail -- a hierarchy row whose object has been

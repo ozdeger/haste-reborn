@@ -120,8 +120,6 @@ namespace Haste {
       #endif
 
       AddStyle(new Style() { name = "Dot", other = EditorStyles.largeLabel, alignment = TextAnchor.MiddleCenter, fontSize = 24, textColor = HastePalette.Current.DotColor });
-
-      yield return Haste.Scheduler.Start(PreCacheDynamicFonts());
     }
 
     static void AddStyle(Style style) {
@@ -178,20 +176,22 @@ namespace Haste {
       }
     }
 
-    private static readonly string glyphs = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_+=~`[]{}|\\:;\"'<>,.?/ ";
-    static IEnumerator PreCacheDynamicFonts() {
-      GUISkin inspectorSkin = EditorGUIUtility.GetBuiltinSkin(EditorSkin.Inspector);
-      foreach (GUIStyle style in styles.Values) {
-        Font font = style.font != null ? style.font : inspectorSkin.font;
-        if (style.richText) {
-          foreach (char glyph in glyphs) {
-            font.RequestCharactersInTexture(glyph.ToString(), style.fontSize, style.fontStyle);
-            font.RequestCharactersInTexture(glyph.ToString(), style.fontSize, FontStyle.Bold);
-          }
-          yield return null;
-        }
-      }
-    }
+    // PreCacheDynamicFonts() lived here and is deliberately gone.
+    //
+    // It walked every rich-text style asking Font.RequestCharactersInTexture to warm the
+    // glyph atlas, because in Unity 5 the first open of Haste could spend over a second
+    // initializing dynamic fonts (see the v1.7.0 changelog entry, "Faster startup time").
+    //
+    // On Unity 6 it does not merely fail to help, it throws. Styles that set richText
+    // ("Tip", "Description", ...) do not set their own font, so the lookup fell through to
+    // EditorGUIUtility.GetBuiltinSkin(EditorSkin.Inspector).font -- which is unassigned in
+    // Unity 6, giving UnassignedReferenceException on every scheduler tick as soon as the
+    // package loaded.
+    //
+    // Deleting it rather than null-guarding it is the right fix: IMGUI text now routes
+    // through UnityEngine.IMGUITextHandle into TextCore, and Font.RequestCharactersInTexture
+    // has no callers left anywhere in Unity's own shipped editor assemblies. There is no
+    // atlas left for it to warm, so a guarded version would just be a slower no-op.
 
     static Texture2D CreateColorSwatch(Color color) {
       Texture2D texture = new Texture2D(1, 1, TextureFormat.ARGB32, false);

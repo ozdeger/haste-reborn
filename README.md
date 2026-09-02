@@ -7,6 +7,13 @@ Haste is a search engine for Unity 3D. Navigate your project with speed.
 
 **Usage: Open Haste by pressing Command/Control+Shift+K and begin typing to search.**
 
+Development
+---
+
+If you are picking up work on Haste, start with [HANDOFF.md](HANDOFF.md): what the tool
+does, how it is built, verified Unity 6 API facts, known behaviours that look like bugs,
+and the current state of the revival.
+
 Installation
 ---
 

@@ -150,22 +150,25 @@
     border-width: 0;
     padding: 0;
     margin: 0;
-    height: 100%;
     font-size: 19px;
     color: #f2f2f2;
     -unity-text-align: middle-left;
+
+    /* Fill the row and CENTRE the text element inside it, rather than stretching the text
+     * element to fill. Those are not the same thing, and the difference is the caret: it
+     * is drawn from the top-left of the text element, and -unity-text-align has no text to
+     * align while the field is empty, so a stretched element puts the caret at the top of
+     * the whole row. Centring a line-height element puts it exactly where the first
+     * character will appear. */
+    height: 100%;
+    justify-content: center;
 }
 
-/* The CARET is drawn inside the inner text element, not the input wrapper, and that
- * element is sized by its content. With nothing typed there is nothing to measure, so it
- * collapsed and the caret was drawn against the top of the row -- then dropped into place
- * the moment there was a character to give it a height.
- *
- * Handing it the row's height makes empty and non-empty measure the same, which is the
- * same fix as the fixed height on .haste-query-slot and for the same reason: nothing
- * about this row should depend on whether it has text in it yet. */
+/* Deliberately NOT given a height. The inner text element (Unity builds
+ * TextField > TextInput > TextElement, verified against 6000.3.17f1) keeps its natural
+ * line height and is centred by its parent above; stretching it here is what left the
+ * caret sitting high with an empty field. */
 .haste-query .unity-text-element {
-    height: 100%;
     -unity-text-align: middle-left;
 }
 

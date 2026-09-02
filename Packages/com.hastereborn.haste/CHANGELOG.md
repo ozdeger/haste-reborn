@@ -18,6 +18,12 @@ changelog for those releases is in the repository root.
   fuzzy-match highlighting, so behaviour changes are visible rather than silent.
 
 ### Changed
+- **The default shortcut is now `Ctrl/Cmd+Shift+K`**, and it is registered with Unity's
+  shortcut system so it can be rebound in Edit > Shortcuts instead of by editing source.
+  Haste previously shipped `[MenuItem("Window/Haste %k")]`, but Unity 6 binds the same
+  `Ctrl/Cmd+K` to its own Search window — and when two commands share a chord, one of them
+  silently never opens. `ShortcutModifiers.Action` resolves to Cmd on macOS and Ctrl
+  elsewhere at runtime, so one declaration covers both platforms.
 - Every feature is unconditionally enabled. The `IS_HASTE_PRO` compile define used to gate
   menu-item search, recency-based recommendations and menu-item actions behind a "Pro"
   edition, and nothing in the repository ever defined it — so building from source

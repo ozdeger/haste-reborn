@@ -5,7 +5,22 @@ Haste is a search engine for Unity 3D. Navigate your project with speed.
 
 > "It’s like Spotlight or Alfred for Unity", said by a friend of ours.
 
-**Usage: Open Haste by pressing Command/Control+K and begin typing to search.**
+**Usage: Open Haste by pressing Command/Control+Shift+K and begin typing to search.**
+
+Installation
+---
+
+In Unity's Package Manager choose **Add package from git URL** and paste:
+
+```
+https://github.com/ozdeger/haste-reborn.git?path=/Packages/com.hastereborn.haste
+```
+
+Append a tag to pin a release, e.g. `#v2.0.0`. Requires Unity 6000.0 or newer.
+
+The `?path=` is required: this repository is a Unity project that *contains* the package
+at `Packages/com.hastereborn.haste`, so a bare repository URL will fail with
+"Repository does not contain a package manifest".
 
 Screenshots
 ---
@@ -33,7 +48,7 @@ Reference
 
 Action | Keyboard | Mouse
 ---|---|---
-Open Haste | ⌘ + K (Ctrl + K on Windows) | Click "Window/Haste"
+Open Haste | ⌘ + ⇧ + K (Ctrl + Shift + K on Windows) | Click "Window/Haste"
 Navigate Search Results | ↑ or ↓ | Click search result
 Select Highlighted Result | Enter | Double-click search result
 Go to beginning | Fn + ← (Home on Windows) |
@@ -46,18 +61,14 @@ Dismiss Haste | ESC | Click anywhere outside of Haste
 Configuring Haste
 ---
 
-To modify Haste's keyboard shortcut open the file "Assets/Haste/Editor/InternalResources/HasteShortcut.cs" in your favorite text editor. Then modify _both_ `MenuItem` attributes using the following special characters:
+Haste's shortcut is registered with Unity's shortcut system, so you rebind it the same way
+you rebind anything else in the editor: **Edit > Shortcuts**, then search for `Haste`.
+There is no need to edit any source file.
 
-  - `%` (ctrl on Windows, cmd on OS X),
-  - `#` (shift),
-  - `&` (alt),
-  - `_` (no key modifiers)
-
-For example to create a menu with the shortcut alt-g use "Window/Haste &g".
-
-Note that if the shortcut conflicts with another shortcut, Haste may not open.
-
-For more details, see the [Unity MenuItem docs](http://docs.unity3d.com/ScriptReference/MenuItem.html).
+The default is `Ctrl/Cmd+Shift+K` rather than the `Ctrl/Cmd+K` older versions of Haste
+used, because Unity 6 binds `Ctrl/Cmd+K` to its own Search window (`Edit > Search > Search
+All...`). Two commands on one chord means one of them silently never opens, so Haste moved
+off it. If you prefer the original chord, take it back in Edit > Shortcuts.
 
 (Additional settings are available in the "Haste" tab of "Unity Preferences".)
 
@@ -73,11 +84,11 @@ With Haste you can also find assets by their type simply by searching for their 
 Step-By-Step Tutorial
 ---
 
-##### Step 1. Import Haste into your project.
+##### Step 1. Install Haste into your project (see Installation above).
 
-##### Step 2. Open the included tutorial scene @ `Assets/Haste/Tutorial/Tutorial.unity`
+##### Step 2. Open the included tutorial scene @ `Assets/Tutorial/Tutorial.unity` (available when you clone this repository)
 
-##### Step 3. Press Command+K (⌘+K) on OS X (Ctrl+K on Windows) to open Haste.
+##### Step 3. Press Command+Shift+K (⌘+⇧+K) on macOS (Ctrl+Shift+K on Windows) to open Haste.
 
 This is Haste. You can open it at any time.
 

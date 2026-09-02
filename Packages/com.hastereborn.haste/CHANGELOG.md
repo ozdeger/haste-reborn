@@ -150,7 +150,8 @@ changelog for those releases is in the repository root.
 - The slide into the actions pane is faster — 0.12s and ease-out, where an
   ease-in-out curve's slow start was most of what read as a wait.
 - The palette header shows Haste's own mark instead of the placeholder letter
-  the design comp used.
+  the design comp used, at the full height of the query row with no chip around
+  it.
 - Escape always closes Haste, wherever you are. It used to unwind one level of
   the actions pane, so the deeper you were the more times you had to press it.
   Going back is the left arrow's job and only the left arrow's.

@@ -1,5 +1,6 @@
 using System.Linq;
 using NUnit.Framework;
+using UnityEngine;
 
 namespace Haste {
 
@@ -98,6 +99,74 @@ namespace Haste {
       Assert.That(HasteKinds.Matches(HasteKind.Prefab, script), Is.False);
       // A token naming several kinds matches any of them.
       Assert.That(HasteKinds.Matches(HasteKind.Command | HasteKind.Tool, Menu("Tools/X/Y")), Is.True);
+    }
+
+    // ----------------------------------------------------------- item actions
+
+    static System.Collections.Generic.List<HasteItemAction> ActionsFor(string path, string source) {
+      return HasteItemActions.For(new HasteItem(path, 0, source).GetResult(0f, new string[0]));
+    }
+
+    static string[] LabelsFor(string path, string source) {
+      return ActionsFor(path, source).Select(a => a.Label).ToArray();
+    }
+
+    [Test]
+    public void Actions_OfferOpenForEverything() {
+      foreach (var source in new[] { HasteProjectSource.NAME, HasteHierarchySource.NAME,
+                                     HasteMenuItemSource.NAME, HasteLayoutSource.NAME }) {
+        Assert.That(LabelsFor("Assets/Thing.prefab", source), Contains.Item("Open"),
+          source + " has no Open action");
+      }
+    }
+
+    [Test]
+    public void Actions_AreScopedToWhatTheItemActuallyIs() {
+      var asset = LabelsFor("Assets/Sprites/Icon.png", HasteProjectSource.NAME);
+      Assert.That(asset, Contains.Item("Reveal in Project window"));
+      Assert.That(asset, Contains.Item("Copy GUID"));
+      Assert.That(asset, Contains.Item("Duplicate"));
+      Assert.That(asset, Contains.Item("Delete"));
+
+      // A GameObject has no asset path, so the asset-only actions must not be offered --
+      // Copy GUID and Duplicate would operate on a path that does not exist.
+      var hierarchy = LabelsFor("Main Camera", HasteHierarchySource.NAME);
+      Assert.That(hierarchy, Contains.Item("Reveal in Hierarchy"));
+      Assert.That(hierarchy, Has.No.Member("Copy GUID"));
+      Assert.That(hierarchy, Has.No.Member("Duplicate"));
+      Assert.That(hierarchy, Has.No.Member("Delete"));
+
+      // A menu command is neither: Open and the path, nothing more.
+      Assert.That(LabelsFor("File/Build Profiles", HasteMenuItemSource.NAME),
+        Is.EqualTo(new[] { "Open", "Copy Path" }));
+    }
+
+    [Test]
+    public void Actions_MarkTheDestructiveOneAndKeepClipboardActionsInPlace() {
+      var actions = ActionsFor("Assets/Sprites/Icon.png", HasteProjectSource.NAME);
+
+      var delete = actions.Single(a => a.Label == "Delete");
+      Assert.That(delete.Destructive, Is.True, "Delete is drawn in red on the strength of this");
+      Assert.That(delete.ClosesWindow, Is.True,
+        "it opens a confirmation dialog, and the palette dismisses on focus loss -- " +
+        "running it in place would pull the window out from under the dialog");
+
+      foreach (var copy in actions.Where(a => a.Label.StartsWith("Copy"))) {
+        Assert.That(copy.ClosesWindow, Is.False, copy.Label + " should leave the palette open");
+        Assert.That(copy.Confirmation, Is.Not.Null.And.Not.Empty, "the flash needs something to say");
+      }
+
+      Assert.That(actions.Select(a => a.Run), Has.None.Null, "an action with nothing to run");
+    }
+
+    [Test]
+    public void Actions_NameTheFileBrowserAfterThePlatformAtRuntime() {
+      // Runtime check, never a compile symbol: a Windows-built editor assembly bakes in
+      // the compiling editor's symbol (HANDOFF 6.3).
+      var expected = Application.platform == RuntimePlatform.OSXEditor
+        ? "Show in Finder" : "Show in Explorer";
+      Assert.That(LabelsFor("Assets/Sprites/Icon.png", HasteProjectSource.NAME),
+        Contains.Item(expected));
     }
 
     // ------------------------------------------------ per-part highlighting

@@ -137,6 +137,7 @@ neither indexing nor searching can stall the editor.
 | `UI/HasteSpotlightWindow.cs` | The palette. UI Toolkit; replaced the IMGUI `HasteWindow` |
 | `InternalResources/UI/HasteSpotlight.uss` | All palette styling, values taken from the design |
 | `HasteKinds.cs` | Presentation taxonomy for row badges and scope tokens |
+| `HasteItemActions.cs` | What the actions pane offers, per kind |
 | `HasteDisplay.cs` | Where the palette opens |
 | `HasteSettings.cs` | `EditorPrefs` wrapper keyed by a `HasteSetting` enum |
 | `HastePreferences.cs` | The preferences page |
@@ -506,7 +507,6 @@ with stable identity keys; the rest of the search-core rewrite; and settings con
 
 Left over from the palette work, in rough order of value:
 
-- **The actions pane** (`→` / `Cmd+K`) from the design, and its 0.18s slide.
 - **"Suggested commands"** on the launch screen. Recents are real; suggestions need a
   signal that does not exist yet.
 - **Row density** is fixed at the design's standard 32px. The design exposes compact (24)
@@ -572,6 +572,12 @@ From the palette rewrite, in the order worth checking:
   old full-path label did.
 - **Arrow keys.** They are intercepted on the root with `TrickleDown` so the text field
   does not eat them first.
+- **The actions pane slide.** `→` moves a double-width track by `translate: -50%` over
+  0.18s. If the transition does not animate, the USS `transition-property: translate` is
+  the thing to check.
+- **Destructive actions.** Delete opens a confirmation dialog, and it must do so *after*
+  the palette has closed — the window dismisses on focus loss, so a modal raised while it
+  is open would pull the palette out from under the dialog. Worth confirming once.
 - **Typography.** The design sets paths, type badges and key chips in a monospace
   (`ui-monospace, Menlo`) and everything else in the system UI face. The stylesheet sets
   neither, so all of it renders in Unity's default editor font — the proportional text is

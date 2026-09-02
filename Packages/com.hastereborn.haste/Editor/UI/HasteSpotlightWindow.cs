@@ -16,7 +16,6 @@ namespace Haste {
   // SearchWindow uses CreateGUI and a plain ListView).
   //
   // Deliberately NOT ported from the design, and why:
-  //   - The sliding actions pane (-> / Cmd+K). Out of scope for this pass.
   //   - Group headers per kind. Haste ranks globally by score, and grouping by kind in a
   //     fixed order would put a weak asset match above an exact menu-item match.
   //   - "Suggested commands" on launch. There is no signal behind it yet; recency is real
@@ -59,6 +58,10 @@ namespace Haste {
     HasteKind scopeKinds = HasteKind.Any;
     string scopeToken;
 
+    bool actionsMode;
+    int actionIndex;
+    List<HasteItemAction> actions = new List<HasteItemAction>();
+
     HasteSchedulerNode searching;
     bool holdsReloadLock;
     bool wasIndexing;
@@ -80,6 +83,10 @@ namespace Haste {
     Label messageHint;
     Label statusLabel;
     Label placeholder;
+    VisualElement track;
+    VisualElement actionsList;
+    Label paneTitle;
+    Label flashLabel;
     Label countLabel;
     VisualElement footerIcon;
 
@@ -253,6 +260,15 @@ namespace Haste {
       var body = new VisualElement();
       body.AddToClassList("haste-body");
 
+      track = new VisualElement();
+      track.AddToClassList("haste-track");
+      body.Add(track);
+
+      var resultsPane = new VisualElement();
+      resultsPane.AddToClassList("haste-pane");
+      track.Add(resultsPane);
+      track.Add(BuildActionsPane());
+
       listView = new ListView {
         fixedItemHeight = RowHeight,
         selectionType = SelectionType.Single,
@@ -266,7 +282,7 @@ namespace Haste {
           SetHighlighted(listView.selectedIndex, false);
         }
       };
-      body.Add(listView);
+      resultsPane.Add(listView);
 
       messageView = new VisualElement();
       messageView.AddToClassList("haste-message");
@@ -280,9 +296,159 @@ namespace Haste {
       messageHint.AddToClassList("haste-message-hint");
       messageView.Add(messageHint);
       messageView.style.display = DisplayStyle.None;
-      body.Add(messageView);
+      resultsPane.Add(messageView);
 
       return body;
+    }
+
+    VisualElement BuildActionsPane() {
+      var pane = new VisualElement();
+      pane.AddToClassList("haste-pane");
+
+      var header = new VisualElement();
+      header.AddToClassList("haste-pane-header");
+
+      var back = new Label("←");
+      back.AddToClassList("haste-back");
+      back.RegisterCallback<MouseDownEvent>(evt => { HideActions(); evt.StopPropagation(); });
+      header.Add(back);
+
+      paneTitle = new Label();
+      paneTitle.AddToClassList("haste-pane-title");
+      header.Add(paneTitle);
+      pane.Add(header);
+
+      var divider = new VisualElement();
+      divider.AddToClassList("haste-pane-divider");
+      pane.Add(divider);
+
+      actionsList = new VisualElement();
+      actionsList.AddToClassList("haste-actions-list");
+      pane.Add(actionsList);
+
+      flashLabel = new Label();
+      flashLabel.AddToClassList("haste-flash");
+      flashLabel.style.display = DisplayStyle.None;
+      pane.Add(flashLabel);
+
+      return pane;
+    }
+
+    // ---------------------------------------------------------- actions pane
+
+    void ShowActions() {
+      if (highlighted < 0 || highlighted >= results.Length) {
+        return;
+      }
+
+      actions = HasteItemActions.For(results[highlighted]);
+      if (actions.Count == 0) {
+        return;
+      }
+
+      actionsMode = true;
+      actionIndex = 0;
+      paneTitle.text = HasteStringUtils.GetFileName(results[highlighted].Item.path);
+      flashLabel.style.display = DisplayStyle.None;
+
+      RebuildActions();
+      track.AddToClassList("haste-track--actions");
+      SyncStatus();
+    }
+
+    void HideActions() {
+      if (!actionsMode) {
+        return;
+      }
+      actionsMode = false;
+      track.RemoveFromClassList("haste-track--actions");
+      flashLabel.style.display = DisplayStyle.None;
+      SyncStatus();
+    }
+
+    void RebuildActions() {
+      actionsList.Clear();
+
+      for (var i = 0; i < actions.Count; i++) {
+        var index = i;
+        var action = actions[i];
+
+        var row = new VisualElement();
+        row.AddToClassList("haste-pane-action");
+        row.EnableInClassList("haste-pane-action--destructive", action.Destructive);
+        row.EnableInClassList("haste-pane-action--selected", i == actionIndex);
+
+        var label = new Label(action.Label);
+        label.AddToClassList("haste-pane-action-label");
+        row.Add(label);
+
+        var spacer = new VisualElement();
+        spacer.AddToClassList("haste-spacer");
+        row.Add(spacer);
+
+        var keys = new Label(action.Keys);
+        keys.AddToClassList("haste-pane-action-keys");
+        row.Add(keys);
+
+        row.RegisterCallback<MouseDownEvent>(evt => {
+          actionIndex = index;
+          RunAction(index);
+          evt.StopPropagation();
+        });
+
+        actionsList.Add(row);
+      }
+    }
+
+    void MoveAction(int delta) {
+      if (actions.Count == 0) {
+        return;
+      }
+      actionIndex = ((actionIndex + delta) % actions.Count + actions.Count) % actions.Count;
+      RebuildActions();
+    }
+
+    void RunAction(int index) {
+      if (index < 0 || index >= actions.Count) {
+        return;
+      }
+
+      var action = actions[index];
+
+      // Clipboard actions run in place and confirm with the flash; anything that touches
+      // the project is deferred past the close, because the palette dismisses on focus
+      // loss and a modal confirmation would otherwise pull it out from under itself.
+      if (!action.ClosesWindow) {
+        try {
+          action.Run();
+        } catch (Exception e) {
+          Debug.LogException(e);
+        }
+        Flash(action.Confirmation ?? action.Label);
+        return;
+      }
+
+      if (highlighted >= 0 && highlighted < results.Length) {
+        HasteRecommendations.instance.Add(results[highlighted].Item);
+      }
+
+      Selection.objects = prevSelection;
+
+      // Wrapped rather than assigned: HasteWindowAction is its own delegate type, and a
+      // System.Action does not implicitly convert to it the way a method group does.
+      var run = action.Run;
+      Haste.WindowAction += () => run();
+      Close();
+    }
+
+    void Flash(string message) {
+      flashLabel.text = message;
+      flashLabel.style.display = DisplayStyle.Flex;
+      flashLabel.schedule.Execute(() => {
+        if (flashLabel != null) {
+          flashLabel.style.display = DisplayStyle.None;
+        }
+      }).StartingIn(1800);
     }
 
     VisualElement BuildFooter() {
@@ -309,6 +475,20 @@ namespace Haste {
       key.AddToClassList("haste-key");
       footer.Add(key);
 
+      var separator = new VisualElement();
+      separator.AddToClassList("haste-footer-separator");
+      footer.Add(separator);
+
+      var actionsLabel = new Label("Item actions");
+      actionsLabel.AddToClassList("haste-action-label");
+      actionsLabel.RegisterCallback<MouseDownEvent>(evt => { ShowActions(); evt.StopPropagation(); });
+      footer.Add(actionsLabel);
+
+      var actionsKey = new Label("→");
+      actionsKey.AddToClassList("haste-key");
+      actionsKey.RegisterCallback<MouseDownEvent>(evt => { ShowActions(); evt.StopPropagation(); });
+      footer.Add(actionsKey);
+
       return footer;
     }
 
@@ -318,9 +498,13 @@ namespace Haste {
       var row = new VisualElement();
       row.AddToClassList("haste-row");
 
-      var tag = new Label();
+      var tag = new VisualElement();
       tag.AddToClassList("haste-tag");
       tag.name = "tag";
+      var tagText = new Label();
+      tagText.AddToClassList("haste-tag-text");
+      tagText.name = "tagText";
+      tag.Add(tagText);
       row.Add(tag);
 
       var name = new Label();
@@ -357,6 +541,46 @@ namespace Haste {
       return row;
     }
 
+    // The editor's own icon for the thing, falling back to the design's text badge when
+    // there is none -- menu commands and window layouts have no asset to take one from.
+    static void BindTag(VisualElement tag, Label tagText, IHasteResult result) {
+      var icon = IconFor(result);
+
+      if (icon != null) {
+        tag.style.backgroundImage = new StyleBackground(icon);
+        tag.AddToClassList("haste-tag--icon");
+        tagText.style.display = DisplayStyle.None;
+        return;
+      }
+
+      tag.style.backgroundImage = new StyleBackground((Texture2D)null);
+      tag.RemoveFromClassList("haste-tag--icon");
+      tagText.style.display = DisplayStyle.Flex;
+      tagText.text = HasteKinds.Tag(result.Item);
+    }
+
+    static Texture2D IconFor(IHasteResult result) {
+      var item = result.Item;
+
+      // GetCachedIcon is the Project window's own lookup, so prefabs, textures, audio
+      // clips, animation clips and controllers all get the icon the user already knows.
+      if (item.source == HasteProjectSource.NAME) {
+        return AssetDatabase.GetCachedIcon(item.path) as Texture2D;
+      }
+
+      if (item.source == HasteHierarchySource.NAME) {
+        var obj = result.Object;
+        if (obj == null) {
+          return null;
+        }
+        // ObjectContent gives the same icon the Hierarchy draws, which is the component
+        // icon for things like a Camera rather than the generic GameObject cube.
+        return EditorGUIUtility.ObjectContent(obj, obj.GetType()).image as Texture2D;
+      }
+
+      return null;
+    }
+
     void BindRow(VisualElement row, int index) {
       if (index < 0 || index >= results.Length) {
         return;
@@ -379,7 +603,7 @@ namespace Haste {
         directory, HasteStringUtils.GetHighlightIndices(directory, result.Terms),
         PathHighlightStart, HighlightEnd);
 
-      row.Q<Label>("tag").text = HasteKinds.Tag(item);
+      BindTag(row.Q("tag"), row.Q<Label>("tagText"), result);
 
       // Hierarchy rows keep the editor's own colour coding: prefab blue, broken-prefab
       // red, dimmed when inactive. The design shows one row treatment; these are derived.
@@ -440,6 +664,8 @@ namespace Haste {
 
       query = value;
       SyncPlaceholder();
+      // Otherwise the pane would keep offering actions for a row that is no longer there.
+      HideActions();
       Research();
     }
 
@@ -545,7 +771,7 @@ namespace Haste {
       } else if (multiSelection.Count > 0) {
         statusLabel.text = multiSelection.Count + " selected · ↵ to confirm";
       } else if (results.Length > 0) {
-        statusLabel.text = results.Length + " results · ↑↓ to move";
+        statusLabel.text = results.Length + " results · ↑↓ to move · → for actions";
       } else {
         statusLabel.text = HasteTips.Random;
       }

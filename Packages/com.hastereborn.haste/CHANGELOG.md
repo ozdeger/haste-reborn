@@ -18,6 +18,13 @@ changelog for those releases is in the repository root.
   fuzzy-match highlighting, so behaviour changes are visible rather than silent.
 
 ### Changed
+- **Item actions.** Press `→` (or `Cmd/Ctrl+K`) on a result to slide across to what you can
+  do with it — reveal it, show it in Finder, copy its path or GUID, duplicate it, delete it.
+  `←` or Escape goes back. Which actions appear depends on what the thing is; a menu
+  command has no GUID to copy.
+- **Rows use the editor's own icons** — the prefab, texture, audio clip, animation clip and
+  controller icons you already recognise, straight from the Project window. Menu commands
+  and window layouts, which have no asset to take an icon from, keep a text badge.
 - **A new palette.** Haste is rebuilt on UI Toolkit against a Spotlight-style design:
   a wider window, a single row per result with the file name on the left and its folder on
   the right, a type badge, and a status bar. Matched characters are still highlighted, now

@@ -7,8 +7,6 @@
  *   - the outer drop shadow (0 24px 60px rgba(0,0,0,.55)). USS has no box-shadow; it
  *     would need a nine-sliced background image, and a popup window has no surface
  *     outside itself to cast onto anyway.
- *   - the 0.18s slide between the results and actions panes, which belongs to the actions
- *     pane -- out of scope for this pass.
  */
 
 /* The window's own root. It must be OPAQUE and square: an editor window is a rectangular
@@ -149,6 +147,127 @@
     overflow: hidden;
 }
 
+/* Results and actions sit side by side on a double-width track that slides. This is the
+ * design's own 0.18s cubic-bezier; UI Toolkit animates `translate` natively. */
+.haste-track {
+    flex-direction: row;
+    width: 200%;
+    height: 100%;
+    translate: 0 0;
+    transition-property: translate;
+    transition-duration: 0.18s;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.haste-track--actions {
+    translate: -50% 0;
+}
+
+.haste-pane {
+    width: 50%;
+    height: 100%;
+    flex-shrink: 0;
+}
+
+/* ---------------------------------------------------------- actions pane */
+
+.haste-pane-header {
+    flex-direction: row;
+    align-items: center;
+    padding-top: 6px;
+    padding-right: 8px;
+    padding-bottom: 9px;
+    padding-left: 8px;
+}
+
+.haste-back {
+    flex-shrink: 0;
+    padding-top: 2px;
+    padding-right: 6px;
+    padding-bottom: 2px;
+    padding-left: 6px;
+    margin-right: 9px;
+    border-radius: 4px;
+    background-color: #2e2e2e;
+    border-width: 1px;
+    border-color: #3b3b3b;
+    font-size: 10px;
+    color: #9c9c9c;
+    -unity-text-align: middle-center;
+}
+
+.haste-pane-title {
+    flex-shrink: 1;
+    font-size: 12px;
+    color: #eaeaea;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.haste-pane-divider {
+    height: 1px;
+    background-color: #2c2c2c;
+    margin-right: 8px;
+    margin-bottom: 6px;
+    margin-left: 8px;
+}
+
+.haste-actions-list {
+    flex-grow: 1;
+    padding-right: 8px;
+    padding-left: 8px;
+}
+
+.haste-pane-action {
+    flex-direction: row;
+    align-items: center;
+    height: 30px;
+    padding-right: 10px;
+    padding-left: 10px;
+    border-radius: 7px;
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.haste-pane-action:hover {
+    background-color: #2c2c2c;
+}
+
+.haste-pane-action--selected,
+.haste-pane-action--selected:hover {
+    background-color: #343434;
+}
+
+.haste-pane-action-label {
+    font-size: 12px;
+    color: #e6e6e6;
+}
+
+.haste-pane-action--destructive .haste-pane-action-label {
+    color: #d98a86;
+}
+
+.haste-pane-action-keys {
+    font-size: 10px;
+    color: #7d7d7d;
+}
+
+.haste-flash {
+    margin-top: 10px;
+    margin-right: 8px;
+    margin-left: 8px;
+    padding-top: 7px;
+    padding-right: 9px;
+    padding-bottom: 7px;
+    padding-left: 9px;
+    border-radius: 6px;
+    background-color: #26332b;
+    border-width: 1px;
+    border-color: #354a3b;
+    font-size: 11px;
+    color: #a8c9b1;
+    white-space: normal;
+}
+
 .haste-list {
     flex-grow: 1;
     padding-top: 8px;
@@ -168,6 +287,22 @@
 .haste-list .unity-collection-view__item--selected,
 .haste-list .unity-list-view__item--selected {
     background-color: rgba(0, 0, 0, 0);
+}
+
+/* The highlight is driven from the ListView's own selected state as well as from the
+ * modifier class below. The class alone was not enough: it is written during bindItem, and
+ * ListView does not rebind a row that is already realised when only the selection moves,
+ * so arrowing down left the old row lit. */
+.haste-list .unity-collection-view__item--selected > .haste-row,
+.haste-list .unity-list-view__item--selected > .haste-row {
+    background-color: #343434;
+}
+
+.haste-list .unity-collection-view__item--selected .haste-tag,
+.haste-list .unity-list-view__item--selected .haste-tag {
+    color: #a8a8a8;
+    background-color: #3f3f3f;
+    border-color: #4a4a4a;
 }
 
 .haste-row {
@@ -196,13 +331,32 @@
     border-radius: 4px;
     align-items: center;
     justify-content: center;
-    font-size: 8px;
-    -unity-font-style: bold;
-    color: #8a8a8a;
     background-color: #2f2f2f;
     border-width: 1px;
     border-color: #3a3a3a;
     margin-right: 11px;
+    background-size: 16px 16px;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+/* Rows that carry a real asset icon drop the badge chrome so the icon reads as itself. */
+.haste-tag--icon {
+    background-color: rgba(0, 0, 0, 0);
+    border-color: rgba(0, 0, 0, 0);
+}
+
+/* The fallback label, for items with no icon: menu commands and layouts.
+ *
+ * -unity-text-align is what centres TEXT. The flex align-items/justify-content on the
+ * badge only centre the label ELEMENT inside it, which is why these read top-left before.
+ */
+.haste-tag-text {
+    font-size: 8px;
+    -unity-font-style: bold;
+    color: #8a8a8a;
+    -unity-text-align: middle-center;
+    width: 100%;
 }
 
 .haste-row--highlighted .haste-tag {
@@ -328,6 +482,14 @@
     font-size: 10px;
     color: #9c9c9c;
     -unity-text-align: middle-center;
+}
+
+.haste-footer-separator {
+    width: 1px;
+    height: 16px;
+    background-color: #2e2e2e;
+    margin-right: 4px;
+    margin-left: 4px;
 }
 
 .haste-count {

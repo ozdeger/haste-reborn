@@ -263,6 +263,11 @@ Cecil also reads method bodies, which is how several of the findings below were 
   native walker Unity's own Hierarchy uses; gives name, depth, instanceID and `colorCode`
   with zero managed object loads, and `colorCode` is `{0 Normal, 1 Prefab, 2 BrokenPrefab}`.
 - **`ObjectChangeEvents.changesPublished`** — precise incremental hierarchy deltas.
+- **Human double-tap timings, measured** (154 Shift transitions, one session, macOS
+  6000.3.17f1): tap hold median 82 ms, p90 **117 ms**; deliberate holds 1300–1600 ms; gap
+  between taps median 93 ms. Useful because both constants in `activation-design.md` were
+  guesses and both were too tight — a 120 ms tap limit discarded 6% of genuine taps, and a
+  "3 fires in 10 s" runaway breaker fired twice on someone simply testing the feature.
 - **A bare modifier press reaches `beforeEventProcessed` only as modifier BITS, not as a
   key event — at least on macOS.** Measured on 6000.3.17f1: tapping Shift produces no
   `KeyDown`/`KeyUp` whatsoever. `EditorApplication.modifierKeysChanged` fires, and one

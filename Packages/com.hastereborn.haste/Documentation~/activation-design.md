@@ -110,7 +110,8 @@ The remaining invariants, none of them user-configurable:
 - ~~require a KeyUp between the two KeyDowns~~ — subsumed. Reading the modifier BIT makes
   key repeat structurally invisible: holding Shift leaves the bit set, so a repeat is not a
   transition at all
-- each tap held under ~120 ms; a longer press was a hold, not a tap
+- each tap held under **250 ms**, not the ~120 ms first guessed at here — see the measured
+  numbers below; a longer press was a hold, not a tap
 - both taps must be the same physical Shift key — **best-effort only**, see below: modifier
   bits cannot tell Left from Right
 - reject if `modifiers` contains anything but Shift, after masking off the incidental
@@ -141,9 +142,11 @@ So:
    type mismatch means unavailable, not cast-and-pray.
 2. Wrap the whole handler body in try/catch. Reset gesture state in the catch.
 3. Second consecutive exception → unsubscribe permanently, log once.
-4. Runaway breaker: more than 3 fires in 10 s → self-disable and log once with the
+4. Runaway breaker: more than **6 fires in 2 s** → self-disable and log once with the
    settings path. This is the net for whatever false-positive class we did not anticipate,
-   and it is headlessly testable.
+   and it is headlessly testable. **Not the 3-in-10 s originally specified here** — that
+   figure was picked without data, and it is a heavy-use detector rather than a
+   false-positive detector. See below.
 5. Combine, never assign. `Delegate.Remove` then `Delegate.Combine`. Assigning would wipe
    Unity's own subscribers — the actual failure mode seen in careless plugins.
 6. Defer the open through `EditorApplication.delayCall`; opening a window during event
@@ -215,6 +218,37 @@ Also: `UnityEngine.Event` carries no timestamp — only the internal `Event.GetD
 exists — so the window is measured on the dispatch clock with
 `EditorApplication.timeSinceStartup`, and an editor stall can coalesce two far-apart presses.
 Reject implausibly long gaps rather than trusting the clock.
+
+What a real editor log measured
+---
+
+Both timing constants in this document were guesses, and both were wrong in the same
+direction — too tight. From 154 Shift transitions captured in one session on
+6000.3.17f1/macOS:
+
+| | measured |
+|---|---|
+| tap hold, median | 82 ms |
+| tap hold, p90 | **117 ms** |
+| genuine holds (Shift used as a modifier) | 1300–1600 ms |
+| taps rejected by the original 120 ms limit | **6%** (5 of 77) |
+| gap between taps, median | 93 ms |
+
+The 120 ms tap limit sat directly on top of the distribution it was meant to be clear of,
+so roughly one tap in sixteen was silently discarded. 250 ms sits in the wide gap between
+real taps and real holds. The 250 ms *window* between taps needed no change — it already
+covered the median comfortably.
+
+The breaker was worse, and was the main cause of "it works, then it stops": the log
+contains its degrade message **twice**, both times because someone was testing the gesture.
+34 legitimate fires occurred over 338 s, but four of them landed inside one ten-second
+stretch, which is ordinary use — and the penalty was disabling the feature for the rest of
+the session. A human double tap takes 250–400 ms end to end, so seven inside two seconds is
+not something deliberate use reaches, while a gesture firing on ordinary typing clears it
+easily.
+
+The lesson generalises past this feature: a safety net whose threshold is set by intuition
+will catch the user before it catches the bug.
 
 Acceptance test, runnable headlessly
 ---

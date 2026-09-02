@@ -118,14 +118,25 @@ namespace Haste {
     [Test]
     public void ATapHeldTooLongIsAHoldNotATap() {
       Down();
-      Wait(0.30);
+      Wait(0.60);
       Assert.That(Up(), Is.False, "a long first press is someone reaching for a capital");
 
       SetUp();
       Down(); Wait(0.05); Up();
       Wait(0.10);
-      Down(); Wait(0.30);
+      Down(); Wait(0.60);
       Assert.That(Up(), Is.False, "a long second press is a hold too");
+    }
+
+    [Test]
+    public void ARealisticallySlowTapStillCounts() {
+      // Measured from a real editor log: 77 taps, median 82ms, p90 117ms. The original
+      // 120ms limit sat on top of that distribution and silently discarded about one tap
+      // in sixteen, which is most of what "it works sometimes" was.
+      Down(); Wait(0.117); Up();
+      Wait(0.09);
+      Down(); Wait(0.117);
+      Assert.That(Up(), Is.True, "a p90 tap must not be mistaken for a hold");
     }
 
     [Test]
@@ -228,20 +239,34 @@ namespace Haste {
     }
 
     [Test]
-    public void TheBreakerStopsARunawayGesture() {
-      // The net for whatever false-positive class was not anticipated: repeated fires in
-      // a few seconds mean the rules are wrong, and firing is worse than not.
-      for (var i = 0; i < 3; i++) {
-        Assert.That(Tap(), Is.True, "fire " + i + " should be allowed");
-        Wait(0.2);
+    public void DeliberateRepeatedUseDoesNotTripTheBreaker() {
+      // The regression that mattered most. At 3-fires-in-10s the breaker treated somebody
+      // testing the gesture as a false positive and disabled it for the session -- which
+      // is exactly what "it worked a few times then stopped" was.
+      for (var i = 0; i < 5; i++) {
+        Assert.That(Tap(), Is.True, "ordinary repeated use, fire " + (i + 1));
+        Wait(0.5);
+      }
+      Assert.That(gesture.TrippedBreaker, Is.False);
+    }
+
+    [Test]
+    public void TheBreakerStillStopsARunawayGesture() {
+      // A genuine storm: firing far faster than a person can tap, which is what it would
+      // look like if the rules let ordinary typing through.
+      for (var i = 0; i < 6; i++) {
+        Assert.That(Tap(), Is.True, "fire " + (i + 1) + " should be allowed");
       }
 
-      Assert.That(Tap(), Is.False, "the fourth fire within the window trips the breaker");
+      Assert.That(Tap(), Is.False, "the seventh fire inside two seconds trips the breaker");
       Assert.That(gesture.TrippedBreaker, Is.True);
 
-      // And it stays tripped, however long you wait.
+      // And it stays tripped, however long you wait, until it is explicitly cleared.
       Wait(60.0);
       Assert.That(Tap(), Is.False);
+
+      gesture.ClearBreaker();
+      Assert.That(Tap(), Is.True, "Reset double-tap state must actually recover it");
     }
 
     [Test]

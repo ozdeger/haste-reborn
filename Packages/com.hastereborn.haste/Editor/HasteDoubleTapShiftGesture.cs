@@ -37,13 +37,28 @@ namespace Haste {
 
     // A press held longer than this was a hold, not a tap -- someone reaching for a
     // capital letter, or shift-dragging in the Scene view.
-    public double MaxTapSeconds = 0.12;
+    //
+    // 250ms, not the 120ms activation-design.md guessed at. Measured from 77 real taps in
+    // an editor log: median 82ms, p90 117ms, and 6% of genuine taps ran past 120ms -- the
+    // old limit sat directly on top of the distribution it was meant to be clear of, so
+    // roughly one tap in sixteen was silently discarded as "a hold". Actual holds in the
+    // same log ran 1300-1600ms, so there is a wide gap to sit in.
+    public double MaxTapSeconds = 0.25;
 
-    // Runaway breaker. Whatever false-positive class was not anticipated, this is the net:
-    // more than a few fires in quick succession means the rules are wrong, and firing is
-    // worse than not.
-    public int MaxFiresPerWindow = 3;
-    public double BreakerWindowSeconds = 10.0;
+    // Runaway breaker: the net for whatever false-positive class was not anticipated.
+    //
+    // 6 fires in 2 seconds, not the 3-in-10 activation-design.md specified. That figure
+    // was picked without data and it is not a false-positive detector -- it is a
+    // heavy-use detector. In a real editor log it tripped twice, both times because
+    // someone was TESTING the gesture: opening the palette four times in ten seconds is
+    // ordinary use, and disabling the feature for the rest of the session was the single
+    // biggest cause of "it works, then it stops".
+    //
+    // A human double tap takes roughly 250-400ms end to end, so seven of them inside two
+    // seconds is not something deliberate use reaches. A genuine storm -- the gesture
+    // firing on ordinary typing -- clears it easily.
+    public int MaxFiresPerWindow = 6;
+    public double BreakerWindowSeconds = 2.0;
 
     Phase phase;
 

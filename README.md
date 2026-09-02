@@ -155,7 +155,28 @@ Haste provides access to as many built-in MenuItems as possible with Unity's exp
 Ignoring Assets
 ---
 
-You can ignore assets in your project like third-party tools, etc. by right-clicking on the asset and selecting `Haste > Ignore`. The asset can be unignored by right-clicking and selecting `Haste > Unignored`. You can further manage ignored assets in Haste's Preferences inside of the main Unity Preferences.
+Haste ships with a list of folders it skips: `Assets/Plugins`, the External Dependency
+Manager's generated folders, the common mobile SDKs, and Unity's own magic folders. On a
+real 20,000-file project that is about 10% of all assets and a quarter of every C# hit — so
+a search for "manager" finds your managers rather than a third-party library's.
+
+`Plugins/Android`, `Plugins/iOS` and `Plugins/tvOS` stay searchable, because
+`AndroidManifest.xml` and native plugin sources are things you actually look for.
+
+To see exactly what is skipped, or to turn the list off, go to **Preferences > Haste**.
+
+You can add your own, in either of two lists:
+
+- **Shared with the project** — committed to `ProjectSettings/HasteIgnorePaths.asset`, so
+  your whole team gets it.
+- **Just for you** — stays on your machine.
+
+A rule with a slash is a path (`Assets/Plugins`). A rule without one is a folder name
+matched at any depth (`Firebase`). Start a rule with `!` to make an exception, which always
+wins.
+
+You can also right-click a folder and choose `Haste > Ignore` (or `Unignore`), which adds
+it to your personal list.
 
 Menu Items
 ---

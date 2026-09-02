@@ -140,6 +140,8 @@ neither indexing nor searching can stall the editor.
 | `HasteKinds.cs` | Presentation taxonomy for row badges and scope tokens |
 | `HasteItemActions.cs` | What the actions pane offers, per kind |
 | `HasteKeyMap.cs` | The keyboard map, as a pure function so it can be tested |
+| `HasteIgnoreRules.cs` | The shipped ignore list and the matcher, pure and testable |
+| `HasteIgnorePaths.cs` | The project's shared ignore list, committed in `ProjectSettings/` |
 | `HasteDisplay.cs` | Where the palette opens |
 | `HasteSettings.cs` | `EditorPrefs` wrapper keyed by a `HasteSetting` enum |
 | `HastePreferences.cs` | The preferences page |
@@ -632,7 +634,23 @@ From the burn-down:
    is on, and `HasteDisplay` now centres on the editor's own window — so the workaround has
    nothing left to work around. The new palette is a fixed borderless popup with no drag
    affordance, so the toggle would have been a preference that does nothing.
-4. Ignore-list scope (team-shared vs per-user) and semantics (literal prefixes vs globs).
+4. ~~Ignore-list scope (team-shared vs per-user) and semantics (literal prefixes vs
+   globs).~~ **Decided: both scopes, and a small syntax instead of globs.** A shared list
+   in `ProjectSettings/HasteIgnorePaths.asset`, the user's own in EditorPrefs, and a
+   shipped default list — all three unioned. A rule containing `/` is a path prefix; one
+   without is a folder name matched at any depth; a leading `!` is an exception that always
+   wins, which is what keeps `Plugins/Android` searchable while `Plugins` is ignored.
+   Matching is `OrdinalIgnoreCase` and boundary-aware, replacing a culture-sensitive
+   `IndexOf(rule) == 0` that also matched `Assets/PluginsCustom` for a rule of
+   `Assets/Plugins`.
+
+   **The shipped rules are all path-rooted, and that was measured rather than assumed.**
+   The first attempt matched SDKs by bare name so they would be caught wherever they were
+   unpacked. Run against a real 20,000-file project it hid
+   `Assets/Scripts/Firebase/FirebaseService.cs` — the project's *own* wrapper code, named
+   after the SDK it wraps, which is entirely normal. A shipped list cannot see the
+   project's layout and has no business guessing at depth; a user's own rules can, so bare
+   names remain available there. `HasteIgnoreTests` pins that case.
 5. Whether `Image Assets/` — the old Asset Store marketing artwork — stays in the repo.
 
 ---

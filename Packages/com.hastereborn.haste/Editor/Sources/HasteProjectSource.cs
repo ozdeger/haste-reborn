@@ -12,15 +12,6 @@ namespace Haste {
 
     public const string NAME = "Project";
 
-    static bool IsIgnored(string[] ignorePaths, string path) {
-      foreach (var ignorePath in ignorePaths) {
-        if (path.IndexOf(ignorePath) == 0) {
-          return true;
-        }
-      }
-      return false;
-    }
-
     static string GetNormalizedAssetPath(string assetPath) {
       var path = Path.Combine("Assets", assetPath.TrimStart(Application.dataPath + Path.DirectorySeparatorChar));
       // Normalize Windows paths
@@ -31,9 +22,13 @@ namespace Haste {
     }
 
     public IEnumerator<HasteItem> GetEnumerator() {
-      var ignorePaths = HasteSettings.IgnorePaths.Split(new []{','}, StringSplitOptions.RemoveEmptyEntries)
-        .Select((s) => s.Trim())
-        .ToArray();
+      // Resolved once per crawl rather than per path: the list is small but the crawl is
+      // tens of thousands of entries.
+      //
+      // This used to be `path.IndexOf(ignorePath) == 0` over the raw setting -- culture
+      // sensitive, and with no segment boundary, so "Assets/Plugins" would also have
+      // swallowed "Assets/PluginsCustom".
+      var ignoreRules = HasteIgnore.EffectiveRules();
 
       Queue<string> directories = new Queue<string>();
 
@@ -55,7 +50,7 @@ namespace Haste {
           }
 
           string path = GetNormalizedAssetPath(filePath);
-          if (IsIgnored(ignorePaths, path)) {
+          if (HasteIgnoreRules.IsIgnored(path, ignoreRules)) {
             continue;
           }
 
@@ -68,13 +63,18 @@ namespace Haste {
           }
 
           string path = GetNormalizedAssetPath(directoryPath);
-          if (IsIgnored(ignorePaths, path)) {
-            continue;
+          if (HasteIgnoreRules.IsIgnored(path, ignoreRules)) {
+            // Not enqueued: an ignored folder's contents are not walked at all, which is
+            // where most of the saving comes from. An exception rule under an ignored
+            // folder still needs the walk, so only prune when nothing below is excepted.
+            if (!HasteIgnore.HasExceptionUnder(path, ignoreRules)) {
+              continue;
+            }
+          } else {
+            yield return new HasteItem(path, 0, NAME);
           }
 
           directories.Enqueue(directoryPath);
-
-          yield return new HasteItem(path, 0, NAME);
         }
       }
     }

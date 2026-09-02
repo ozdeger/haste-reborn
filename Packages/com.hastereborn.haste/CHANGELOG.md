@@ -18,6 +18,20 @@ changelog for those releases is in the repository root.
   fuzzy-match highlighting, so behaviour changes are visible rather than silent.
 
 ### Changed
+- **Vendored and generated folders are ignored out of the box.** `Assets/Plugins`, the
+  External Dependency Manager's folders, the common mobile SDKs and Unity's own magic
+  folders no longer appear in results, so a search for "manager" returns your managers
+  rather than a third-party library's. Measured on a real 20,000-file project, that is
+  about 10% of all assets and a quarter of every C# hit.
+  - `Plugins/Android`, `Plugins/iOS` and `Plugins/tvOS` stay searchable, because
+    `AndroidManifest.xml` and native plugin sources are things people genuinely look for.
+  - See exactly what is in the list, or turn it off, under Preferences ▸ Haste.
+- **Ignore paths can be shared with your team.** Two lists now: one committed to the
+  project in `ProjectSettings/HasteIgnorePaths.asset`, and your own, which stays on your
+  machine. Both apply.
+- **Ignore rules got a syntax.** A rule with a slash is a path (`Assets/Plugins`). A rule
+  without one is a folder name matched at any depth (`Firebase`). Start a rule with `!` to
+  make an exception, which always wins.
 - **"Enable Select" is now off by default.** Arrowing through results no longer selects
   each one as you pass it. That preview was useful, but it expanded hierarchy and project
   folders as it went — and unlike the selection, that rearrangement was not undone when you
@@ -97,6 +111,9 @@ changelog for those releases is in the repository root.
   identified items by an unstable hash that cannot be resolved back to an object.
 
 ### Fixed
+- Ignore rules no longer match partial folder names. `Assets/Plugins` used to also hide
+  `Assets/PluginsCustom`, because the comparison had no segment boundary — and it was
+  culture-sensitive, which diverges in Turkish locales.
 - The palette no longer throws `ArgumentOutOfRangeException` when it opens. Its stylesheet
   used a CSS timing function that UI Toolkit does not support; Unity keeps such a
   declaration with no values rather than rejecting it, and then reads past the end of it on

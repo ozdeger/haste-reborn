@@ -39,18 +39,21 @@
 
 /* ---------------------------------------------------------------- header */
 
-/* No vertical padding: the mark is 52px and IS the header's height, which is what the
- * padding plus the query row used to add up to. So the header measures the same 52px it
- * always did and nothing below it moves. What keeps the mark off the window's top edge is
- * the transparent margin baked into haste_icon.png rather than padding here -- if it ever
- * looks cramped, that is the thing to look at, not this rule. */
+/* No padding on the top or the LEFT, so the mark sits in the window's corner rather than
+ * inset from it. The mark is the tallest child and the header has no vertical padding, so
+ * it fills the header's height by definition -- there is no alignment to set.
+ *
+ * The query text is not left stranded against the window edge by this: the mark's own
+ * width and right margin are what inset it now, which is why that margin is larger than
+ * the gap a chip would have needed. Everything to the right of the mark still centres
+ * vertically in the row. */
 .haste-header {
     flex-direction: row;
     align-items: center;
     padding-top: 0;
     padding-right: 16px;
     padding-bottom: 0;
-    padding-left: 16px;
+    padding-left: 0;
 }
 
 /* Haste's mark, sitting straight against the query text with nothing around it.
@@ -59,18 +62,19 @@
  * A logo does not need one -- and an 18px flame inside a 26px chip was small enough to
  * read as a smudge rather than as a mark.
  *
- * It is the tallest thing in the header, so it is what sets the header's height. 52px is
- * chosen to equal what the header measured before -- a ~26px query row plus 14 and 12 of
- * padding -- so the mark grew into the space that was already there and the results list
- * below did not lose a row. Changing this number changes the header's height directly;
- * the header's vertical padding is zero precisely so that this is the only number
- * involved. */
+ * A 48px square in the corner, and the tallest thing in the header, so it is what sets
+ * the header's height -- 48 against the ~52 the header measured before, so the results
+ * list below gains a few pixels rather than losing any.
+ *
+ * The three 48s go together: the element is square and the image fills it exactly, so
+ * there is no letterboxing inside the box and no cropping of the mark. Changing the size
+ * means changing all three. */
 .haste-badge {
-    width: 52px;
-    height: 52px;
+    width: 48px;
+    height: 48px;
     flex-shrink: 0;
-    margin-right: 10px;
-    background-size: 52px 52px;
+    margin-right: 14px;
+    background-size: 48px 48px;
     background-position: center;
     background-repeat: no-repeat;
 }

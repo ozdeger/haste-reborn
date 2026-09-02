@@ -477,7 +477,7 @@ namespace Haste {
       //
       // The blast radius was narrower than it looks, and worth recording so nobody hunts
       // for symptoms that were never there: the result row renders GetFileName, which was
-      // always correct, and HasteItem.extensionLower is never read by anything. What the
+      // always correct, and the extension HasteItem used to derive was read by nothing. What the
       // wrong name actually cost was scoring -- the exact-name, prefix-name and
       // substring-name rungs all compare against it, so "Component/Add..." could not be
       // matched by typing its own name.

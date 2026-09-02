@@ -139,6 +139,7 @@ neither indexing nor searching can stall the editor.
 | `InternalResources/UI/HasteSpotlight.uss` | All palette styling, values taken from the design |
 | `HasteKinds.cs` | Presentation taxonomy for row badges and scope tokens |
 | `HasteItemActions.cs` | What the actions pane offers, per kind |
+| `HasteKeyMap.cs` | The keyboard map, as a pure function so it can be tested |
 | `HasteDisplay.cs` | Where the palette opens |
 | `HasteSettings.cs` | `EditorPrefs` wrapper keyed by a `HasteSetting` enum |
 | `HastePreferences.cs` | The preferences page |
@@ -590,7 +591,8 @@ From the palette rewrite, in the order worth checking:
   acronyms, odd on a short name shown by itself — which the new row does far more than the
   old full-path label did.
 - **Arrow keys.** They are intercepted on the root with `TrickleDown` so the text field
-  does not eat them first.
+  does not eat them first. Which key does what is pinned by `HasteKeyMapTests`; that the
+  events arrive at all is not, and cannot be.
 - **The actions pane slide.** `→` moves a double-width track by `translate: -50%` over
   0.18s, eased with `ease-in-out` because USS has no `cubic-bezier` (see 3.3).
 - **Destructive actions.** Delete opens a confirmation dialog, and it must do so *after*
@@ -693,7 +695,13 @@ exercise:
 - editor GUI, styles, fonts or GUISkin (`EditorStyles` throws in batch mode regardless of
   graphics device)
 - anything downstream of an `EditorStyles` readiness gate
-- real keyboard or mouse input, on any platform
+- real keyboard or mouse input, on any platform. The palette's answer is
+  `HasteKeyMap.Resolve`, a pure function from (key, modifiers, mode) to an intent, which
+  `HasteSpotlightWindow.OnKeyDown` does nothing but dispatch. That exists because the right
+  arrow once shipped doing nothing at all: an edit adding the binding was lost, the code
+  compiled, every test passed, and the only way to find it was to press the key. A binding
+  that lives in a `switch` inside an `EditorWindow` is untestable; the same binding in a
+  pure function is ordinary
 - `[InitializeOnLoad]` → scheduler startup chains, since `-quit` exits before
   `EditorApplication.update` pumps them
 

@@ -889,38 +889,35 @@ namespace Haste {
     // ------------------------------------------------------------- keyboard
 
     void OnKeyDown(KeyDownEvent evt) {
-      switch (evt.keyCode) {
-        case KeyCode.Escape:
-          Dismiss();
-          evt.StopPropagation();
-          break;
+      var intent = HasteKeyMap.Resolve(
+        evt.keyCode, evt.actionKey, evt.shiftKey,
+        actionsMode, scopeKinds != HasteKind.Any, string.IsNullOrEmpty(query));
 
-        case KeyCode.Return:
-        case KeyCode.KeypadEnter:
-          // Enter reveals, Shift+Enter opens, Cmd/Ctrl+Enter builds the multi-selection.
-          if (evt.actionKey) {
-            ToggleMultiSelection(highlighted);
-          } else {
-            Act(highlighted, evt.shiftKey);
-          }
-          evt.StopPropagation();
-          break;
-
-        case KeyCode.UpArrow:    Move(-1); evt.StopPropagation(); break;
-        case KeyCode.DownArrow:  Move(1);  evt.StopPropagation(); break;
-        case KeyCode.Home:       SetHighlighted(0, true); evt.StopPropagation(); break;
-        case KeyCode.End:        SetHighlighted(results.Length - 1, true); evt.StopPropagation(); break;
-        case KeyCode.PageUp:     Move(-VisibleRows()); evt.StopPropagation(); break;
-        case KeyCode.PageDown:   Move(VisibleRows()); evt.StopPropagation(); break;
-
-        case KeyCode.Backspace:
-          // Only when there is nothing left to delete, so backspace still edits text.
-          if (scopeKinds != HasteKind.Any && string.IsNullOrEmpty(query)) {
-            ClearScope();
-            evt.StopPropagation();
-          }
-          break;
+      if (intent == HasteKeyIntent.None) {
+        return;
       }
+
+      switch (intent) {
+        case HasteKeyIntent.Dismiss:           Dismiss(); break;
+        case HasteKeyIntent.Reveal:            Act(highlighted); break;
+        case HasteKeyIntent.Open:              Act(highlighted, true); break;
+        case HasteKeyIntent.ToggleMultiSelect: ToggleMultiSelection(highlighted); break;
+        case HasteKeyIntent.MoveUp:            Move(-1); break;
+        case HasteKeyIntent.MoveDown:          Move(1); break;
+        case HasteKeyIntent.MoveHome:          SetHighlighted(0, true); break;
+        case HasteKeyIntent.MoveEnd:           SetHighlighted(results.Length - 1, true); break;
+        case HasteKeyIntent.MovePageUp:        Move(-VisibleRows()); break;
+        case HasteKeyIntent.MovePageDown:      Move(VisibleRows()); break;
+        case HasteKeyIntent.ShowActions:       ShowActions(); break;
+        case HasteKeyIntent.ClearScope:        ClearScope(); break;
+
+        case HasteKeyIntent.HideActions:       HideActions(); break;
+        case HasteKeyIntent.ActionUp:          MoveAction(-1); break;
+        case HasteKeyIntent.ActionDown:        MoveAction(1); break;
+        case HasteKeyIntent.RunAction:         RunAction(actionIndex); break;
+      }
+
+      evt.StopPropagation();
     }
 
     int VisibleRows() {

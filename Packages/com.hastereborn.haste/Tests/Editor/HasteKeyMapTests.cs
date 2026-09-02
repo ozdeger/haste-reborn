@@ -1,0 +1,99 @@
+using NUnit.Framework;
+using UnityEngine;
+
+namespace Haste {
+
+  // The palette's keyboard map.
+  //
+  // These exist because of a real failure: the right arrow shipped doing nothing. An edit
+  // that should have added the binding was lost, and nothing caught it -- the code
+  // compiled, every test passed, and UI Toolkit cannot be driven headlessly, so the only
+  // way to find it was to press the key. Pulling the mapping out of the window makes it
+  // ordinary testable logic.
+  [TestFixture]
+  internal class HasteKeyMapTests {
+
+    static HasteKeyIntent Results(KeyCode key, bool actionKey = false, bool shift = false,
+                                  bool hasScope = false, bool queryIsEmpty = false) {
+      return HasteKeyMap.Resolve(key, actionKey, shift, false, hasScope, queryIsEmpty);
+    }
+
+    static HasteKeyIntent Actions(KeyCode key, bool actionKey = false, bool shift = false) {
+      return HasteKeyMap.Resolve(key, actionKey, shift, true, false, false);
+    }
+
+    [Test]
+    public void RightArrowAndCommandKOpenTheActionsPane() {
+      // The binding that was missing.
+      Assert.That(Results(KeyCode.RightArrow), Is.EqualTo(HasteKeyIntent.ShowActions));
+      Assert.That(Results(KeyCode.K, actionKey: true), Is.EqualTo(HasteKeyIntent.ShowActions));
+
+      // A bare "k" is a character to type, not a command.
+      Assert.That(Results(KeyCode.K), Is.EqualTo(HasteKeyIntent.None));
+    }
+
+    [Test]
+    public void EnterRevealsAndShiftEnterOpens() {
+      Assert.That(Results(KeyCode.Return), Is.EqualTo(HasteKeyIntent.Reveal));
+      Assert.That(Results(KeyCode.KeypadEnter), Is.EqualTo(HasteKeyIntent.Reveal));
+      Assert.That(Results(KeyCode.Return, shift: true), Is.EqualTo(HasteKeyIntent.Open));
+      Assert.That(Results(KeyCode.Return, actionKey: true), Is.EqualTo(HasteKeyIntent.ToggleMultiSelect));
+
+      // The multi-select chord wins over Shift, so Cmd+Shift+Enter still adds to the set
+      // rather than opening one thing.
+      Assert.That(Results(KeyCode.Return, actionKey: true, shift: true),
+        Is.EqualTo(HasteKeyIntent.ToggleMultiSelect));
+    }
+
+    [Test]
+    public void ArrowsAndPagingMoveTheHighlight() {
+      Assert.That(Results(KeyCode.UpArrow), Is.EqualTo(HasteKeyIntent.MoveUp));
+      Assert.That(Results(KeyCode.DownArrow), Is.EqualTo(HasteKeyIntent.MoveDown));
+      Assert.That(Results(KeyCode.Home), Is.EqualTo(HasteKeyIntent.MoveHome));
+      Assert.That(Results(KeyCode.End), Is.EqualTo(HasteKeyIntent.MoveEnd));
+      Assert.That(Results(KeyCode.PageUp), Is.EqualTo(HasteKeyIntent.MovePageUp));
+      Assert.That(Results(KeyCode.PageDown), Is.EqualTo(HasteKeyIntent.MovePageDown));
+      Assert.That(Results(KeyCode.Escape), Is.EqualTo(HasteKeyIntent.Dismiss));
+    }
+
+    [Test]
+    public void BackspaceOnlyClearsTheScopeOnceThereIsNothingLeftToDelete() {
+      Assert.That(Results(KeyCode.Backspace, hasScope: true, queryIsEmpty: true),
+        Is.EqualTo(HasteKeyIntent.ClearScope));
+
+      // Otherwise it must fall through to the text field, or the query cannot be edited.
+      Assert.That(Results(KeyCode.Backspace, hasScope: true, queryIsEmpty: false),
+        Is.EqualTo(HasteKeyIntent.None));
+      Assert.That(Results(KeyCode.Backspace, hasScope: false, queryIsEmpty: true),
+        Is.EqualTo(HasteKeyIntent.None));
+    }
+
+    [Test]
+    public void TheActionsPaneOwnsTheKeyboardWhileItIsOpen() {
+      Assert.That(Actions(KeyCode.UpArrow), Is.EqualTo(HasteKeyIntent.ActionUp));
+      Assert.That(Actions(KeyCode.DownArrow), Is.EqualTo(HasteKeyIntent.ActionDown));
+      Assert.That(Actions(KeyCode.LeftArrow), Is.EqualTo(HasteKeyIntent.HideActions));
+      Assert.That(Actions(KeyCode.Return), Is.EqualTo(HasteKeyIntent.RunAction));
+
+      // Escape backs out of the pane rather than dismissing the whole palette, which it
+      // does everywhere else.
+      Assert.That(Actions(KeyCode.Escape), Is.EqualTo(HasteKeyIntent.HideActions));
+      Assert.That(Results(KeyCode.Escape), Is.EqualTo(HasteKeyIntent.Dismiss));
+
+      // Nothing from the results list leaks through.
+      Assert.That(Actions(KeyCode.RightArrow), Is.EqualTo(HasteKeyIntent.None));
+      Assert.That(Actions(KeyCode.Home), Is.EqualTo(HasteKeyIntent.None));
+      Assert.That(Actions(KeyCode.Backspace), Is.EqualTo(HasteKeyIntent.None));
+    }
+
+    [Test]
+    public void OrdinaryTypingIsLeftAlone() {
+      // Anything the map does not claim must reach the text field untouched, or the
+      // palette cannot be typed into at all.
+      foreach (var key in new[] { KeyCode.A, KeyCode.Z, KeyCode.Space, KeyCode.Period,
+                                  KeyCode.Alpha1, KeyCode.Slash, KeyCode.Greater }) {
+        Assert.That(Results(key), Is.EqualTo(HasteKeyIntent.None), key + " was swallowed");
+      }
+    }
+  }
+}

@@ -33,10 +33,16 @@ namespace Haste {
 
     static Action<EventType, KeyCode, EventModifiers> handler;
 
+    // Diagnostics state. Only touched when the preference is on.
+    static EventModifiers lastSeenModifiers;
+    static int diagnosticLines;
+    static bool modifierWatchHooked;
+
     static HasteDoubleTapShift() {
       // [InitializeOnLoad] runs once per domain and statics reset with it, so a
       // cross-reload duplicate is structurally impossible. `hooked` guards within a domain.
       Hook();
+      HookModifierWatch();
     }
 
     static void Hook() {
@@ -73,6 +79,61 @@ namespace Haste {
       } catch (Exception e) {
         Degrade("could not subscribe: " + e.GetType().Name);
       }
+    }
+
+    // EditorApplication.modifierKeysChanged is public and parameterless: it says "some
+    // modifier changed" and nothing else. Useless on its own, but it is the one signal
+    // that is documented to fire for a bare modifier press, so the diagnostics report
+    // whether it fires at all -- which is the difference between "we can build a fallback"
+    // and "macOS never tells us".
+    static void HookModifierWatch() {
+      if (modifierWatchHooked) {
+        return;
+      }
+      modifierWatchHooked = true;
+
+      try {
+        EditorApplication.modifierKeysChanged += OnModifierKeysChanged;
+      } catch (Exception) {
+        modifierWatchHooked = false;
+      }
+    }
+
+    static void OnModifierKeysChanged() {
+      if (!HasteSettings.DoubleTapShiftDiagnostics) {
+        return;
+      }
+      Log("modifierKeysChanged");
+    }
+
+    static void Log(string message) {
+      // Capped so a stuck state cannot bury the console.
+      if (diagnosticLines++ > 300) {
+        return;
+      }
+      Debug.Log(string.Format("[Haste] {0}  t={1:0.000}", message, EditorApplication.timeSinceStartup));
+    }
+
+    // What the hook actually delivers.
+    //
+    // Layout, Repaint and MouseMove flood, so they are logged only when the modifier bits
+    // CHANGED since the last event -- which is the interesting case: if macOS never sends
+    // a bare Shift as KeyDown, the press may still show up as a modifier bit riding on the
+    // next event of any type, and that would be enough to build on.
+    static void LogEvent(EventType type, KeyCode key, EventModifiers modifiers) {
+      var changed = modifiers != lastSeenModifiers;
+      var previous = lastSeenModifiers;
+      lastSeenModifiers = modifiers;
+
+      var noisy = type == EventType.Layout || type == EventType.Repaint ||
+                  type == EventType.MouseMove || type == EventType.MouseDrag;
+
+      if (noisy && !changed) {
+        return;
+      }
+
+      Log(string.Format("{0,-12} key={1,-12} mods={2}{3}",
+        type, key, modifiers, changed ? "  (was " + previous + ")" : ""));
     }
 
     static void Unhook() {
@@ -115,10 +176,8 @@ namespace Haste {
           return;
         }
 
-        if (HasteSettings.DoubleTapShiftDiagnostics &&
-            (HasteDoubleTapShiftGesture.IsShift(key) || type == EventType.KeyDown || type == EventType.KeyUp)) {
-          Debug.Log(string.Format("[Haste] shift-probe {0} {1} mods={2} t={3:0.000}",
-            type, key, modifiers, EditorApplication.timeSinceStartup));
+        if (HasteSettings.DoubleTapShiftDiagnostics) {
+          LogEvent(type, key, modifiers);
         }
 
         gesture.WindowSeconds = HasteSettings.DoubleTapShiftWindowMs / 1000.0;

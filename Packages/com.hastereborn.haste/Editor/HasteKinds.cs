@@ -19,7 +19,7 @@ namespace Haste {
     Script    = 1 << 3,
     Hierarchy = 1 << 4,
     Component = 1 << 5,
-    Command   = 1 << 6,
+    Menu      = 1 << 6,
     Tool      = 1 << 7,
     Layout    = 1 << 8,
     Texture   = 1 << 9,
@@ -58,7 +58,7 @@ namespace Haste {
           if (item.path.StartsWith("Tools/", StringComparison.Ordinal)) {
             return HasteKind.Tool;
           }
-          return HasteKind.Command;
+          return HasteKind.Menu;
       }
 
       return FromExtension(item.pathLower);
@@ -146,7 +146,7 @@ namespace Haste {
         case HasteKind.Script:    return "CS";
         case HasteKind.Hierarchy: return "GO";
         case HasteKind.Component: return "CMP";
-        case HasteKind.Command:   return "CMD";
+        case HasteKind.Menu:      return "MENU";
         case HasteKind.Tool:      return "TL";
         case HasteKind.Layout:    return "LAY";
       }
@@ -180,23 +180,20 @@ namespace Haste {
         case HasteKind.Model:     return "model";
         case HasteKind.Shader:    return "shader";
         case HasteKind.Font:      return "font";
-        case HasteKind.Command | HasteKind.Tool: return "command";
-        case HasteKind.Command:   return "command";
+        case HasteKind.Menu | HasteKind.Tool: return "menu";
+        case HasteKind.Menu:      return "menu";
       }
       return "";
     }
 
-    // Tokens the query can start with, longest first so "script" wins over "s".
-    //
-    // "?" is deliberately mapped to commands rather than a settings kind of its own:
+    // "?" is deliberately mapped to menu items rather than a settings kind of its own:
     // Unity 6 exposes exactly one settings menu item ("Edit/Project Settings..."), not one
     // per page, so a settings scope would hold a single row. Reaching individual pages
     // needs SettingsService, which is not part of this pass.
-    static readonly string[] tokenNames = {
-      "hierarchy", "component", "prefab", "script", "layout", "asset", "scene",
-      "cmd", "tool", "cs", "go", "go", "a", "p", "s", "h", "l",
-    };
-
+    //
+    // A `tokenNames` array used to sit here listing the tokens "longest first". Nothing
+    // read it -- TryParseToken's switch is the only parser -- so it was a second list to
+    // keep in step with no way to notice when it drifted.
     public static bool TryParseToken(string token, out HasteKind kinds) {
       kinds = HasteKind.None;
       if (string.IsNullOrEmpty(token)) {
@@ -204,14 +201,17 @@ namespace Haste {
       }
 
       switch (token.ToLowerInvariant()) {
+        // "menu" is the name; "command" and "cmd" still parse because they were the
+        // name until recently and are what fingers remember. They are not advertised.
         case ">":
+        case "menu":
         case "cmd":
-        case "command":  kinds = HasteKind.Command | HasteKind.Tool; return true;
+        case "command":  kinds = HasteKind.Menu | HasteKind.Tool; return true;
         case "#":
         case "component": kinds = HasteKind.Component; return true;
         case "?":
         case "setting":
-        case "settings": kinds = HasteKind.Command; return true;
+        case "settings": kinds = HasteKind.Menu; return true;
         // No single-letter aliases for "asset" or "scene". "a" is equally a start for
         // anim, animator, audio and asset; "s" for scene, script, shader, sound and
         // sprite. Picking a winner would be arbitrary, and the loser would be unreachable.
@@ -349,7 +349,7 @@ namespace Haste {
       HasteKind.Font,
       HasteKind.Hierarchy,
       HasteKind.Component,
-      HasteKind.Command,
+      HasteKind.Menu,
       HasteKind.Tool,
       HasteKind.Layout,
     };

@@ -22,7 +22,7 @@ namespace Haste {
     DoubleTapShiftEnabled,
     DoubleTapShiftWindowMs,
     DoubleTapShiftDiagnostics,
-    // Suffixed with the kind name, like Source: "Haste:Weight:Command".
+    // Suffixed with the kind name, like Source: "Haste:Weight:Hierarchy".
     Weight,
     // Suffixed with a MENU ROOT, like "Haste:MenuWeight:Tools". Deliberately not sharing
     // the Weight prefix: "Component" is both a HasteKind and a menu root, and one prefix

@@ -128,6 +128,11 @@ changelog for those releases is in the repository root.
   installed read-only. Pre-2.0 recency data is discarded rather than migrated: it
   identified items by an unstable hash that cannot be resolved back to an object.
 
+### Changed
+- The filter for menu items is called `menu`, not `command` — `t:menu`, or the `>`
+  sigil as before, and the chip reads "menu". `t:command` and `t:cmd` still work
+  but are no longer the name. The row badge reads `MENU`.
+
 ### Added
 - Menu items are now weighted by their menu rather than all together. Unity's own menus
   start demoted at 0.7 as before, but a menu your project added — `Tools`,

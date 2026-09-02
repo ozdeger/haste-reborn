@@ -75,6 +75,11 @@ the same source and want opposite treatment. The split is drawn at
 `HasteMenuItemSource.BuiltinRoots` — the editor's own menu bar starts at 0.7, anything a
 `[MenuItem]` invented starts at 1.0 and gets a slider as soon as it is discovered.
 
+The scope token for menu items is **`menu`** (`t:menu `, `menu:`, or the `>` sigil), and
+`HasteKind.Menu` is the kind behind it. `command` and `cmd` still parse — they were the
+name until this rename — but they are not advertised and they present as "menu", so the
+chip shows one word whichever was typed.
+
 1.4 Selection behaviour, which is subtler than it looks
 ---
 

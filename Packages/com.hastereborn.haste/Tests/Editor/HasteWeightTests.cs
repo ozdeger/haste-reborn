@@ -45,7 +45,7 @@ namespace Haste {
       // Menu kinds are deliberately absent from this table -- HasteMenuWeights weights
       // them by root instead. They keep a neutral 1.0 here so that anything still reading
       // the kind table does not double-apply a demotion.
-      foreach (var kind in new[] { HasteKind.Command, HasteKind.Tool, HasteKind.Component }) {
+      foreach (var kind in new[] { HasteKind.Menu, HasteKind.Tool, HasteKind.Component }) {
         Assert.That(HasteWeights.IsMenuDriven(kind), Is.True, kind.ToString());
         Assert.That(HasteWeights.Default(kind), Is.EqualTo(1.0f).Within(0.001f), kind.ToString());
       }
@@ -70,14 +70,14 @@ namespace Haste {
 
     [Test]
     public void SettingAWeightPersistsAndIsClamped() {
-      HasteWeights.Set(HasteKind.Command, 0.25f);
-      Assert.That(HasteWeights.Get(HasteKind.Command), Is.EqualTo(0.25f).Within(0.001f));
+      HasteWeights.Set(HasteKind.Menu, 0.25f);
+      Assert.That(HasteWeights.Get(HasteKind.Menu), Is.EqualTo(0.25f).Within(0.001f));
 
-      HasteWeights.Set(HasteKind.Command, 99f);
-      Assert.That(HasteWeights.Get(HasteKind.Command), Is.EqualTo(HasteWeights.Max).Within(0.001f));
+      HasteWeights.Set(HasteKind.Menu, 99f);
+      Assert.That(HasteWeights.Get(HasteKind.Menu), Is.EqualTo(HasteWeights.Max).Within(0.001f));
 
-      HasteWeights.Set(HasteKind.Command, -5f);
-      Assert.That(HasteWeights.Get(HasteKind.Command), Is.EqualTo(HasteWeights.Min).Within(0.001f));
+      HasteWeights.Set(HasteKind.Menu, -5f);
+      Assert.That(HasteWeights.Get(HasteKind.Menu), Is.EqualTo(HasteWeights.Min).Within(0.001f));
     }
 
     [Test]
@@ -102,7 +102,7 @@ namespace Haste {
 
       // The kind weight is not consulted at all for menu items, so changing it must not
       // move them. This is the regression that a leftover slider in preferences would be.
-      HasteWeights.Set(HasteKind.Command, 0.0f);
+      HasteWeights.Set(HasteKind.Menu, 0.0f);
       Assert.That(HasteWeights.For(unity), Is.EqualTo(0.3f).Within(0.001f));
     }
 

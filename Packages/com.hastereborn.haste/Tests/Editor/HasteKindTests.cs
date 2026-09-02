@@ -90,8 +90,8 @@ namespace Haste {
     public void Classify_SplitsMenuItemsByRoot() {
       Assert.That(HasteKinds.Classify(Menu("Component/Physics/Rigidbody")), Is.EqualTo(HasteKind.Component));
       Assert.That(HasteKinds.Classify(Menu("Tools/Atlas/Rebuild")), Is.EqualTo(HasteKind.Tool));
-      Assert.That(HasteKinds.Classify(Menu("File/Build Profiles")), Is.EqualTo(HasteKind.Command));
-      Assert.That(HasteKinds.Classify(Menu("Edit/Project Settings...")), Is.EqualTo(HasteKind.Command));
+      Assert.That(HasteKinds.Classify(Menu("File/Build Profiles")), Is.EqualTo(HasteKind.Menu));
+      Assert.That(HasteKinds.Classify(Menu("Edit/Project Settings...")), Is.EqualTo(HasteKind.Menu));
     }
 
     [Test]
@@ -118,7 +118,7 @@ namespace Haste {
 
       // A menu item ending in "..." must not be read as having an extension; see the
       // ellipsis fix in HasteStringUtils.
-      Assert.That(HasteKinds.Tag(Menu("File/Build Settings...")), Is.EqualTo("CMD"));
+      Assert.That(HasteKinds.Tag(Menu("File/Build Settings...")), Is.EqualTo("MENU"));
     }
 
     [Test]
@@ -131,13 +131,43 @@ namespace Haste {
 
       // Sigils bind without a colon; word tokens need one.
       Assert.That(HasteKinds.SplitScope(">build", out kinds, out token), Is.EqualTo("build"));
-      Assert.That(kinds, Is.EqualTo(HasteKind.Command | HasteKind.Tool));
+      Assert.That(kinds, Is.EqualTo(HasteKind.Menu | HasteKind.Tool));
       Assert.That(HasteKinds.SplitScope("#canvas", out kinds, out token), Is.EqualTo("canvas"));
       Assert.That(kinds, Is.EqualTo(HasteKind.Component));
 
       // Whitespace after the token is eaten, so "h: main camera" scopes and keeps 2 terms.
       Assert.That(HasteKinds.SplitScope("h:  main camera", out kinds, out token), Is.EqualTo("main camera"));
       Assert.That(kinds, Is.EqualTo(HasteKind.Hierarchy));
+    }
+
+    [Test]
+    public void MenuIsTheFilterNameAndTheOlderOnesStillParse() {
+      HasteKind kinds; string token;
+
+      Assert.That(HasteKinds.SplitScope("t:menu build", out kinds, out token), Is.EqualTo("build"));
+      Assert.That(kinds, Is.EqualTo(HasteKind.Menu | HasteKind.Tool));
+      Assert.That(token, Is.EqualTo("menu"));
+
+      Assert.That(HasteKinds.SplitScope("menu:build", out kinds, out token), Is.EqualTo("build"));
+      Assert.That(kinds, Is.EqualTo(HasteKind.Menu | HasteKind.Tool));
+
+      // "command" and "cmd" were the name until this rename and are what fingers
+      // remember, so they still parse -- but they present as "menu", so the chip shows one
+      // word whichever one was typed.
+      foreach (var alias in new[] { "command", "cmd" }) {
+        Assert.That(HasteKinds.SplitScope(alias + ":build", out kinds, out token),
+          Is.EqualTo("build"), alias);
+        Assert.That(kinds, Is.EqualTo(HasteKind.Menu | HasteKind.Tool), alias);
+        Assert.That(token, Is.EqualTo("menu"), alias);
+      }
+
+      // The sigil is unchanged.
+      Assert.That(HasteKinds.SplitScope(">build", out kinds, out token), Is.EqualTo("build"));
+      Assert.That(token, Is.EqualTo("menu"));
+
+      Assert.That(HasteKinds.Label(HasteKind.Menu), Is.EqualTo("menu"));
+      Assert.That(HasteKinds.Label(HasteKind.Menu | HasteKind.Tool), Is.EqualTo("menu"));
+      Assert.That(HasteKinds.Tag(Menu("File/Build Profiles")), Is.EqualTo("MENU"));
     }
 
     [Test]
@@ -208,7 +238,7 @@ namespace Haste {
       Assert.That(HasteKinds.Matches(HasteKind.Prefab, prefab), Is.True);
       Assert.That(HasteKinds.Matches(HasteKind.Prefab, script), Is.False);
       // A token naming several kinds matches any of them.
-      Assert.That(HasteKinds.Matches(HasteKind.Command | HasteKind.Tool, Menu("Tools/X/Y")), Is.True);
+      Assert.That(HasteKinds.Matches(HasteKind.Menu | HasteKind.Tool, Menu("Tools/X/Y")), Is.True);
     }
 
     [Test]
@@ -229,7 +259,7 @@ namespace Haste {
         Is.EqualTo(new[] { "Main Camera" }));
 
       // A token naming several kinds keeps all of them.
-      Assert.That(HasteKinds.Filter(results, HasteKind.Prefab | HasteKind.Command).Length, Is.EqualTo(2));
+      Assert.That(HasteKinds.Filter(results, HasteKind.Prefab | HasteKind.Menu).Length, Is.EqualTo(2));
 
       // Any is a pass-through, and returns the same array rather than copying it.
       Assert.That(HasteKinds.Filter(results, HasteKind.Any), Is.SameAs(results));

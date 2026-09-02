@@ -44,6 +44,7 @@ namespace Haste {
     static bool lastDiagnosticsSetting;
     static bool announcedCap;
     static bool announcedDisabled;
+    static bool lastFedShiftBit;
     static int diagnosticLines;
     static bool modifierWatchHooked;
 
@@ -267,7 +268,17 @@ namespace Haste {
 
         gesture.WindowSeconds = HasteSettings.DoubleTapShiftWindowMs / 1000.0;
 
-        if (gesture.Feed(type, key, modifiers, EditorApplication.timeSinceStartup, IsSuppressed())) {
+        var reason = SuppressionReason();
+
+        if (HasteSettings.DoubleTapShiftDiagnostics && reason != null && shiftBit != lastFedShiftBit) {
+          Log("suppressed: " + reason);
+        }
+        lastFedShiftBit = shiftBit;
+
+        if (gesture.Feed(type, key, modifiers, EditorApplication.timeSinceStartup, reason != null)) {
+          if (HasteSettings.DoubleTapShiftDiagnostics) {
+            Log("FIRED -- opening the palette");
+          }
           // Deferred: opening a window during event dispatch corrupts Unity's layout state.
           EditorApplication.delayCall += HasteSpotlightWindow.Open;
         }
@@ -293,26 +304,38 @@ namespace Haste {
     // edited removes the largest false-positive class outright -- Hierarchy renames,
     // Inspector fields, search boxes, Haste's own query field, and IME input where a bare
     // Shift is a mode toggle.
-    static bool IsSuppressed() {
-      if (EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling) {
-        return true;
+    //
+    // Returns the REASON rather than a bool, because a silent suppression is
+    // indistinguishable from a broken hook: the events still log, the gesture never fires,
+    // and nothing says why. That cost a full diagnostic round trip.
+    static string SuppressionReason() {
+      if (EditorApplication.isPlayingOrWillChangePlaymode) {
+        return "play mode";
       }
-
-      if (Haste.IsApplicationBusy) {
-        return true;
+      if (EditorApplication.isCompiling) {
+        return "compiling";
       }
-
-      if (EditorGUIUtility.editingTextField || EditorGUIUtility.textFieldHasSelection) {
-        return true;
+      if (!HasteSettings.Enabled) {
+        return "Haste is disabled in preferences";
       }
-
+      if (EditorApplication.isUpdating) {
+        return "asset database is updating";
+      }
+      if (EditorGUIUtility.editingTextField) {
+        return "a text field is being edited";
+      }
+      if (EditorGUIUtility.textFieldHasSelection) {
+        return "a text field has a selection";
+      }
       // A drag in progress: the Shift is snapping something, not asking for a palette.
       if (GUIUtility.hotControl != 0) {
-        return true;
+        return "a drag is in progress (hotControl=" + GUIUtility.hotControl + ")";
       }
-
       // Already open; a second gesture should not stack windows.
-      return HasteSpotlightWindow.IsOpen;
+      if (HasteSpotlightWindow.IsOpen) {
+        return "the palette is already open";
+      }
+      return null;
     }
   }
 }

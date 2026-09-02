@@ -179,9 +179,10 @@ namespace Haste {
         root.styleSheets.Add(sheet);
       }
 
-      // Two elements, not one. The window's root cannot be rounded -- an editor window is
-      // an opaque rectangle -- so it paints the design's backdrop colour, and the rounded
-      // frame sits inside it. See the note in the stylesheet.
+      // Two elements, not one: the outer is the window's own root, which exists whether
+      // or not it is used, and the inner carries the palette's border and clipping. Both
+      // are square -- see the note in the stylesheet for why the design's 12px radius
+      // cannot be applied to a Unity popup.
       root.AddToClassList("haste-backdrop");
 
       var frame = new VisualElement();

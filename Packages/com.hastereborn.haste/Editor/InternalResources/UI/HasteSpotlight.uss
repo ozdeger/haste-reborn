@@ -9,16 +9,24 @@
  *     outside itself to cast onto anyway.
  */
 
-/* The window's own root. It must be OPAQUE and square: an editor window is a rectangular
- * surface with no per-pixel transparency, so a radius here does not round the window --
- * it carves the corners out of the content and lets whatever the editor paints underneath
- * show through, which is lighter than the palette and reads as a border.
+/* The window is SQUARE, and the design's 12px radius is deliberately not applied here.
  *
- * #141414 is the design's own backdrop colour (the card the window sits on in artboard
- * 1a), so the corners left by the frame's radius look deliberate rather than like a leak. */
+ * An editor window is a rectangular surface with no per-pixel transparency, so a radius
+ * on the outermost element does not round the window -- it carves the corners out of the
+ * palette and lets whatever is behind it show through. The frame used to carry the radius
+ * with a darker backdrop behind it so the carved corners read as intentional, but the
+ * result is a rounded card sitting on a visible square plate, which is not what the design
+ * shows and not what any other Unity popup looks like. Square is the honest version.
+ *
+ * Rounding the window for real needs per-pixel window transparency, which UI Toolkit does
+ * not expose. The radius stays on everything INSIDE -- rows, chips, badges -- where there
+ * is a real surface behind it to round against.
+ *
+ * The two elements remain because the outer one is the window's own root, which has to
+ * exist regardless; it just paints the same colour now so no sliver of it can show. */
 .haste-backdrop {
     flex-grow: 1;
-    background-color: #141414;
+    background-color: #232323;
 }
 
 .haste-root {
@@ -26,7 +34,6 @@
     background-color: #232323;
     border-width: 1px;
     border-color: #0d0d0d;
-    border-radius: 12px;
     overflow: hidden;
 }
 

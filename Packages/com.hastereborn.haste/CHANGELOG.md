@@ -129,6 +129,11 @@ changelog for those releases is in the repository root.
   identified items by an unstable hash that cannot be resolved back to an object.
 
 ### Changed
+- The palette window is square. The design's 12px radius cannot round a Unity
+  popup — an editor window has no per-pixel transparency, so the radius carved
+  the corners out and left a rounded card sitting on a visible darker plate.
+  Rows, chips and badges keep their radius, where there is a real surface to
+  round against.
 - The actions pane no longer lists the `Assets` menu's project-wide entries —
   `Refresh`, `Reimport All`, `Import New Asset…`, `Import Package`,
   `Open C# Project`, `Update UXML Schema`, `View in Import Activity Window`, and

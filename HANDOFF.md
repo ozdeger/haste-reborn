@@ -669,11 +669,12 @@ From the palette rewrite, in the order worth checking:
 - **That it opens at all, focused, with the caret in the field.** `Update` closes the
   window when it is not the focused window, and only a `hasBeenFocused` guard stops that
   firing on the frames between `ShowPopup` and focus arriving.
-- **The corners.** The design has a 12px radius and a large drop shadow. USS has no
-  box-shadow at all, so the shadow is simply absent; the radius is applied, but a Unity
-  popup is an opaque rectangular OS window, so the corners may well render square. If they
-  do, that is a platform limit rather than a bug — worth confirming before anyone tries to
-  "fix" it.
+- ~~**The corners.**~~ SETTLED, and the answer was worse than "renders square": the radius
+  DID apply, carving the palette's corners away and showing the backdrop plate behind them,
+  so the window read as a rounded card on a dark rectangle. The window is square now.
+  Rounding it for real needs per-pixel window transparency, which UI Toolkit does not
+  expose; the radius stays on rows, chips and badges, which have a surface behind them.
+  The design's drop shadow is still simply absent — USS has no box-shadow.
 - **The text field.** Unity's `TextField` has its own nested input element and default
   chrome; the stylesheet targets `.unity-text-field__input` to strip it. If a border or a
   pale background survives, that selector is the place to look.

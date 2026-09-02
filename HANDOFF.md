@@ -631,14 +631,14 @@ implemented: the `[Shortcut]` binding and the double-tap-Shift gesture.
 
 From the palette rewrite, in the order worth checking:
 
-- **Arrow-key scrolling in both lists.** Both keep one row of context in the direction of
-  travel, by scrolling to the NEXT row and then to the highlighted one. `ScrollToItem` on
-  its own scrolls the minimum distance, which is not symmetric when the viewport is not a
-  whole number of rows tall: it revealed the next row going down and nothing going up. The
-  actions pane additionally needs `GeometryChangedEvent` rather than `schedule.Execute` --
-  a row built this frame has no size, and `ScrollTo` on a zero-sized element silently does
-  nothing, which is why scheduling it for the next frame still left the pane unscrolled.
-  None of this has a headless surface.
+- **Arrow-key scrolling in the actions pane.** It needs `GeometryChangedEvent` rather than
+  `schedule.Execute` -- a row built this frame has no size, and `ScrollTo` on a zero-sized
+  element silently does nothing, which is why scheduling it for the next frame still left
+  the pane unscrolled. No headless surface.
+  **Not a bug:** `ScrollToItem` is asymmetric, revealing the row after the highlighted one
+  going down but nothing going up. That is Unity's own list behaviour, shared with every
+  ListView in the editor. An override was written and taken back out; matching the rest of
+  the editor is worth more than the symmetry. Do not re-add it.
 - **The favourite chord.** `Alt+Enter` is claimed on the root in `TrickleDown` and
   resolved before every other Enter binding, so it beats Reveal, Open and RunAction rather
   than racing them. It is a modified Enter rather than a letter because any letter chord

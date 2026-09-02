@@ -521,12 +521,9 @@ namespace Haste {
       SyncStatus();
     }
 
-    void RebuildActions(int direction = 0) {
+    void RebuildActions() {
       actionsList.Clear();
-
       VisualElement selectedRow = null;
-      VisualElement lookaheadRow = null;
-      var lookahead = actionIndex + (direction > 0 ? 1 : direction < 0 ? -1 : 0);
 
       for (var i = 0; i < actions.Count; i++) {
         var index = i;
@@ -540,9 +537,6 @@ namespace Haste {
 
         if (i == actionIndex) {
           selectedRow = row;
-        }
-        if (i == lookahead) {
-          lookaheadRow = row;
         }
 
         var label = new Label(action.Label);
@@ -566,21 +560,17 @@ namespace Haste {
         actionsList.Add(row);
       }
 
-      ScrollActionIntoView(selectedRow, lookaheadRow);
+      ScrollActionIntoView(selectedRow);
     }
 
     VisualElement pendingActionRow;
-    VisualElement pendingActionLookahead;
 
-    // Same one-row lookahead as the results list, and for the same reason.
-    //
     // The rows were just built and have no geometry yet, and ScrollTo on a zero-sized
     // element does nothing -- which is why scheduling this for the next frame was not
     // enough and the pane did not scroll at all. GeometryChangedEvent is the moment the
     // row actually has a size, the same trick FocusQuery uses on the text field.
-    void ScrollActionIntoView(VisualElement selected, VisualElement lookahead) {
+    void ScrollActionIntoView(VisualElement selected) {
       pendingActionRow = selected;
-      pendingActionLookahead = lookahead;
 
       if (selected == null) {
         return;
@@ -605,10 +595,6 @@ namespace Haste {
       if (pendingActionRow == null || pendingActionRow.panel == null) {
         return;
       }
-
-      if (pendingActionLookahead != null && pendingActionLookahead.panel != null) {
-        actionsList.ScrollTo(pendingActionLookahead);
-      }
       actionsList.ScrollTo(pendingActionRow);
     }
 
@@ -617,7 +603,7 @@ namespace Haste {
         return;
       }
       actionIndex = ((actionIndex + delta) % actions.Count + actions.Count) % actions.Count;
-      RebuildActions(delta);
+      RebuildActions();
     }
 
     void RunAction(int index) {
@@ -1116,7 +1102,7 @@ namespace Haste {
 
     // ------------------------------------------------------------ selection
 
-    void SetHighlighted(int index, bool syncListView, int direction = 0) {
+    void SetHighlighted(int index, bool syncListView) {
       if (results.Length == 0) {
         return;
       }
@@ -1126,7 +1112,7 @@ namespace Haste {
       if (syncListView) {
         listView.SetSelectionWithoutNotify(new[] { highlighted });
       }
-      ScrollHighlightIntoView(direction);
+      listView.ScrollToItem(highlighted);
       listView.RefreshItems();
       SyncStatus();
 
@@ -1140,33 +1126,15 @@ namespace Haste {
       }
     }
 
-    // One row of lookahead in the direction of travel, and the SAME one in both
-    // directions.
+    // Scrolling is deliberately left to ListView.ScrollToItem, above, which scrolls the
+    // minimum distance that makes the row visible.
     //
-    // ScrollToItem on its own scrolls the minimum distance that makes the row visible,
-    // which is not symmetric in practice: moving down it revealed the next row as well,
-    // because the viewport is not a whole number of rows tall and it aligns to one;
-    // moving up it revealed nothing until the highlight was already off the top. So going
-    // down you could see where you were heading and going up you could not.
-    //
-    // Scrolling to the NEXT row first and then to the highlighted one gives the same
-    // one-row margin whichever way you are going. The second call is a no-op once the
-    // first has done its work, since the highlighted row is adjacent and now on screen.
-    //
-    // The direction is the one that was TRAVELLED, which stays right across the wrap:
-    // pressing down on the last row wraps to the first, and the lookahead is then row 1 --
-    // still the row you are heading towards. Out of range at either end means there is
-    // nothing to look ahead to, which is the correct answer, not an edge case.
-    void ScrollHighlightIntoView(int direction) {
-      if (direction != 0) {
-        var lookahead = highlighted + (direction > 0 ? 1 : -1);
-        if (lookahead >= 0 && lookahead < results.Length) {
-          listView.ScrollToItem(lookahead);
-        }
-      }
-      listView.ScrollToItem(highlighted);
-    }
-
+    // That is not symmetric -- moving down tends to reveal the row after the highlighted
+    // one, moving up does not -- and an override that kept a row of context in the
+    // direction of travel was written and then taken back out. The asymmetry is Unity's
+    // own list behaviour, shared with every other ListView in the editor, and matching the
+    // rest of the editor is worth more than a margin nobody asked for. Do not re-add it
+    // without a reason better than symmetry.
     void Move(int delta) {
       if (results.Length == 0) {
         return;
@@ -1174,7 +1142,7 @@ namespace Haste {
       var next = highlighted + delta;
       // Wrap, as the design's own arrow handling does.
       next = ((next % results.Length) + results.Length) % results.Length;
-      SetHighlighted(next, true, delta);
+      SetHighlighted(next, true);
     }
 
     void ToggleMultiSelection(int index) {

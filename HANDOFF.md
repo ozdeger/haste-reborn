@@ -9,6 +9,13 @@ Written against commit history through the Unity 6 revival. Facts labelled **mea
 were obtained by running Unity 6000.0.80f1 or 6000.3.17f1, not from documentation — Unity's
 docs are stale in several of these areas.
 
+**Read 6.3 first if you are picking this up.** The document was originally written on a
+Windows machine with no Mac, and that shaped several of its conclusions. Development has
+since moved to macOS with 6000.3.17f1, where the suite is green — but **6000.0.80f1 is not
+installed there**, so the dual-editor verification the rest of this document assumes is
+currently single-editor. Anything below that says "verified on both" was verified by
+someone else, on a machine this one is not.
+
 ---
 
 Part 1 — What the tool actually does
@@ -393,14 +400,15 @@ own name. Real, but narrow.
 The lesson for the rest of this document: it was written partly from reading, and a claim
 about impact is not the same as a claim about behaviour. Check which one you are relying on.
 
-4.3 Other known-but-unfixed items
+4.3 ~~Other known-but-unfixed items~~ — all FIXED
 ---
 
-- ~~`HasteIndex.Remove` decrements `Count` unconditionally, even for an item that was never
-  present.~~ **Fixed** alongside 4.1: the index now keeps an authoritative item set, so
-  `Count` is exact, removing something never added is a no-op, and adding twice counts once.
-All three of the following are now **fixed**, and each is pinned so it cannot come back.
+Every item once listed here is now fixed, and each is pinned so it cannot come back. They
+are kept, struck through, because what each one *was* explains the shape of the fix.
 
+- ~~`HasteIndex.Remove` decrements `Count` unconditionally, even for an item that was never
+  present.~~ **Fixed** alongside 4.1: the index keeps an authoritative item set, so `Count`
+  is exact, removing something never added is a no-op, and adding twice counts once.
 - ~~`Haste.Update`'s frame budget captures `start` once outside the loop while accumulating
   elapsed time each iteration, producing a triangular sum — so the 16 ms budget is
   exhausted early.~~ The series was `t + 2t + 3t + …` instead of `n·t`, so the loop stopped
@@ -422,12 +430,12 @@ All three of the following are now **fixed**, and each is pinned so it cannot co
   early rather than throwing on the first `EditorStyles` read. The test that pins this
   would previously have *hung the whole run* rather than failed it.
 
-A fourth item, found while widening the index, is **fixed**: `HasteScoring`'s
-first-character rungs indexed into `nameLower[0]` unguarded, and
+One more, found while widening the index rather than inherited from this list:
+`HasteScoring`'s first-character rungs indexed into `nameLower[0]` unguarded, and
 `GetFileNameWithoutExtension` returns `""` for a path that is nothing but an extension — so
-a GameObject named `.x` threw `IndexOutOfRangeException` out of the scorer. This one is a
-good illustration of 6.4's first rule: it compiled cleanly and no test reached it until one
-was written for it.
+a GameObject named `.x` threw `IndexOutOfRangeException` out of the scorer. A good
+illustration of 6.4's first rule: it compiled cleanly, and no test reached it until one was
+written for it.
 
 ---
 

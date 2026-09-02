@@ -136,6 +136,17 @@ namespace Haste {
           }
         }
 
+        if (HasteDoubleTapShift.IsDisabled) {
+          EditorGUILayout.Space();
+          EditorGUILayout.HelpBox(
+            "Double-tap Shift switched itself off this session, either because it fired " +
+            "repeatedly or because the editor hook failed. The keyboard shortcut is " +
+            "unaffected.", MessageType.Warning);
+          if (GUILayout.Button("Reset double-tap state", GUILayout.Width(180))) {
+            HasteDoubleTapShift.ResetState();
+          }
+        }
+
         EditorGUILayout.Space();
         EditorGUILayout.HelpBox(
           "Tap Shift twice, quickly, to open Haste. It is ignored while you are typing in " +

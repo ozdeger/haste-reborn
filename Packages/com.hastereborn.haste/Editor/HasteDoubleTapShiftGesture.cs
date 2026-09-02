@@ -61,6 +61,14 @@ namespace Haste {
 
     public bool TrippedBreaker { get; private set; }
 
+    // Clears a tripped breaker. Without this a false positive disables the gesture for
+    // the rest of the domain with no way back.
+    public void ClearBreaker() {
+      TrippedBreaker = false;
+      firesInWindow = 0;
+      breakerWindowStartedAt = 0.0;
+    }
+
     public void Reset() {
       phase = Phase.Idle;
       firstTapKey = KeyCode.None;

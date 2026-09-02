@@ -41,6 +41,9 @@ namespace Haste {
     // Diagnostics state. Only touched when the preference is on.
     static EventModifiers lastSeenModifiers;
     static bool lastShiftBit;
+    static bool lastDiagnosticsSetting;
+    static bool announcedCap;
+    static bool announcedDisabled;
     static int diagnosticLines;
     static bool modifierWatchHooked;
 
@@ -105,6 +108,48 @@ namespace Haste {
       }
     }
 
+    // Re-arms the line cap when the preference is switched on, and explains itself if
+    // the gesture is already disabled -- otherwise turning logging on after a degrade
+    // produces silence and no reason for it.
+    static void SyncDiagnostics() {
+      var on = HasteSettings.DoubleTapShiftDiagnostics;
+      if (on == lastDiagnosticsSetting) {
+        return;
+      }
+      lastDiagnosticsSetting = on;
+
+      if (!on) {
+        return;
+      }
+
+      diagnosticLines = 0;
+      announcedCap = false;
+
+      if (disabledPermanently && !announcedDisabled) {
+        announcedDisabled = true;
+        Debug.LogWarning("[Haste] Key logging is on, but double-tap Shift is currently " +
+          "disabled (it degraded earlier this session). Events are still logged. Use " +
+          "\"Reset double-tap state\" in Preferences > Haste to re-enable the gesture.");
+      }
+    }
+
+    // Clears a degrade so the gesture can be tried again without a domain reload. There
+    // was previously no way back at all.
+    public static void ResetState() {
+      disabledPermanently = false;
+      announcedDisabled = false;
+      announcedCap = false;
+      diagnosticLines = 0;
+      consecutiveFailures = 0;
+      gesture.ClearBreaker();
+      gesture.Reset();
+      Hook();
+    }
+
+    public static bool IsDisabled {
+      get { return disabledPermanently; }
+    }
+
     static void OnModifierKeysChanged() {
       if (!HasteSettings.DoubleTapShiftDiagnostics) {
         return;
@@ -112,11 +157,23 @@ namespace Haste {
       Log("modifierKeysChanged");
     }
 
+    // Capped so a stuck state cannot bury the console -- but it SAYS SO when it stops.
+    // The first version just went quiet at 300 lines, which reads exactly like the hook
+    // having died.
+    const int MaxDiagnosticLines = 2000;
+
     static void Log(string message) {
-      // Capped so a stuck state cannot bury the console.
-      if (diagnosticLines++ > 300) {
+      if (diagnosticLines >= MaxDiagnosticLines) {
+        if (!announcedCap) {
+          announcedCap = true;
+          Debug.LogWarning("[Haste] Key logging reached " + MaxDiagnosticLines +
+            " lines and stopped. Toggle it off and on again in Preferences > Haste to " +
+            "start a fresh run.");
+        }
         return;
       }
+
+      diagnosticLines++;
       Debug.Log(string.Format("[Haste] {0}  t={1:0.000}", message, EditorApplication.timeSinceStartup));
     }
 
@@ -131,14 +188,17 @@ namespace Haste {
       var previous = lastSeenModifiers;
       lastSeenModifiers = modifiers;
 
-      var noisy = type == EventType.Layout || type == EventType.Repaint ||
-                  type == EventType.MouseMove || type == EventType.MouseDrag;
-
-      if (noisy && !changed) {
+      // Only what bears on the gesture: a modifier change, or a key event.
+      //
+      // The first version logged every event type that was not Layout/Repaint/MouseMove/
+      // MouseDrag, which still leaves MouseEnterWindow, MouseLeaveWindow, ValidateCommand,
+      // ExecuteCommand, ContextClick and Used -- all of which flood during ordinary editor
+      // use. It exhausted its own line cap within seconds and then went silent.
+      if (!changed && type != EventType.KeyDown && type != EventType.KeyUp) {
         return;
       }
 
-      Log(string.Format("{0,-12} key={1,-12} mods={2}{3}",
+      Log(string.Format("{0,-14} key={1,-12} mods={2}{3}",
         type, key, modifiers, changed ? "  (was " + previous + ")" : ""));
     }
 
@@ -172,18 +232,23 @@ namespace Haste {
     // the remaining invocations and kills every shortcut in the editor -- presenting as a
     // Unity bug. Nothing may escape.
     static void OnBeforeEventProcessed(EventType type, KeyCode key, EventModifiers modifiers) {
-      if (disabledPermanently) {
-        return;
-      }
-
       try {
-        if (!HasteSettings.DoubleTapShiftEnabled) {
-          gesture.Reset();
-          return;
-        }
+        // Diagnostics run BEFORE the disabled check on purpose. They used to sit after it,
+        // so once the breaker tripped the logging died with it -- and the console said
+        // nothing about why, which looks identical to the hook never having worked.
+        SyncDiagnostics();
 
         if (HasteSettings.DoubleTapShiftDiagnostics) {
           LogEvent(type, key, modifiers);
+        }
+
+        if (disabledPermanently) {
+          return;
+        }
+
+        if (!HasteSettings.DoubleTapShiftEnabled) {
+          gesture.Reset();
+          return;
         }
 
         // Repaint and Layout arrive constantly, and IsSuppressed touches half a dozen

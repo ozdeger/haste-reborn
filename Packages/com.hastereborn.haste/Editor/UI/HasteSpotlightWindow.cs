@@ -79,6 +79,7 @@ namespace Haste {
     Label messageTitle;
     Label messageHint;
     Label statusLabel;
+    Label placeholder;
     Label countLabel;
     VisualElement footerIcon;
 
@@ -158,19 +159,27 @@ namespace Haste {
 
     public void CreateGUI() {
       var root = rootVisualElement;
-      root.AddToClassList("haste-root");
 
       var sheet = HasteResources.Load<StyleSheet>("UI/HasteSpotlight.uss");
       if (sheet != null) {
         root.styleSheets.Add(sheet);
       }
 
-      root.Add(BuildHeader());
-      root.Add(BuildHints());
-      root.Add(Divider());
-      root.Add(BuildBody());
-      root.Add(Divider());
-      root.Add(BuildFooter());
+      // Two elements, not one. The window's root cannot be rounded -- an editor window is
+      // an opaque rectangle -- so it paints the design's backdrop colour, and the rounded
+      // frame sits inside it. See the note in the stylesheet.
+      root.AddToClassList("haste-backdrop");
+
+      var frame = new VisualElement();
+      frame.AddToClassList("haste-root");
+      root.Add(frame);
+
+      frame.Add(BuildHeader());
+      frame.Add(BuildHints());
+      frame.Add(Divider());
+      frame.Add(BuildBody());
+      frame.Add(Divider());
+      frame.Add(BuildFooter());
 
       // TrickleDown so the arrow keys reach us before the text field consumes them.
       root.RegisterCallback<KeyDownEvent>(OnKeyDown, TrickleDown.TrickleDown);
@@ -204,10 +213,20 @@ namespace Haste {
       scopeChip.RegisterCallback<MouseDownEvent>(evt => { ClearScope(); evt.StopPropagation(); });
       header.Add(scopeChip);
 
+      var slot = new VisualElement();
+      slot.AddToClassList("haste-query-slot");
+
       queryField = new TextField();
       queryField.AddToClassList("haste-query");
       queryField.RegisterValueChangedCallback(evt => OnQueryChanged(evt.newValue));
-      header.Add(queryField);
+      slot.Add(queryField);
+
+      placeholder = new Label("Search assets, objects, commands…");
+      placeholder.AddToClassList("haste-placeholder");
+      placeholder.pickingMode = PickingMode.Ignore;
+      slot.Add(placeholder);
+
+      header.Add(slot);
 
       countLabel = new Label();
       countLabel.AddToClassList("haste-count");
@@ -420,7 +439,15 @@ namespace Haste {
       }
 
       query = value;
+      SyncPlaceholder();
       Research();
+    }
+
+    void SyncPlaceholder() {
+      if (placeholder != null) {
+        placeholder.style.display =
+          string.IsNullOrEmpty(query) ? DisplayStyle.Flex : DisplayStyle.None;
+      }
     }
 
     void ClearScope() {

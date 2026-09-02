@@ -147,7 +147,8 @@ namespace Haste {
       var text = File.ReadAllText(path);
 
       foreach (var required in new[] {
-        ".haste-root", ".haste-header", ".haste-badge", ".haste-scope", ".haste-query",
+        ".haste-backdrop", ".haste-root", ".haste-header", ".haste-badge", ".haste-scope",
+        ".haste-query", ".haste-query-slot", ".haste-placeholder",
         ".haste-hints", ".haste-hint", ".haste-divider", ".haste-body", ".haste-list",
         ".haste-row", ".haste-row--highlighted", ".haste-tag", ".haste-name",
         ".haste-name--prefab", ".haste-name--broken", ".haste-name--disabled",

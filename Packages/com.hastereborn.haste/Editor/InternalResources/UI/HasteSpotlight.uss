@@ -11,6 +11,18 @@
  *     pane -- out of scope for this pass.
  */
 
+/* The window's own root. It must be OPAQUE and square: an editor window is a rectangular
+ * surface with no per-pixel transparency, so a radius here does not round the window --
+ * it carves the corners out of the content and lets whatever the editor paints underneath
+ * show through, which is lighter than the palette and reads as a border.
+ *
+ * #141414 is the design's own backdrop colour (the card the window sits on in artboard
+ * 1a), so the corners left by the frame's radius look deliberate rather than like a leak. */
+.haste-backdrop {
+    flex-grow: 1;
+    background-color: #141414;
+}
+
 .haste-root {
     flex-grow: 1;
     background-color: #232323;
@@ -70,9 +82,24 @@
     margin-left: 6px;
 }
 
+/* Wraps the field so the placeholder can sit on top of it. */
+.haste-query-slot {
+    flex-grow: 1;
+    justify-content: center;
+}
+
 .haste-query {
     flex-grow: 1;
     margin: 0;
+}
+
+/* Unity's TextField has no placeholder, so this is a label laid over the field. It
+ * ignores picking so clicks still land on the input underneath. */
+.haste-placeholder {
+    position: absolute;
+    left: 2px;
+    font-size: 19px;
+    color: #5c5c5c;
 }
 
 .haste-query > .unity-text-field__input,

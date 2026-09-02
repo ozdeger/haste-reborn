@@ -143,8 +143,11 @@ changelog for those releases is in the repository root.
   that had no size yet, which does nothing.
 
 ### Changed
-- Moving between levels of a context menu slides like moving into it did, instead
-  of snapping. The slide is faster overall — 0.12s and ease-out, where an
+- Moving between levels of a context menu animates instead of snapping: a short
+  14px throw in the direction you are going, plus a fade. The full-width slide it
+  replaced dragged a pane of wide rows across the screen, which reads as
+  direction but is unpleasant to watch.
+- The slide into the actions pane is faster — 0.12s and ease-out, where an
   ease-in-out curve's slow start was most of what read as a wait.
 - The palette header shows Haste's own mark instead of the placeholder letter
   the design comp used.

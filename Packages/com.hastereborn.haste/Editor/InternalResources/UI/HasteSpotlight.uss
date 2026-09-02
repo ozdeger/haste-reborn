@@ -48,18 +48,18 @@
     padding-left: 16px;
 }
 
-/* Haste's mark. The typography here is gone with the placeholder letter it centred --
- * the badge carries haste_icon.png now, drawn inside the plate rather than filling it. */
+/* Haste's mark, sitting straight against the query text with nothing around it.
+ *
+ * The plate and its border were there to give the placeholder LETTER a shape to sit in.
+ * A logo does not need one -- and an 18px flame inside a 26px chip was small enough to
+ * read as a smudge rather than as a mark. It fills the height of the query row now, which
+ * is what the chip was taking up anyway. */
 .haste-badge {
-    width: 26px;
-    height: 26px;
+    width: 30px;
+    height: 30px;
     flex-shrink: 0;
-    border-radius: 6px;
-    background-color: #343434;
-    border-width: 1px;
-    border-color: #3f3f3f;
-    margin-right: 12px;
-    background-size: 18px 18px;
+    margin-right: 10px;
+    background-size: 30px 30px;
     background-position: center;
     background-repeat: no-repeat;
 }
@@ -239,30 +239,46 @@
  * results list beside it: 32px tall, 10px of side padding, a 7px radius, and the same two
  * greys for hover and selection. They sit side by side in the track, so anything that did
  * not line up read as a mistake -- which is what it was. */
-/* Moving between LEVELS of a context menu gets the same motion as moving into it, and
- * the same numbers, so the two read as one gesture rather than two behaviours. The pane
- * only ever holds one level, so what slides is the new one arriving -- there is no
- * outgoing copy to cross-fade against. */
+/* Moving between LEVELS of a context menu: a SHORT throw plus a fade, not a full-width
+ * slide.
+ *
+ * The full-width version travelled the whole pane, which on rows this wide means a lot of
+ * text crossing a lot of screen at speed -- legible as direction, unpleasant to look at,
+ * and the wider the window the worse it gets, because the distance grows while the
+ * duration does not.
+ *
+ * 14px carries the direction just as clearly. Direction in a transition is read from
+ * which WAY something moves, not from how far, and once the fade is doing the work of
+ * saying "this is different content" the offset only has to hint. The result is softer to
+ * look at and reads as faster despite being about the same length, because nothing is
+ * ever moving quickly.
+ *
+ * Note this is NOT the same mechanism as .haste-track's slide, which is structural -- the
+ * track really does move the actions pane in from off-screen. This one is content being
+ * replaced in a pane that is already where it belongs. */
 .haste-actions-list {
     flex-grow: 1;
     padding-right: 8px;
     padding-left: 8px;
     translate: 0 0;
-    transition-property: translate;
-    transition-duration: 0.12s;
+    opacity: 1;
+    transition-property: translate, opacity;
+    transition-duration: 0.11s;
     transition-timing-function: ease-out;
 }
 
-/* The starting offset, worn for exactly one frame. The zero duration is what makes the
- * jump to the edge instant, so only the journey back to 0 is animated -- without it the
- * list would slide out and then back in, taking twice as long to say half as much. */
+/* The starting state, worn for exactly one frame. The zero duration is what makes the
+ * jump to it instant, so only the journey back is animated -- without it the list would
+ * travel out and then back, taking twice as long to say half as much. */
 .haste-actions-list--from-right {
-    translate: 100% 0;
+    translate: 14px 0;
+    opacity: 0;
     transition-duration: 0s;
 }
 
 .haste-actions-list--from-left {
-    translate: -100% 0;
+    translate: -14px 0;
+    opacity: 0;
     transition-duration: 0s;
 }
 

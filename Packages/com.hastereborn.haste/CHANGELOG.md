@@ -139,6 +139,10 @@ changelog for those releases is in the repository root.
   GameObject's path changes when it is renamed, reparented or its scene closes.
 
 ### Changed
+- Type filters are now recognised **anywhere in the query**, not only at the
+  front. Search for `popup`, then type ` t:prefab ` on the end and it becomes a
+  chip like it always should have. `prefab:` works the same way. Sigils (`>`,
+  `#`, `?`) still only bind at the very start, where they are unambiguous.
 - The palette window is square. The design's 12px radius cannot round a Unity
   popup — an editor window has no per-pixel transparency, so the radius carved
   the corners out and left a rounded card sitting on a visible darker plate.

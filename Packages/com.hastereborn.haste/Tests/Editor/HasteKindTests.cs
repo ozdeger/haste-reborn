@@ -171,6 +171,51 @@ namespace Haste {
     }
 
     [Test]
+    public void SplitScope_FindsATokenAnywhereNotJustAtTheFront() {
+      HasteKind kinds; string token;
+
+      // The order people actually work in: type something, look, then narrow. Before this
+      // the token sat there as literal text and the search returned nothing, because
+      // every term has to match.
+      Assert.That(HasteKinds.SplitScope("popup t:prefab ", out kinds, out token), Is.EqualTo("popup "));
+      Assert.That(kinds, Is.EqualTo(HasteKind.Prefab));
+      Assert.That(token, Is.EqualTo("prefab"));
+
+      Assert.That(HasteKinds.SplitScope("popup prefab:", out kinds, out token), Is.EqualTo("popup "));
+      Assert.That(kinds, Is.EqualTo(HasteKind.Prefab));
+
+      // And with text on both sides, the query closes up rather than keeping the gap.
+      Assert.That(HasteKinds.SplitScope("main t:prefab camera", out kinds, out token),
+        Is.EqualTo("main camera"));
+      Assert.That(kinds, Is.EqualTo(HasteKind.Prefab));
+
+      Assert.That(HasteKinds.SplitScope("main scene:camera", out kinds, out token),
+        Is.EqualTo("main camera"));
+      Assert.That(kinds, Is.EqualTo(HasteKind.Scene));
+    }
+
+    [Test]
+    public void SplitScope_WillNotPeelATokenOutOfTheTailOfAPath() {
+      HasteKind kinds; string token;
+
+      // The word runs back to the previous SPACE, not to the previous separator, so a
+      // path that happens to end in a type name is left alone.
+      Assert.That(HasteKinds.SplitScope("Assets/prefab:x", out kinds, out token),
+        Is.EqualTo("Assets/prefab:x"));
+      Assert.That(kinds, Is.EqualTo(HasteKind.Any));
+
+      // A sigil only binds at the very start -- mid-query it is a character being typed.
+      Assert.That(HasteKinds.SplitScope("popup >", out kinds, out token), Is.EqualTo("popup >"));
+      Assert.That(kinds, Is.EqualTo(HasteKind.Any));
+
+      // An unterminated t: later in the query does not stop an earlier real token, and
+      // vice versa: the scan keeps going rather than giving up on the first colon.
+      Assert.That(HasteKinds.SplitScope("a:b popup prefab:", out kinds, out token),
+        Is.EqualTo("a:b popup "));
+      Assert.That(kinds, Is.EqualTo(HasteKind.Prefab));
+    }
+
+    [Test]
     public void SplitScope_DoesNotCommitWhileTheTypeNameIsStillBeingTyped() {
       HasteKind kinds; string token;
 

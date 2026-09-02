@@ -889,6 +889,14 @@ namespace Haste {
           scopeKinds = kinds;
           scopeToken = token;
           queryField.SetValueWithoutNotify(rest);
+
+          // The token can now be lifted out of the MIDDLE of the query, which rewrites
+          // the field under the caret. Put it back at the end, where the person typing
+          // was: leaving it at a stale index would drop the next character somewhere
+          // they were not looking.
+          queryField.textSelection.cursorIndex = rest.Length;
+          queryField.textSelection.selectIndex = rest.Length;
+
           value = rest;
           SyncScopeChrome();
         }

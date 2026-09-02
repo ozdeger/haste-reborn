@@ -268,7 +268,10 @@ namespace Haste {
         return query;
       }
 
-      // Single-character sigils bind immediately; word tokens need their colon.
+      // Single-character sigils bind immediately, and ONLY at the very start. A ">" in
+      // the middle of a query is far more likely to be something someone is typing than a
+      // scope, and unlike the colon forms there is no punctuation making the intent
+      // explicit.
       var head = query[0];
       if (head == '>' || head == '#' || head == '?') {
         if (TryParseToken(head.ToString(), out kinds)) {
@@ -277,9 +280,26 @@ namespace Haste {
         }
       }
 
-      var colon = query.IndexOf(':');
-      if (colon > 0) {
-        var word = query.Substring(0, colon);
+      // Word tokens are found ANYWHERE in the query, not only at the front.
+      //
+      // Typing the scope first is a thing you have to decide before you start, and people
+      // do not: they type "popup", look at the results, and then narrow. Requiring the
+      // token to lead meant that "popup t:prefab " just sat there as literal text and
+      // quietly returned nothing, because every term has to match.
+      for (var colon = query.IndexOf(':'); colon >= 0; colon = query.IndexOf(':', colon + 1)) {
+        if (colon == 0) {
+          continue;
+        }
+
+        // The word runs back to the previous space, so in "Assets/prefab:" the word is
+        // "Assets/prefab" and does not parse. A token has to be something typed on its
+        // own, never the tail of a path that happens to end in a type name.
+        var start = query.LastIndexOf(' ', colon - 1) + 1;
+        var word = query.Substring(start, colon - start);
+
+        if (word.Length == 0) {
+          continue;
+        }
 
         // "t:<type>" -- the syntax Unity's own Project window search uses, so it is what
         // people already have in their fingers. The type name runs to the first space.
@@ -298,27 +318,34 @@ namespace Haste {
           // Requiring the space costs nothing in practice: the chips insert one, and
           // typing a query after the tag produces one anyway.
           if (end < 0) {
-            kinds = HasteKind.Any;
-            return query;
+            continue;
           }
 
           if (TryParseToken(rest.Substring(0, end), out kinds)) {
             token = Label(kinds);
-            return rest.Substring(end + 1).TrimStart();
+            return Rejoin(query.Substring(0, start), rest.Substring(end + 1));
           }
 
-          kinds = HasteKind.Any;
-          return query;
+          continue;
         }
 
+        // The colon terminates this form by itself, so there is no prefix trap to guard
+        // against and it commits as soon as it is typed.
         if (TryParseToken(word, out kinds)) {
           token = Label(kinds);
-          return query.Substring(colon + 1).TrimStart();
+          return Rejoin(query.Substring(0, start), query.Substring(colon + 1));
         }
       }
 
       kinds = HasteKind.Any;
       return query;
+    }
+
+    // Puts the query back together once the token has been lifted out of the middle of
+    // it. `before` keeps its trailing space and `after` loses its leading one, so
+    // "popup t:prefab foo" closes up to "popup foo" rather than "popup  foo".
+    static string Rejoin(string before, string after) {
+      return before + after.TrimStart();
     }
 
     // Whether a row gets the Hierarchy window's colour coding -- prefab blue,

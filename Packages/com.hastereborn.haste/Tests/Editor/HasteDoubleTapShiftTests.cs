@@ -32,12 +32,14 @@ namespace Haste {
 
     void Wait(double seconds) { now += seconds; }
 
-    // A clean double tap: down, up, down, up, all inside the windows.
+    // A clean double tap. It completes on the second PRESS -- the release afterwards is
+    // fed for realism but is not what fires.
     bool Tap(KeyCode key = KeyCode.LeftShift) {
       Down(key); Wait(0.05); Up(key);
       Wait(0.10);
-      Down(key); Wait(0.05);
-      return Up(key);
+      var fired = Down(key);
+      Wait(0.05); Up(key);
+      return fired;
     }
 
     [Test]
@@ -49,14 +51,32 @@ namespace Haste {
     }
 
     [Test]
-    public void ItFiresOnTheSecondKeyUpAndNotBefore() {
+    public void ItFiresOnTheSecondPressNotItsRelease() {
+      // Measured against 105 real gestures: waiting for the release costs 88ms of median
+      // latency -- most of the lag between tapping and being able to type -- and avoids
+      // exactly one misfire. Double-click fires on the second press for the same reason.
       Assert.That(Down(), Is.False, "first down");
       Wait(0.05);
       Assert.That(Up(), Is.False, "first up");
       Wait(0.10);
-      Assert.That(Down(), Is.False, "second down must not fire -- the release is the gesture");
+      Assert.That(Down(), Is.True, "the second press is the gesture");
       Wait(0.05);
-      Assert.That(Up(), Is.True);
+      Assert.That(Up(), Is.False, "and the release afterwards does nothing");
+    }
+
+    [Test]
+    public void OnlyTheFirstTapsHoldIsChecked() {
+      // The second cannot be: the decision is made before the key comes up. This is the
+      // one thing given up by firing on the press, and it is recorded rather than hidden.
+      Down(); Wait(0.60);
+      Assert.That(Up(), Is.False, "a long FIRST press is still a hold, not a tap");
+
+      SetUp();
+      Down(); Wait(0.05); Up();
+      Wait(0.10);
+      Assert.That(Down(), Is.True, "and the second press fires however long it is then held");
+      Wait(0.60);
+      Assert.That(Up(), Is.False);
     }
 
     [Test]
@@ -86,8 +106,7 @@ namespace Haste {
       Bits(EventModifiers.Shift); Wait(0.05);
       Bits(EventModifiers.None);
       Wait(0.10);
-      Bits(EventModifiers.Shift); Wait(0.05);
-      Assert.That(Bits(EventModifiers.None), Is.True);
+      Assert.That(Bits(EventModifiers.Shift), Is.True);
     }
 
     [Test]
@@ -99,8 +118,7 @@ namespace Haste {
       for (var i = 0; i < 10; i++) { Wait(0.003); Bits(EventModifiers.Shift); }
       Bits(EventModifiers.None);
       Wait(0.05);
-      Bits(EventModifiers.Shift); Wait(0.03);
-      Assert.That(Bits(EventModifiers.None), Is.True,
+      Assert.That(Bits(EventModifiers.Shift), Is.True,
         "the flood should have been ignored, leaving one clean tap either side");
     }
 
@@ -111,8 +129,7 @@ namespace Haste {
       // disable the gesture outright.
       Bits(EventModifiers.Shift); Wait(0.05); Bits(EventModifiers.None);
       Wait(0.10);
-      Bits(EventModifiers.Shift); Wait(0.05);
-      Assert.That(Bits(EventModifiers.None), Is.True);
+      Assert.That(Bits(EventModifiers.Shift), Is.True);
     }
 
     [Test]
@@ -120,12 +137,6 @@ namespace Haste {
       Down();
       Wait(0.60);
       Assert.That(Up(), Is.False, "a long first press is someone reaching for a capital");
-
-      SetUp();
-      Down(); Wait(0.05); Up();
-      Wait(0.10);
-      Down(); Wait(0.60);
-      Assert.That(Up(), Is.False, "a long second press is a hold too");
     }
 
     [Test]
@@ -135,29 +146,26 @@ namespace Haste {
       // in sixteen, which is most of what "it works sometimes" was.
       Down(); Wait(0.117); Up();
       Wait(0.09);
-      Down(); Wait(0.117);
-      Assert.That(Up(), Is.True, "a p90 tap must not be mistaken for a hold");
+      Assert.That(Down(), Is.True, "a p90 first tap must not be mistaken for a hold");
     }
 
     [Test]
     public void TwoTapsTooFarApartAreTwoSeparateTaps() {
       Down(); Wait(0.05); Up();
       Wait(1.0);
-      Down(); Wait(0.05);
-      Assert.That(Up(), Is.False);
+      Assert.That(Down(), Is.False);
+      Wait(0.05); Up();
 
       // ...and that late tap counts as a fresh first tap, so tapping again completes.
       Wait(0.10);
-      Down(); Wait(0.05);
-      Assert.That(Up(), Is.True);
+      Assert.That(Down(), Is.True);
     }
 
     [Test]
     public void BothTapsMustBeTheSamePhysicalShift() {
       Down(KeyCode.LeftShift); Wait(0.05); Up(KeyCode.LeftShift);
       Wait(0.10);
-      Down(KeyCode.RightShift); Wait(0.05);
-      Assert.That(Up(KeyCode.RightShift), Is.False);
+      Assert.That(Down(KeyCode.RightShift), Is.False);
     }
 
     [Test]
@@ -166,8 +174,7 @@ namespace Haste {
       Wait(0.05);
       gesture.Feed(EventType.KeyDown, KeyCode.H, EventModifiers.Shift, now, false);
       Wait(0.05);
-      Down(); Wait(0.05);
-      Assert.That(Up(), Is.False, "Shift, H, Shift is typing, not the gesture");
+      Assert.That(Down(), Is.False, "Shift, H, Shift is typing, not the gesture");
     }
 
     [Test]
@@ -179,7 +186,10 @@ namespace Haste {
       Wait(0.02);
       gesture.Feed(EventType.KeyUp, KeyCode.H, EventModifiers.Shift, now, false);
       Wait(0.02);
-      Assert.That(Bits(EventModifiers.None), Is.False);
+      Bits(EventModifiers.None);
+      Wait(0.05);
+      Assert.That(Bits(EventModifiers.Shift), Is.False,
+        "the letter reset it, so this press starts a fresh first tap");
     }
 
     [Test]
@@ -188,8 +198,7 @@ namespace Haste {
       Down(mods: EventModifiers.Shift | EventModifiers.Command);
       Wait(0.05); Up();
       Wait(0.10);
-      Down(); Wait(0.05);
-      Assert.That(Up(), Is.False);
+      Assert.That(Down(), Is.False);
     }
 
     [Test]
@@ -199,8 +208,7 @@ namespace Haste {
       Bits(EventModifiers.Command | EventModifiers.Shift); Wait(0.05);
       Bits(EventModifiers.Command);
       Wait(0.05);
-      Bits(EventModifiers.Command | EventModifiers.Shift); Wait(0.05);
-      Assert.That(Bits(EventModifiers.Command), Is.False);
+      Assert.That(Bits(EventModifiers.Command | EventModifiers.Shift), Is.False);
     }
 
     [Test]
@@ -210,8 +218,7 @@ namespace Haste {
                   EventModifiers.Numeric | EventModifiers.FunctionKey;
       Down(mods: noisy); Wait(0.05); Up();
       Wait(0.10);
-      Down(mods: noisy); Wait(0.05);
-      Assert.That(Up(), Is.True);
+      Assert.That(Down(mods: noisy), Is.True);
     }
 
     [Test]
@@ -222,8 +229,7 @@ namespace Haste {
         Down(); Wait(0.05); Up();
         gesture.Feed(mouse, KeyCode.None, EventModifiers.Shift, now, false);
         Wait(0.05);
-        Down(); Wait(0.05);
-        Assert.That(Up(), Is.False, mouse + " should have reset the gesture");
+        Assert.That(Down(), Is.False, mouse + " should have reset the gesture");
       }
     }
 
@@ -234,8 +240,7 @@ namespace Haste {
       Down(); Wait(0.05); Up();
       gesture.Feed(EventType.KeyDown, KeyCode.LeftShift, EventModifiers.Shift, now, true);
       Wait(0.05);
-      Down(); Wait(0.05);
-      Assert.That(Up(), Is.False);
+      Assert.That(Down(), Is.False);
     }
 
     [Test]
@@ -274,8 +279,7 @@ namespace Haste {
       gesture.WindowSeconds = 0.5;
       Down(); Wait(0.05); Up();
       Wait(0.40);
-      Down(); Wait(0.05);
-      Assert.That(Up(), Is.True, "a widened window should accept a slower tap");
+      Assert.That(Down(), Is.True, "a widened window should accept a slower tap");
     }
   }
 }

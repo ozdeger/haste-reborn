@@ -25,7 +25,7 @@ namespace Haste {
   // Everything here is a rejection rule. The gesture fires only when nothing objected.
   public class HasteDoubleTapShiftGesture {
 
-    enum Phase { Idle, FirstDown, FirstUp, SecondDown }
+    enum Phase { Idle, FirstDown, FirstUp }
 
     // Bits the OS sets incidentally and that say nothing about intent.
     const EventModifiers Incidental =
@@ -35,8 +35,11 @@ namespace Haste {
     // Edit > Shortcuts, so Haste's preferences are the only place to widen or escape it.
     public double WindowSeconds = 0.25;
 
-    // A press held longer than this was a hold, not a tap -- someone reaching for a
-    // capital letter, or shift-dragging in the Scene view.
+    // How long the FIRST press may be held and still count as a tap. A longer press was a
+    // hold -- someone reaching for a capital, or shift-dragging in the Scene view.
+    //
+    // Only the first tap is checked; the gesture fires on the second press, before its
+    // release is known. See OnShiftDown.
     //
     // 250ms, not the 120ms activation-design.md guessed at. Measured from 77 real taps in
     // an editor log: median 82ms, p90 117ms, and 6% of genuine taps ran past 120ms -- the
@@ -67,9 +70,9 @@ namespace Haste {
 
     // KeyCode.None when the transition arrived on an event that carries no key -- which on
     // macOS is every time.
-    KeyCode firstTapKey, secondTapKey;
+    KeyCode firstTapKey;
 
-    double firstDownAt, firstUpAt, secondDownAt;
+    double firstDownAt, firstUpAt;
 
     int firesInWindow;
     double breakerWindowStartedAt;
@@ -87,7 +90,6 @@ namespace Haste {
     public void Reset() {
       phase = Phase.Idle;
       firstTapKey = KeyCode.None;
-      secondTapKey = KeyCode.None;
     }
 
     // Same physical key, as far as can be told. Two known keycodes must match; an unknown
@@ -167,10 +169,20 @@ namespace Haste {
         // Too slow, or the other Shift key, is not this gesture -- but it is a perfectly
         // good start for the next one.
         if (SameKey(firstTapKey, key) && time - firstUpAt <= WindowSeconds) {
-          phase = Phase.SecondDown;
-          secondTapKey = key;
-          secondDownAt = time;
-          return false;
+          // Fire on the second PRESS, not its release.
+          //
+          // activation-design.md specified the release, to keep the "a tap is shorter than
+          // MaxTapSeconds" rule applying to both taps. Measured against 105 real gestures
+          // in an editor log, that costs 88 ms of median latency -- most of the lag between
+          // tapping and being able to type -- and buys exactly one avoided misfire.
+          //
+          // So the second tap's hold is no longer checked, because it cannot be: the
+          // decision is made before the key comes up. The residual failure is tapping
+          // Shift and then, within the window, pressing Shift and holding it for something
+          // else; that opens the palette, and Escape closes it and restores the selection.
+          // Double-click has always worked this way for the same reason.
+          Reset();
+          return RecordFire(time);
         }
       }
 
@@ -191,17 +203,6 @@ namespace Haste {
         return false;
       }
 
-      if (phase == Phase.SecondDown) {
-        var held = time - secondDownAt;
-        var matched = SameKey(secondTapKey, key);
-        Reset();
-
-        if (!matched || held > MaxTapSeconds) {
-          return false;
-        }
-        return RecordFire(time);
-      }
-
       Reset();
       return false;
     }
@@ -209,7 +210,6 @@ namespace Haste {
     void StartFirstTap(KeyCode key, double time) {
       phase = Phase.FirstDown;
       firstTapKey = key;
-      secondTapKey = KeyCode.None;
       firstDownAt = time;
     }
 

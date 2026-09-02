@@ -114,7 +114,8 @@ where bare Shift is a mode toggle. Ctrl/Cmd+Shift+K still works everywhere.
 
 The remaining invariants, none of them user-configurable:
 
-- fire on the second release, not the second press
+- ~~fire on the second release, not the second press~~ — **reversed, on measurement.** It
+  fires on the second PRESS. See below
 - ~~require a KeyUp between the two KeyDowns~~ — subsumed. Reading the modifier BIT makes
   key repeat structurally invisible: holding Shift leaves the bit set, so a repeat is not a
   transition at all
@@ -241,6 +242,24 @@ direction — too tight. From 154 Shift transitions captured in one session on
 | genuine holds (Shift used as a modifier) | 1300–1600 ms |
 | taps rejected by the original 120 ms limit | **6%** (5 of 77) |
 | gap between taps, median | 93 ms |
+
+Firing on the release was the other guess this document got wrong, and it was the one the
+user could feel. Across 105 completed gestures in the same log:
+
+| | fire on release | fire on press |
+|---|---|---|
+| opened correctly | 104 | 105 |
+| opened wrongly | 0 | **1** |
+| median latency | +88 ms | 0 |
+
+88 ms is most of the gap between tapping and being able to type, and it is why the palette
+appeared to "miss the first characters". The single wrong open is a Shift tap followed
+within the window by a Shift press held for something else; Escape closes the palette and
+restores the selection. Double-click has always fired on the second press for exactly this
+trade.
+
+The cost, stated plainly: **the second tap's hold is no longer checked, because it cannot
+be.** The decision is made before the key comes up. Only the first tap proves it was a tap.
 
 The 120 ms tap limit sat directly on top of the distribution it was meant to be clear of,
 so roughly one tap in sixteen was silently discarded. 250 ms sits in the wide gap between

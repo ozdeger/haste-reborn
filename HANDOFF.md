@@ -644,6 +644,11 @@ From the palette rewrite, in the order worth checking:
   going down but nothing going up. That is Unity's own list behaviour, shared with every
   ListView in the editor. An override was written and taken back out; matching the rest of
   the editor is worth more than the symmetry. Do not re-add it.
+- **Caret movement.** `Shift+Left` / `Shift+Right`, because the plain arrows drive the
+  palette. They are resolved by the key map rather than left to the text field: unhandled,
+  Shift+arrow reaches Unity's field and EXTENDS THE SELECTION, which is that chord's normal
+  meaning but not what is wanted from one standing in for the plain arrows. `MoveCaret`
+  sets cursorIndex and selectIndex together so the selection collapses.
 - **The favourite chord.** `Alt+Enter` is claimed on the root in `TrickleDown` and
   resolved before every other Enter binding, so it beats Reveal, Open and RunAction rather
   than racing them. It is a modified Enter rather than a letter because any letter chord

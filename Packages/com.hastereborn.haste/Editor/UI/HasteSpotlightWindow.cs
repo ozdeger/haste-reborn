@@ -1030,6 +1030,22 @@ namespace Haste {
       queryField.Focus();
     }
 
+    // Cursor and selection are set together, which collapses any selection and leaves a
+    // plain caret. Shift+arrow reaching Unity's field would have extended the selection
+    // instead -- correct for that chord in general, wrong for one standing in for the
+    // unmodified arrows.
+    void MoveCaret(int delta) {
+      if (queryField == null) {
+        return;
+      }
+
+      var length = (queryField.value ?? "").Length;
+      var next = Mathf.Clamp(queryField.textSelection.cursorIndex + delta, 0, length);
+
+      queryField.textSelection.cursorIndex = next;
+      queryField.textSelection.selectIndex = next;
+    }
+
     void SyncPlaceholder() {
       if (placeholder != null) {
         placeholder.style.display =
@@ -1304,6 +1320,8 @@ namespace Haste {
         case HasteKeyIntent.EnterSubmenu:      EnterSubmenu(); break;
         case HasteKeyIntent.LeaveSubmenu:      LeaveSubmenu(); break;
         case HasteKeyIntent.ToggleFavorite:    ToggleFavorite(highlighted); break;
+        case HasteKeyIntent.CaretLeft:         MoveCaret(-1); break;
+        case HasteKeyIntent.CaretRight:        MoveCaret(1); break;
       }
 
       // StopPropagation alone is enough, and PreventDefault is obsolete in Unity 6.

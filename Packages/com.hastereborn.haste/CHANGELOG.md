@@ -145,6 +145,8 @@ changelog for those releases is in the repository root.
   that had no size yet, which does nothing.
 
 ### Changed
+- `Shift+Left` and `Shift+Right` move the caret through the query, since the
+  plain arrows drive the palette. They move it rather than selecting with it.
 - Moving between levels of a context menu animates instead of snapping: a short
   14px throw in the direction you are going, plus a fade. The full-width slide it
   replaced dragged a pane of wide rows across the screen, which reads as

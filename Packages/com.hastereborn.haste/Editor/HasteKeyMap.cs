@@ -19,6 +19,8 @@ namespace Haste {
     ShowActions,        // Right arrow, or Cmd/Ctrl+K
     ClearScope,
     ToggleFavorite,     // Alt+Enter, from anywhere in the palette
+    CaretLeft,          // Shift+Left
+    CaretRight,         // Shift+Right
 
     HideActions,        // The left arrow at the top level of the pane
     ActionUp,
@@ -47,6 +49,22 @@ namespace Haste {
       // the same thing whether or not its actions are showing, and a chord that works
       // everywhere but one place is worse than one that works nowhere.
       //
+      // Plain Left and Right belong to the palette -- they open and close the actions
+      // pane and walk its levels -- so moving the caret through the query moves to
+      // Shift+Left and Shift+Right.
+      //
+      // These have to be resolved here rather than left to the text field. Unhandled,
+      // Shift+arrow reaches Unity's field and EXTENDS THE SELECTION, which is the normal
+      // meaning of that chord but not what is wanted when it is standing in for the plain
+      // arrows: the window collapses the selection so it behaves like an unmodified
+      // caret move.
+      if (shift && key == KeyCode.LeftArrow) {
+        return HasteKeyIntent.CaretLeft;
+      }
+      if (shift && key == KeyCode.RightArrow) {
+        return HasteKeyIntent.CaretRight;
+      }
+
       // A modified Enter rather than a letter: any letter chord is a character the text
       // field would otherwise be typing, and one that silently stops working the moment
       // something else claims it. Enter is already not a character.

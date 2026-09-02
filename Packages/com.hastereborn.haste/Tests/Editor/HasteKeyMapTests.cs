@@ -24,6 +24,31 @@ namespace Haste {
     }
 
     [Test]
+    public void ShiftArrowsMoveTheCaretBecausePlainArrowsAreTaken() {
+      // Left and Right drive the palette, so the caret gets the shifted pair.
+      Assert.That(Results(KeyCode.LeftArrow, shift: true), Is.EqualTo(HasteKeyIntent.CaretLeft));
+      Assert.That(Results(KeyCode.RightArrow, shift: true), Is.EqualTo(HasteKeyIntent.CaretRight));
+
+      // Including while the actions pane is open -- the query field holds focus the whole
+      // time it is up, so the caret is still there to move.
+      Assert.That(Actions(KeyCode.LeftArrow, shift: true), Is.EqualTo(HasteKeyIntent.CaretLeft));
+      Assert.That(Actions(KeyCode.RightArrow, shift: true), Is.EqualTo(HasteKeyIntent.CaretRight));
+      Assert.That(Actions(KeyCode.LeftArrow, shift: true, atRoot: false),
+        Is.EqualTo(HasteKeyIntent.CaretLeft));
+
+      // The unshifted pair is untouched, which is the whole point of moving the caret to
+      // the shifted one.
+      Assert.That(Results(KeyCode.RightArrow), Is.EqualTo(HasteKeyIntent.ShowActions));
+      Assert.That(Actions(KeyCode.RightArrow), Is.EqualTo(HasteKeyIntent.EnterSubmenu));
+      Assert.That(Actions(KeyCode.LeftArrow), Is.EqualTo(HasteKeyIntent.HideActions));
+      Assert.That(Actions(KeyCode.LeftArrow, atRoot: false), Is.EqualTo(HasteKeyIntent.LeaveSubmenu));
+
+      // Up and Down are not caret keys -- there is one line -- so Shift leaves them alone.
+      Assert.That(Results(KeyCode.UpArrow, shift: true), Is.EqualTo(HasteKeyIntent.MoveUp));
+      Assert.That(Actions(KeyCode.DownArrow, shift: true), Is.EqualTo(HasteKeyIntent.ActionDown));
+    }
+
+    [Test]
     public void TheActionsPaneNestsWithTheArrowKeys() {
       // A context menu has submenus, so the pane has levels. Right goes deeper, mirroring
       // the key that opened it.

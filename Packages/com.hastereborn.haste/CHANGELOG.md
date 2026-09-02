@@ -210,8 +210,9 @@ changelog for those releases is in the repository root.
   but are no longer the name. The row badge reads `MENU`.
 
 ### Fixed
-- The query line no longer moves when you type the first character. Its height
-  came from the text field, and Unity measures an empty one differently.
+- The query line and its caret no longer move when you type the first character.
+  Both the slot and the inner text element were sized by their content, and an
+  empty text field measures differently from one with a character in it.
 - The actions pane scrolls with the arrow keys at all — it was scrolling rows
   that had no size yet, which does nothing.
 

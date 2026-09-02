@@ -123,6 +123,7 @@
 .haste-query {
     flex-grow: 1;
     margin: 0;
+    height: 100%;
 }
 
 /* Unity's TextField has no placeholder, so this is a label laid over the field. It
@@ -149,8 +150,22 @@
     border-width: 0;
     padding: 0;
     margin: 0;
+    height: 100%;
     font-size: 19px;
     color: #f2f2f2;
+    -unity-text-align: middle-left;
+}
+
+/* The CARET is drawn inside the inner text element, not the input wrapper, and that
+ * element is sized by its content. With nothing typed there is nothing to measure, so it
+ * collapsed and the caret was drawn against the top of the row -- then dropped into place
+ * the moment there was a character to give it a height.
+ *
+ * Handing it the row's height makes empty and non-empty measure the same, which is the
+ * same fix as the fixed height on .haste-query-slot and for the same reason: nothing
+ * about this row should depend on whether it has text in it yet. */
+.haste-query .unity-text-element {
+    height: 100%;
     -unity-text-align: middle-left;
 }
 

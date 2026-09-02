@@ -39,6 +39,66 @@ namespace Haste {
       "File", "Edit", "Assets", "GameObject", "Component", "Window", "Help",
     };
 
+    // Every root the menu bar has right now: the editor's own, plus whatever [MenuItem]
+    // attributes invented. HasteMenuWeights lists these in preferences so a project's own
+    // tools menu can be weighted apart from Unity's.
+    //
+    // Sorted, and the editor's own first, because that is the order the menu bar uses and
+    // a preferences list that reshuffles itself between domain reloads is unusable.
+    public static string[] Roots {
+      get {
+        var extra = new List<string>(ExtraRoots);
+        extra.Sort(StringComparer.Ordinal);
+
+        var all = new List<string>(BuiltinRoots.Length + extra.Count);
+        all.AddRange(BuiltinRoots);
+        all.AddRange(extra);
+        return all.ToArray();
+      }
+    }
+
+    public static bool IsBuiltinRoot(string root) {
+      return MatchName(BuiltinRoots, root) != null;
+    }
+
+    // The interned BuiltinRoots entry a path sits under, or null. Compared in place so
+    // that weighting the ~500 stock menu items on every keystroke allocates nothing.
+    public static string MatchBuiltinRoot(string path) {
+      if (string.IsNullOrEmpty(path)) {
+        return null;
+      }
+
+      for (int i = 0; i < BuiltinRoots.Length; i++) {
+        var root = BuiltinRoots[i];
+
+        // Either the whole path IS the root, or the root is followed by a separator --
+        // "Editor" must not match the "Edit" menu.
+        if (path.Length < root.Length) {
+          continue;
+        }
+        if (path.Length > root.Length && path[root.Length] != '/') {
+          continue;
+        }
+        if (String.CompareOrdinal(path, 0, root, 0, root.Length) == 0) {
+          return root;
+        }
+      }
+
+      return null;
+    }
+
+    static string MatchName(string[] names, string name) {
+      if (string.IsNullOrEmpty(name)) {
+        return null;
+      }
+      for (int i = 0; i < names.Length; i++) {
+        if (String.Equals(names[i], name, StringComparison.Ordinal)) {
+          return names[i];
+        }
+      }
+      return null;
+    }
+
     // Actions Haste implements itself. They are deliberately not real menu items, so
     // enumeration never returns them; HasteActions holds the implementations.
     static readonly string[] CustomMenuItems = {

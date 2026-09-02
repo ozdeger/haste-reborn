@@ -128,6 +128,12 @@ changelog for those releases is in the repository root.
   installed read-only. Pre-2.0 recency data is discarded rather than migrated: it
   identified items by an unstable hash that cannot be resolved back to an object.
 
+### Added
+- Menu items are now weighted by their menu rather than all together. Unity's own menus
+  start demoted at 0.7 as before, but a menu your project added — `Tools`,
+  `Dev Tools`, anything a `[MenuItem]` invented — starts at 1.0 and gets its own
+  slider under Preferences > Haste > Weights by menu as soon as Haste sees it.
+
 ### Fixed
 - Pressing Enter on a project asset no longer logs an error instead of focusing it. Haste
   was still asking for Unity 5's `Window/Project` menu item, which Unity 6 moved under

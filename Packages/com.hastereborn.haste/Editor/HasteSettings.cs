@@ -24,6 +24,10 @@ namespace Haste {
     DoubleTapShiftDiagnostics,
     // Suffixed with the kind name, like Source: "Haste:Weight:Command".
     Weight,
+    // Suffixed with a MENU ROOT, like "Haste:MenuWeight:Tools". Deliberately not sharing
+    // the Weight prefix: "Component" is both a HasteKind and a menu root, and one prefix
+    // would have made those two settings the same stored value.
+    MenuWeight,
   }
 
   public delegate void SettingChangedHandler<T>(HasteSetting setting, T before, T after);

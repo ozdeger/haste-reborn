@@ -67,6 +67,14 @@ so `ALLCAPS/lowercase` yields `al` rather than exploding into every character.
 Hierarchy rows are colour-coded exactly like Unity's own Hierarchy window: normal, prefab
 blue, broken-prefab red, each dimmed when the object is inactive.
 
+Every result is multiplied by a weight after matching, so whole categories can be pushed
+down without being hidden (`HasteWeights`, per-user, in EditorPrefs). Menu items are the
+exception: they are weighted by **menu root** rather than by kind (`HasteMenuWeights`),
+because Unity's ~529 stock commands and a project's own `Dev Tools/` menu arrive through
+the same source and want opposite treatment. The split is drawn at
+`HasteMenuItemSource.BuiltinRoots` — the editor's own menu bar starts at 0.7, anything a
+`[MenuItem]` invented starts at 1.0 and gets a slider as soon as it is discovered.
+
 1.4 Selection behaviour, which is subtler than it looks
 ---
 
@@ -569,6 +577,12 @@ Left over from the palette work, in rough order of value:
   signal that does not exist yet.
 - **Row density** is fixed at the design's standard 32px. The design exposes compact (24)
   and two-line (40) as well; they would be a preference.
+- **The Layout source duplicates the Menu Item source.** Measured on 6000.3.17f1: the live
+  menu already contains `Window/Layouts/Default`, `/Tall`, `/Wide`, `/2 by 3`, `/4 Split`,
+  so `HasteLayoutSource` re-indexes paths `HasteMenuItemSource` has already yielded. Dedupe
+  is per-source, so a saved layout can appear twice, once weighted as `Layout` and once as
+  the `Window` menu root. The layout paths themselves are still correct — that was checked
+  when the `Window/Project` bug was fixed, and it is not another instance of it.
 
 3.2's `HierarchyProperty` note is worth reading before the incremental-indexing work: it is
 public in Unity 6 and gives name, depth, instanceID and `colorCode` with no managed object

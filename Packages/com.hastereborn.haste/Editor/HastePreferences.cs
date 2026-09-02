@@ -17,6 +17,21 @@ namespace Haste {
     // Built lazily rather than in a static initialiser: EditorStyles is unusable outside
     // an interactive editor, and guiHandler is the first point where it is safe to read.
     static bool showWeights;
+    static bool showMenuWeights;
+
+    // Built once per domain: reading it walks every loaded assembly looking for
+    // [MenuItem], which is ~120 ms, and OnGUI runs on every repaint. A new menu root
+    // requires a script compile, and that reloads the domain and clears this.
+    static string[] menuRoots;
+
+    static string[] MenuRoots {
+      get {
+        if (menuRoots == null) {
+          menuRoots = HasteMenuItemSource.Roots;
+        }
+        return menuRoots;
+      }
+    }
 
     static GUIStyle wrappedLabel;
 
@@ -169,6 +184,12 @@ namespace Haste {
         showWeights = EditorGUILayout.Foldout(showWeights, "Weights by type");
         if (showWeights) {
           foreach (var kind in HasteKinds.All) {
+            // Menu items are weighted by their root, below. Showing a slider here too
+            // would be a control that silently does nothing.
+            if (HasteWeights.IsMenuDriven(kind)) {
+              continue;
+            }
+
             var current = HasteWeights.Get(kind);
             var updated = EditorGUILayout.Slider(
               ObjectNames.NicifyVariableName(kind.ToString()),
@@ -185,11 +206,47 @@ namespace Haste {
         }
 
         EditorGUILayout.Space();
+
+        showMenuWeights = EditorGUILayout.Foldout(showMenuWeights, "Weights by menu");
+        if (showMenuWeights) {
+          var wasBuiltin = true;
+
+          foreach (var root in MenuRoots) {
+            var builtin = HasteMenuItemSource.IsBuiltinRoot(root);
+
+            // The editor's menus come first and the project's follow. The break between
+            // them is the whole reason this list exists, so it is drawn.
+            if (wasBuiltin && !builtin) {
+              EditorGUILayout.Space();
+              EditorGUILayout.LabelField("From this project and its packages",
+                EditorStyles.miniLabel);
+            }
+            wasBuiltin = builtin;
+
+            var current = HasteMenuWeights.Get(root);
+            var updated = EditorGUILayout.Slider(root, current,
+              HasteMenuWeights.Min, HasteMenuWeights.Max);
+            if (!Mathf.Approximately(updated, current)) {
+              HasteMenuWeights.Set(root, updated);
+            }
+          }
+
+          EditorGUILayout.Space();
+          if (GUILayout.Button("Reset Menu Weights", GUILayout.Width(148))) {
+            HasteMenuWeights.ResetToDefaults();
+          }
+        }
+
+        EditorGUILayout.Space();
         EditorGUILayout.HelpBox(
           "Multiplies the score of every result of that type, after matching. Use it to " +
-          "push whole categories down without hiding them \u2014 scene objects and menu " +
-          "commands start below 1 because there are a great many of them and they match " +
-          "short queries readily.\n\n" +
+          "push whole categories down without hiding them \u2014 scene objects start " +
+          "below 1 because there are a great many of them and they match short queries " +
+          "readily.\n\n" +
+          "Menu items are weighted by their menu instead, because they are not all alike: " +
+          "the ~529 commands Unity ships start at " + HasteMenuWeights.BuiltinDefault +
+          ", while a menu this project added \u2014 your own tools \u2014 starts at " +
+          HasteMenuWeights.DiscoveredDefault + " and is listed as soon as it is found.\n\n" +
           "1 leaves a type where the match quality puts it. 0 sinks it to the bottom; to " +
           "remove a type from results entirely, turn its source off above instead.\n\n" +
           "These are yours, not the project's \u2014 they stay on this machine.",

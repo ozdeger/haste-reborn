@@ -27,12 +27,13 @@ namespace Haste {
       // rarely what a search is for -- the strongest demotion.
       { HasteKind.Hierarchy, 0.5f },
 
-      // Menu items. Individually useful, collectively noisy: 529 of them ship in a stock
-      // editor and they match short queries very readily.
-      { HasteKind.Command,   0.7f },
-      { HasteKind.Tool,      0.7f },
-      { HasteKind.Component, 0.7f },
+      // Saved window layouts. Few, but almost never what a search is for.
       { HasteKind.Layout,    0.7f },
+
+      // Command, Tool and Component are all menu items and are NOT weighted here -- see
+      // HasteMenuWeights, which weights them by menu root instead so that a project's own
+      // tools menu can sit above Unity's 529 stock commands. They stay in HasteKind
+      // because scope tokens ("t:command") still classify by them.
     };
 
     static Dictionary<HasteKind, float> cache;
@@ -61,7 +62,16 @@ namespace Haste {
     }
 
     public static float For(HasteItem item) {
+      if (item != null && item.source == HasteMenuItemSource.NAME) {
+        return HasteMenuWeights.For(item);
+      }
       return Get(HasteKinds.Classify(item));
+    }
+
+    // Kinds whose weight comes from the menu root rather than this table. Preferences
+    // hides them so there is no slider that silently does nothing.
+    public static bool IsMenuDriven(HasteKind kind) {
+      return kind == HasteKind.Command || kind == HasteKind.Tool || kind == HasteKind.Component;
     }
 
     // Read once per domain rather than per item. Map applies this to every match, and

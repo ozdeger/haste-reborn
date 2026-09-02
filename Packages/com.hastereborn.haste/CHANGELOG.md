@@ -143,6 +143,9 @@ changelog for those releases is in the repository root.
   that had no size yet, which does nothing.
 
 ### Changed
+- Moving between levels of a context menu slides like moving into it did, instead
+  of snapping. The slide is faster overall — 0.12s and ease-out, where an
+  ease-in-out curve's slow start was most of what read as a wait.
 - The palette header shows Haste's own mark instead of the placeholder letter
   the design comp used.
 - Escape always closes Haste, wherever you are. It used to unwind one level of

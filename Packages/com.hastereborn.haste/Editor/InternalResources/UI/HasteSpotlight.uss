@@ -174,8 +174,12 @@
     height: 100%;
     translate: 0 0;
     transition-property: translate;
-    transition-duration: 0.18s;
-    transition-timing-function: ease-in-out;
+
+    /* ease-OUT, not ease-in-out: an in-out curve starts slowly, and on a movement this
+     * short the slow start is the whole of what reads as a wait before anything happens.
+     * 0.12s rather than 0.18 for the same reason. */
+    transition-duration: 0.12s;
+    transition-timing-function: ease-out;
 }
 
 .haste-track--actions {
@@ -235,10 +239,31 @@
  * results list beside it: 32px tall, 10px of side padding, a 7px radius, and the same two
  * greys for hover and selection. They sit side by side in the track, so anything that did
  * not line up read as a mistake -- which is what it was. */
+/* Moving between LEVELS of a context menu gets the same motion as moving into it, and
+ * the same numbers, so the two read as one gesture rather than two behaviours. The pane
+ * only ever holds one level, so what slides is the new one arriving -- there is no
+ * outgoing copy to cross-fade against. */
 .haste-actions-list {
     flex-grow: 1;
     padding-right: 8px;
     padding-left: 8px;
+    translate: 0 0;
+    transition-property: translate;
+    transition-duration: 0.12s;
+    transition-timing-function: ease-out;
+}
+
+/* The starting offset, worn for exactly one frame. The zero duration is what makes the
+ * jump to the edge instant, so only the journey back to 0 is animated -- without it the
+ * list would slide out and then back in, taking twice as long to say half as much. */
+.haste-actions-list--from-right {
+    translate: 100% 0;
+    transition-duration: 0s;
+}
+
+.haste-actions-list--from-left {
+    translate: -100% 0;
+    transition-duration: 0s;
 }
 
 .haste-pane-action {

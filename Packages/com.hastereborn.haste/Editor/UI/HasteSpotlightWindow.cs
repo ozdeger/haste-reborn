@@ -374,6 +374,9 @@ namespace Haste {
       var result = results[highlighted];
       actionTrail.Clear();
 
+      // A pane that was left mid-slide must not reopen holding the offset.
+      SlideActions(0);
+
       var root = HasteMenuTree.RootFor(result.Item);
       if (root != null) {
         // The menu has to be read with the row selected. Menu.GetEnabled runs the
@@ -492,7 +495,7 @@ namespace Haste {
       }
 
       actionTrail.Add(submenu);
-      RefreshActionLevel();
+      RefreshActionLevel(1);
     }
 
     void LeaveSubmenu() {
@@ -502,10 +505,13 @@ namespace Haste {
       }
 
       actionTrail.RemoveAt(actionTrail.Count - 1);
-      RefreshActionLevel();
+      RefreshActionLevel(-1);
     }
 
-    void RefreshActionLevel() {
+    const string SlideFromRight = "haste-actions-list--from-right";
+    const string SlideFromLeft = "haste-actions-list--from-left";
+
+    void RefreshActionLevel(int direction = 0) {
       if (highlighted < 0 || highlighted >= results.Length) {
         return;
       }
@@ -514,6 +520,26 @@ namespace Haste {
       actionIndex = 0;
       SyncPaneTitle();
       RebuildActions();
+      SlideActions(direction);
+    }
+
+    // The new level arrives from the side you are heading towards, matching the track's
+    // slide into the pane in the first place.
+    void SlideActions(int direction) {
+      actionsList.RemoveFromClassList(SlideFromRight);
+      actionsList.RemoveFromClassList(SlideFromLeft);
+
+      if (direction == 0) {
+        return;
+      }
+
+      var from = direction > 0 ? SlideFromRight : SlideFromLeft;
+      actionsList.AddToClassList(from);
+
+      // Removed on the NEXT frame rather than this one. Both styles would otherwise
+      // resolve in the same layout pass, the element would never be seen at the offset,
+      // and there would be no journey left to animate.
+      actionsList.schedule.Execute(() => actionsList.RemoveFromClassList(from));
     }
 
     void HideActions() {

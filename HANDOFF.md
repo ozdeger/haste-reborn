@@ -631,6 +631,11 @@ implemented: the `[Shortcut]` binding and the double-tap-Shift gesture.
 
 From the palette rewrite, in the order worth checking:
 
+- **The submenu slide.** Entering or leaving a submenu puts a one-frame offset class on
+  the list and removes it on the next frame, which is what leaves a journey for the
+  transition to animate. Both styles resolving in the same layout pass would mean no
+  animation at all, and there is no headless way to tell the difference -- if a level
+  change snaps instead of sliding, `SlideActions` is the place to look.
 - **Arrow-key scrolling in the actions pane.** It needs `GeometryChangedEvent` rather than
   `schedule.Execute` -- a row built this frame has no size, and `ScrollTo` on a zero-sized
   element silently does nothing, which is why scheduling it for the next frame still left

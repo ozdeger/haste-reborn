@@ -124,7 +124,7 @@ neither indexing nor searching can stall the editor.
 | `HasteStringUtils.cs` | Boundary extraction, subsequence matching, weighted-subsequence highlight indices, path helpers |
 | `HasteWatcher.cs`, `HasteWatcherManager.cs` | Per-source diffing re-crawlers emitting Created/Deleted |
 | `Items/HasteItem.cs` | One indexed thing: path, lowercased forms, boundaries, bitset, extension, recency |
-| `Sources/*.cs` | The four enumerators |
+| `Sources/*.cs` | The four enumerators. `HasteMenuItemSource` reads the editor's live menu tree; it used to ship hardcoded menu tables |
 | `Results/*.cs` | Per-source rendering and the `Action()`/`Select()` behaviour |
 | `GUI/*.cs` | IMGUI widgets, `IDisposable` layout wrappers, manual list virtualization |
 | `HasteWindow.cs` | The palette window and its 4-state machine (Intro/Loading/Results/Empty) |
@@ -247,12 +247,22 @@ Cecil also reads method bodies, which is how several of the findings below were 
   native walker Unity's own Hierarchy uses; gives name, depth, instanceID and `colorCode`
   with zero managed object loads, and `colorCode` is `{0 Normal, 1 Prefab, 2 BrokenPrefab}`.
 - **`ObjectChangeEvents.changesPublished`** — precise incremental hierarchy deltas.
-- **`Menu.GetMenuItems(path, includeSeparators, localized)`** — internal, returns 504–508
-  clean menu paths in ~2.3 ms. `Menu.GetMenuItems("")` returns **0**; there is no root
-  enumeration and no public root API.
+- **`Menu.GetMenuItems(path, includeSeparators, localized)`** — internal, returns
+  `ScriptingMenuItem[]` (`path`, `isSeparator`, `priority`). **Now in use**; measured on
+  6000.3.17f1/macOS it returns 529 clean paths across every root in **0.98 ms**, works
+  under `-batchmode -nographics`, and includes items declared by `[MenuItem]` attributes
+  (Haste's own `Window/Haste` shows up in it). Of those paths, none ends in `/`, none
+  carries a shortcut suffix, and none is duplicated.
+  `Menu.GetMenuItems("")` returns **0**; there is no root enumeration and no public root
+  API — so roots must be named, and the ones packages invent (`Services`) are found by
+  scanning `[MenuItem]` attributes for root names only.
 - **`EditorApplication.ExecuteMenuItem`** — now backed by the native menu tree and works for
   built-ins, which removes the reason `HasteActions.cs` exists.
-- **`Unsupported.GetSubmenus(root)`** — public fallback giving the same flattened path list.
+- **`Unsupported.GetSubmenus(root)`** — public, confirmed by call: returns the same 172
+  paths for `Component` that the internal API does. It is the degradation path in
+  `HasteMenuItemSource`, and the independent oracle the menu tests assert against.
+  `GetSubmenusIncludingSeparators` returns 224 for the same root (parent nodes and
+  separators), and `GetSubmenusCommands` returns command ids, not paths.
 - **`AssetDatabase.LoadAssetAtPath("Packages/<name>/...")`** — works for embedded and for
   read-only `Library/PackageCache` installs alike.
 
@@ -427,19 +437,61 @@ Part 5 — Current state and what is next
   pre-cache, and the resource-folder scan.
 - **The recall fix (4.1)** — interior matches are reachable, acronym ranking is preserved
   by damping rather than filtering, and the golden tables were re-baselined as a
-  deliberate diff. 70 tests, all passing.
+  deliberate diff.
+- **The trailing-ellipsis fix (4.2)**, and a correction to what that bug actually cost.
+- **The live-menu rewrite.** `HasteMenuItemSource` reads the editor's menu tree instead of
+  shipping hardcoded tables. This was the tool's biggest correctness problem and it was
+  measured, not guessed: of the 241 Unity 5 paths being indexed on 6000.3.17f1, **109
+  (45%) did not exist** — results that looked real and did nothing — while **384 real menu
+  items were missing**. Deleted with it: `MenuItemsUnity4.cs` and `MenuItemsUnity5.cs` (479
+  literals), `HasteVersionUtils.cs` (now unused), and 33 of the 44 `HasteActions`
+  fallbacks. 76 tests, all passing.
 
 5.2 Not done
 ---
 
-Phases 2 and 4–7 of the plan, in order: the obsolete-API burn-down; the live-menu rewrite
-that deletes 724 hardcoded menu paths and ~46 of 51 `HasteActions` fallbacks; event-driven
-incremental indexing with stable identity keys; the search-core rewrite; the UI Toolkit
-palette; and settings consolidation.
+The remaining phases, in order: the obsolete-API burn-down (**25 warnings left**, down
+from 32 — the menu work cleared 7); event-driven incremental indexing with stable identity
+keys; the rest of the search-core rewrite; the UI Toolkit palette; and settings
+consolidation.
+
+The remaining 25 obsolete warnings sit in four places, and they are not one job:
+`Haste.cs` (7 — `currentScene`, `projectWindowChanged`, `hierarchyWindowChanged`,
+`activeInstanceID`), `HasteHierarchyResult.cs` (6) and `HasteHierarchySource.cs` (3) — all
+`PrefabType`/`GetPrefabType`, which is a real behavioural migration to
+`GetPrefabAssetType` + `GetPrefabInstanceStatus`, not a rename — `HasteActions.cs` (7, the
+same prefab APIs inside the 11 surviving custom actions), plus one `EditorWindow.title` and
+one `[PreferenceItem]`.
 
 The UI decision is settled — **UI Toolkit**, added alongside the working IMGUI window and
 made default only once its own tests pass. See `Documentation~/activation-design.md` for the
 double-tap-Shift design, which is designed but not implemented.
+
+5.2.1 What the menu rewrite deliberately did not do
+---
+
+- **`ExecuteMenuItem` equivalence for the 10 live fallbacks is taken on trust.** Ten of the
+  33 deleted fallbacks (`Edit/Undo`, `Edit/Copy`, `File/New Scene`, …) were keyed on paths
+  that *do* still exist, so deleting them changes what runs. The grounds are 3.2's finding
+  that `ExecuteMenuItem` is backed by the same native menu tree the source now enumerates,
+  plus the observation that each deleted body was equivalent or worse — `File/New Scene`
+  called the obsolete `EditorApplication.NewScene()` rather than opening Unity 6's
+  scene-template dialog, and the clipboard entries posted a command event to
+  `EditorWindow.focusedWindow`, which can be null. **None of this was observed running.**
+  Press Undo, Copy and New Scene from the palette in a real editor before trusting it.
+- **The macOS application menu is gone from the index**, deliberately. `About Unity` and
+  `Settings…` live there, `Menu.GetMenuItems("Unity")` returns 0, and the old hardcoded
+  entries came with fallbacks that reflect into `UnityEditor.PreferencesWindow` — a type
+  whose continued existence nobody has checked. Re-adding them means a modern
+  implementation (`SettingsService.OpenUserPreferences`) and a platform-correct path, on a
+  machine that can test both platforms.
+- **Root discovery costs ~120 ms** and cannot be filtered down by assembly name: the cost
+  is spread across a hundred assemblies, and `Services` is declared by
+  `UnityEditor.Purchasing` and `UnityEditor.UnityConnectModule`, so excluding Unity's own
+  assemblies loses a real menu. It is cached per domain and deferred until after the
+  built-in roots have been yielded, so the ~500 common menu items are searchable in about
+  a millisecond and the scan is paid once, in the background, after them. If it ever needs
+  to be cheaper, the honest fix is a cache keyed on assembly MVIDs, not a name filter.
 
 5.3 Open product decisions
 ---

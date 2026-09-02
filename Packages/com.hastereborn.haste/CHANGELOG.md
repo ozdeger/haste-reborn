@@ -18,6 +18,12 @@ changelog for those releases is in the repository root.
   fuzzy-match highlighting, so behaviour changes are visible rather than silent.
 
 ### Changed
+- **Menu search now reads the editor's live menus** instead of a list of menu paths
+  captured from Unity 5. On Unity 6 that list was 45% wrong: 109 of its 241 paths no
+  longer existed, so Haste offered menu items that looked real and did nothing when you
+  pressed Enter, while 384 menu items that do exist were missing entirely. Haste now finds
+  built-in menus, package menus and your own `[MenuItem]` methods, including ones under a
+  menu root of your own invention.
 - **Search now finds interior matches.** A result used to be considered only if the first
   character you typed began a word in it, so `ollider` found nothing at all even though
   `Mesh Collider` was indexed, and `amera` could not find `Main Camera`. Both work now, as
@@ -67,6 +73,12 @@ changelog for those releases is in the repository root.
   every scheduler tick. Unity 5's older Mono tolerated it.
 
 ### Removed
+- The two hardcoded menu-path tables (Unity 4.6 and Unity 5, 479 string literals) and the
+  version check that chose between them.
+- 33 of the 44 entries in the menu-item action table: hand-written stand-ins for built-in
+  menu items from the days when `ExecuteMenuItem` could not reach them. 23 were keyed on
+  Unity 5 paths that no longer exist and could never fire; the other 10 shadowed working
+  menu items with worse behaviour. The 11 actions Haste implements itself are unchanged.
 - The Asset Store upsell and the free/Pro distinction.
 - The update checker, which polled a domain that no longer exists over the obsolete `WWW`
   class. It was the only network call in the tool.

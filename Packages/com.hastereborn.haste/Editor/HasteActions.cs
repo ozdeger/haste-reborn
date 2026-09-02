@@ -13,6 +13,18 @@ namespace Haste {
 
     public delegate void MenuItemFallbackDelegate();
 
+    // Implementations for the entries in HasteMenuItemSource.CustomMenuItems -- actions
+    // Haste offers that the editor has no menu item for. HasteMenuItemResult looks a path
+    // up here first and falls through to EditorApplication.ExecuteMenuItem.
+    //
+    // This table used to carry 33 more entries: hand-written stand-ins for built-in menu
+    // items, from the days when ExecuteMenuItem could not reach them. They are gone.
+    // Unity 6 backs ExecuteMenuItem with the same native menu tree the source now
+    // enumerates, and 23 of the 33 were keyed on Unity 5 paths that no longer exist, so
+    // they could never fire; the other 10 shadowed working menu items with worse
+    // behaviour -- "File/New Scene" ran the obsolete EditorApplication.NewScene() instead
+    // of opening Unity 6's scene-template dialog, and the clipboard entries posted a
+    // command event to EditorWindow.focusedWindow, which is null often enough to matter.
     public static IDictionary<string, MenuItemFallbackDelegate> MenuItemFallbacks = new Dictionary<string, MenuItemFallbackDelegate>() {
 
       #region CUSTOM
@@ -167,188 +179,8 @@ namespace Haste {
             PrefabUtility.ReconnectToLastPrefab(selectedObject);
           }
         }
-      } },
-      #endregion
-
-      { "Unity/About Unity...", () => { // OS X
-        var AboutWindow = typeof(EditorWindow).Assembly.GetType("UnityEditor.AboutWindow");
-        EditorWindow.GetWindow(AboutWindow, true, "About Unity");
-      } },
-
-      { "Help/About Unity...", () => { // Windows
-        var AboutWindow = typeof(EditorWindow).Assembly.GetType("UnityEditor.AboutWindow");
-        EditorWindow.GetWindow(AboutWindow, true, "About Unity");
-      } },
-
-      { "Unity/Preferences...", () => { // OS X
-        HasteReflection.Invoke(HasteReflection.EditorAssembly, "UnityEditor.PreferencesWindow", "ShowPreferencesWindow");
-      } },
-
-      { "File/Preferences...", () => { // Windows
-        HasteReflection.Invoke(HasteReflection.EditorAssembly, "UnityEditor.PreferencesWindow", "ShowPreferencesWindow");
-      } },
-
-      { "File/New Scene", () => {
-        EditorApplication.SaveCurrentSceneIfUserWantsTo();
-        EditorApplication.NewScene();
-      } },
-
-      { "File/Open Scene...", () => {
-        var scenePath = EditorUtility.OpenFilePanel("Load Scene", Application.dataPath, "unity");
-        if (scenePath.Length != 0) {
-          EditorApplication.SaveCurrentSceneIfUserWantsTo();
-          EditorApplication.OpenScene(scenePath);
-        }
-      } },
-
-      { "File/Save Scene", () => {
-        EditorApplication.SaveScene();
-      } },
-
-      { "File/Save Scene as...", () => {
-        EditorApplication.SaveScene(String.Empty, true);
-      } },
-
-      // { "File/New Project...", () => {
-      //   // TODO: Project wizard
-      //   throw new NotImplementedException();
-      // } },
-
-      // { "File/Open Project...", () => {
-      //   // TODO: Project wizard
-      //   throw new NotImplementedException();
-      // } },
-
-      { "File/Save Project", () => {
-        AssetDatabase.SaveAssets();
-      } },
-
-      { "File/Build Settings...", () => {
-        HasteReflection.Invoke(HasteReflection.EditorAssembly, "UnityEditor.BuildPlayerWindow", "ShowBuildPlayerWindow");
-      } },
-
-      { "File/Build & Run", () => {
-        HasteReflection.Invoke(HasteReflection.EditorAssembly, "UnityEditor.BuildPlayerWindow", "BuildPlayerAndRun");
-      } },
-
-      { "File/Build in Cloud...", () => {
-        Application.OpenURL("http://build.connect.unity3d.com/");
-      } },
-
-      { "Edit/Undo", () => {
-        Undo.PerformUndo();
-      } },
-
-      { "Edit/Redo", () => {
-        Undo.PerformRedo();
-      } },
-
-      { "Edit/Cut", () => {
-        EditorWindow.focusedWindow.SendEvent(EditorGUIUtility.CommandEvent("Cut"));
-      } },
-
-      { "Edit/Copy", () => {
-        EditorWindow.focusedWindow.SendEvent(EditorGUIUtility.CommandEvent("Copy"));
-      } },
-
-      { "Edit/Paste", () => {
-        EditorWindow.focusedWindow.SendEvent(EditorGUIUtility.CommandEvent("Paste"));
-      } },
-
-      { "Edit/Duplicate", () => {
-        EditorWindow.focusedWindow.SendEvent(EditorGUIUtility.CommandEvent("Duplicate"));
-      } },
-
-      { "Edit/Delete", () => {
-        EditorWindow.focusedWindow.SendEvent(EditorGUIUtility.CommandEvent("Delete"));
-      } },
-
-      { "Edit/Frame Selected", () => {
-        SceneView.lastActiveSceneView.FrameSelected();
-      } },
-
-      { "Edit/Lock View To Selected", () => {
-        SceneView.lastActiveSceneView.FrameSelected(true);
-      } },
-
-      { "Edit/Select All", () => {
-        EditorWindow.focusedWindow.SendEvent(EditorGUIUtility.CommandEvent("SelectAll"));
-      } },
-
-      { "Edit/Play", () => {
-        EditorApplication.isPlaying = !EditorApplication.isPlaying;
-      } },
-
-      { "Edit/Pause", () => {
-        EditorApplication.isPaused = !EditorApplication.isPaused;
-      } },
-
-      { "Edit/Step", () => {
-        EditorApplication.Step();
-      } },
-
-      // { "Edit/Project Settings/Input", () => {
-      //   TODO: throw new NotImplementedException();
-      // } },
-
-      { "Edit/Project Settings/Tags and Layers", () => {
-        Type type = HasteReflection.EditorAssembly.GetType("UnityEditor.TagManager");
-        Selection.activeObject = Resources.FindObjectsOfTypeAll(type).First();
-      } },
-
-      // { "Edit/Project Settings/Audio", () => {
-      //   TODO: throw new NotImplementedException();
-      // } },
-
-      // { "Edit/Project Settings/Time", () => {
-      //   TODO: throw new NotImplementedException();
-      // } },
-
-      { "Edit/Project Settings/Player", () => {
-        Selection.activeObject = Resources.FindObjectsOfTypeAll<PlayerSettings>().First();
-        EditorApplication.ExecuteMenuItem("Window/Inspector");
-      } },
-
-      { "Edit/Project Settings/Physics", () => {
-        Type type = HasteReflection.EditorAssembly.GetType("UnityEditor.PhysicsManager");
-        Selection.activeObject = Resources.FindObjectsOfTypeAll(type).First();
-        EditorApplication.ExecuteMenuItem("Window/Inspector");
-      } },
-
-      { "Edit/Project Settings/Physics 2D", () => {
-        Type type = HasteReflection.EditorAssembly.GetType("UnityEditor.Physics2DSettings");
-        Selection.activeObject = Resources.FindObjectsOfTypeAll(type).First();
-        EditorApplication.ExecuteMenuItem("Window/Inspector");
-      } },
-
-      { "Edit/Project Settings/Quality", () => {
-        Selection.activeObject = Resources.FindObjectsOfTypeAll<QualitySettings>().First();
-        EditorApplication.ExecuteMenuItem("Window/Inspector");
-      } },
-
-      // { "Edit/Project Settings/Graphics", () => {
-      //   TODO: throw new NotImplementedException();
-      // } },
-
-      // { "Edit/Project Settings/Network", () => {
-      //   TODO: throw new NotImplementedException();
-      // } },
-
-      { "Edit/Project Settings/Editor", () => {
-        Selection.activeObject = Resources.FindObjectsOfTypeAll<EditorSettings>().First();
-        EditorApplication.ExecuteMenuItem("Window/Inspector");
-      } },
-
-      { "Edit/Project Settings/Script Execution Order", () => {
-        Type type = HasteReflection.EditorAssembly.GetType("UnityEditor.MonoManager");
-        Selection.activeObject = Resources.FindObjectsOfTypeAll(type).First();
-        EditorApplication.ExecuteMenuItem("Window/Inspector");
-      } },
-
-      { "Edit/Render Settings", () => {
-        Selection.activeObject = UnityEngine.Object.FindObjectOfType<RenderSettings>();
-        EditorApplication.ExecuteMenuItem("Window/Inspector");
       } }
+      #endregion
     };
   }
 }

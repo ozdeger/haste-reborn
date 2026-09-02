@@ -138,15 +138,17 @@ Ignoring Assets
 
 You can ignore assets in your project like third-party tools, etc. by right-clicking on the asset and selecting `Haste > Ignore`. The asset can be unignored by right-clicking and selecting `Haste > Unignored`. You can further manage ignored assets in Haste's Preferences inside of the main Unity Preferences.
 
-Missing Menu Items
+Menu Items
 ---
 
-Due to limitations in the current Unity editor APIs the following menu items are not available through Haste:
+Haste indexes the editor's live menu tree, so it finds whatever your editor actually has —
+built-in menus, menus added by packages, and your own `[MenuItem]` methods, including ones
+under a menu of your own invention. Nothing is hardcoded, so there is no list here to go
+stale, and Haste will not offer you a menu item that does not exist.
 
-  - File/New Project...
-  - File/Open Project...
-  - Edit/Project Settings/Input
-  - Edit/Project Settings/Audio
-  - Edit/Project Settings/Time
-  - Edit/Project Settings/Graphics
-  - Edit/Project Settings/Network
+Older versions shipped a fixed list of menu paths captured from Unity 5. On Unity 6 nearly
+half of those paths no longer existed, and several hundred real menu items were missing.
+
+Two things are still out of reach, because they are not part of the menu tree the editor
+exposes: the macOS application menu (`About Unity`, `Settings…`) and the project wizard
+(`New Project…`, `Open Project…`).

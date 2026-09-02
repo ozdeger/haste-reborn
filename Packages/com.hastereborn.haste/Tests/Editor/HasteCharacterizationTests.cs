@@ -650,21 +650,101 @@ namespace Haste {
     [Test]
     [Category("Sources")]
     public void MenuItemSource_StaticInitialiserDoesNotThrow() {
-      // Regression guard. The shortcut-stripping Regex was written as
-      // @"\s+[\%\#\&\_]+\w$"; "\_" is not a legal escape sequence, so modern .NET
-      // throws ArgumentException while constructing it. That turned every touch of
-      // this type into a TypeInitializationException, silently killing menu-item
-      // search on Unity 6 even though the project compiled cleanly.
+      // Regression guard, kept although the regex it was written for is gone with the
+      // attribute-scanning path. A shortcut-stripping Regex written as
+      // @"\s+[\%\#\&\_]+\w$" -- "\_" is not a legal escape sequence -- made modern
+      // .NET throw while constructing it, turning every touch of this type into a
+      // TypeInitializationException and silently killing menu-item search on Unity 6,
+      // with the project compiling cleanly throughout. Static state here stays cheap
+      // and total for that reason.
       Assert.DoesNotThrow(() => { var unused = new HasteMenuItemSource(); });
+    }
+
+    // The source enumerates the editor's live menu tree. These run against whatever
+    // editor is executing them, so they assert invariants rather than a fixed list.
+
+    static string[] SourcePaths() {
+      return new HasteMenuItemSource().Select(i => i.path).ToArray();
+    }
+
+    // An independent oracle: Unsupported.GetSubmenus is public, and is a different entry
+    // point from the internal Menu.GetMenuItems the source prefers.
+    static HashSet<string> LiveMenuOracle() {
+      var live = new HashSet<string>();
+      foreach (var root in new[] { "File", "Edit", "Assets", "GameObject", "Component",
+                                   "Window", "Help", "Services" }) {
+        var paths = UnityEditor.Unsupported.GetSubmenus(root);
+        if (paths == null) continue;
+        foreach (var p in paths) live.Add(p);
+      }
+      return live;
     }
 
     [Test]
     [Category("Sources")]
-    public void MenuItemSource_StripsShortcutSuffixFromMenuPaths() {
-      // What the regex is actually for, exercised through a real menu-attribute string.
-      var stripped = System.Text.RegularExpressions.Regex.Replace(
-        "Window/Haste %k", @"\s+[%#&_]+\w$", "");
-      Assert.That(stripped, Is.EqualTo("Window/Haste"));
+    public void MenuItemSource_YieldsOnlyMenuItemsThatActuallyExist() {
+      // The point of the rewrite. The shipped Unity 5 list had 109 of 241 paths (45%)
+      // that do not exist on Unity 6 -- results that look real and do nothing.
+      var live = LiveMenuOracle();
+      var custom = new HashSet<string>(new[] {
+        "Assets/Instantiate Prefab", "GameObject/Lock", "GameObject/Unlock",
+        "GameObject/Activate", "GameObject/Deactivate", "GameObject/Reset Transform",
+        "GameObject/Select Parent", "GameObject/Select Children", "GameObject/Select Prefab",
+        "GameObject/Revert to Prefab", "GameObject/Reconnect to Prefab",
+      });
+
+      var phantom = SourcePaths().Where(p => !custom.Contains(p) && !live.Contains(p)).ToArray();
+      Assert.That(phantom, Is.Empty,
+        "these paths are indexed but are not in the editor's menu tree:\n  " +
+        string.Join("\n  ", phantom));
+    }
+
+    [Test]
+    [Category("Sources")]
+    public void MenuItemSource_FindsMenuItemsTheHardcodedListNeverHad() {
+      var paths = new HashSet<string>(SourcePaths());
+      // Unity 6 menu items with no equivalent in the Unity 5 list that used to ship.
+      Assert.That(paths, Contains.Item("Edit/Project Settings..."));
+      Assert.That(paths, Contains.Item("File/Build Profiles"));
+      Assert.That(paths, Contains.Item("GameObject/Create Empty Parent"));
+      // And it should be finding hundreds of items, not a few dozen.
+      Assert.That(paths.Count, Is.GreaterThan(400));
+    }
+
+    [Test]
+    [Category("Sources")]
+    public void MenuItemSource_DoesNotIndexHasteItself() {
+      Assert.That(SourcePaths(), Has.No.Member("Window/Haste"));
+    }
+
+    [Test]
+    [Category("Sources")]
+    public void MenuItemSource_PathsAreCleanAndUnique() {
+      var paths = SourcePaths();
+      Assert.That(paths.Where(p => p.EndsWith("/")), Is.Empty, "a path ended in a separator");
+      Assert.That(paths.Where(p => string.IsNullOrEmpty(p)), Is.Empty);
+      Assert.That(paths.Length, Is.EqualTo(paths.Distinct().Count()), "duplicate paths");
+      // Live paths arrive without the "%k" a [MenuItem] attribute carries, so the source
+      // no longer parses them. This is what makes that safe to rely on.
+      Assert.That(paths.Where(p => System.Text.RegularExpressions.Regex.IsMatch(p, @"\s+[%#&_]+\w$")),
+        Is.Empty, "a live menu path carried a shortcut suffix");
+    }
+
+    [Test]
+    [Category("Sources")]
+    public void MenuItemSource_EveryInventedActionHasAnImplementation() {
+      // HasteActions and the source's custom list are two halves of one feature. If they
+      // drift, either an action is offered that does nothing, or one exists that cannot
+      // be reached. Both directions are checked.
+      var invented = SourcePaths().Where(p => !LiveMenuOracle().Contains(p)).ToArray();
+      foreach (var path in invented) {
+        Assert.That(HasteActions.MenuItemFallbacks.ContainsKey(path), Is.True,
+          "\"" + path + "\" is offered but has no implementation");
+      }
+      foreach (var key in HasteActions.MenuItemFallbacks.Keys) {
+        Assert.That(invented, Contains.Item(key),
+          "\"" + key + "\" is implemented but never offered");
+      }
     }
 
     [Test]

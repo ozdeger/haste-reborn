@@ -143,6 +143,9 @@ changelog for those releases is in the repository root.
   that had no size yet, which does nothing.
 
 ### Changed
+- Escape always closes Haste, wherever you are. It used to unwind one level of
+  the actions pane, so the deeper you were the more times you had to press it.
+  Going back is the left arrow's job and only the left arrow's.
 - The badge at the left of the footer is now a settings button that opens Haste's
   preferences. It still doubles as the indexing light.
 - The footer shows a `Favorite` / `Unfavorite` hint alongside the others, and

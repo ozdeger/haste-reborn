@@ -20,7 +20,7 @@ namespace Haste {
     ClearScope,
     ToggleFavorite,     // Alt+Enter, from anywhere in the palette
 
-    HideActions,        // Escape, or the left arrow at the top level of the pane
+    HideActions,        // The left arrow at the top level of the pane
     ActionUp,
     ActionDown,
     RunAction,
@@ -68,13 +68,16 @@ namespace Haste {
           // submenu is not something that can be run.
           case KeyCode.RightArrow:  return HasteKeyIntent.EnterSubmenu;
 
-          // Left retraces one level and only closes the pane once there is nothing left
-          // to retrace. Escape always closes the whole pane, which is what Unity's own
-          // menus do and what makes the two keys worth having separately.
+          // Left is the ONLY way back: it retraces one level, and closes the pane once
+          // there is nothing left to retrace.
           case KeyCode.LeftArrow:
             return actionsAtRoot ? HasteKeyIntent.HideActions : HasteKeyIntent.LeaveSubmenu;
 
-          case KeyCode.Escape:      return HasteKeyIntent.HideActions;
+          // Escape means the same thing everywhere in the palette: put it away. It used
+          // to unwind one level like the left arrow, which made it depend on where you
+          // were -- and the deeper you were, the more times you had to press the key you
+          // reached for to get out.
+          case KeyCode.Escape:      return HasteKeyIntent.Dismiss;
           case KeyCode.Return:
           case KeyCode.KeypadEnter: return HasteKeyIntent.RunAction;
         }

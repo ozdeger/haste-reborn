@@ -34,10 +34,10 @@ namespace Haste {
       Assert.That(Actions(KeyCode.LeftArrow, atRoot: false), Is.EqualTo(HasteKeyIntent.LeaveSubmenu));
       Assert.That(Actions(KeyCode.LeftArrow), Is.EqualTo(HasteKeyIntent.HideActions));
 
-      // Escape closes the whole pane from any depth. That is the difference between the
-      // two keys and the reason both are bound.
-      Assert.That(Actions(KeyCode.Escape), Is.EqualTo(HasteKeyIntent.HideActions));
-      Assert.That(Actions(KeyCode.Escape, atRoot: false), Is.EqualTo(HasteKeyIntent.HideActions));
+      // Escape closes the palette outright from any depth, rather than unwinding. Going
+      // back is the left arrow's job and only the left arrow's.
+      Assert.That(Actions(KeyCode.Escape), Is.EqualTo(HasteKeyIntent.Dismiss));
+      Assert.That(Actions(KeyCode.Escape, atRoot: false), Is.EqualTo(HasteKeyIntent.Dismiss));
 
       // Enter still resolves to RunAction at any depth -- the window turns it into a
       // descend when the highlighted row is a submenu, because only it knows that.
@@ -97,9 +97,10 @@ namespace Haste {
       Assert.That(Actions(KeyCode.LeftArrow), Is.EqualTo(HasteKeyIntent.HideActions));
       Assert.That(Actions(KeyCode.Return), Is.EqualTo(HasteKeyIntent.RunAction));
 
-      // Escape backs out of the pane rather than dismissing the whole palette, which it
-      // does everywhere else.
-      Assert.That(Actions(KeyCode.Escape), Is.EqualTo(HasteKeyIntent.HideActions));
+      // Escape means one thing everywhere in the palette: put it away. It is deliberately
+      // NOT a back key -- that is the left arrow's job, and Escape that unwinds one level
+      // takes more presses the deeper you are.
+      Assert.That(Actions(KeyCode.Escape), Is.EqualTo(HasteKeyIntent.Dismiss));
       Assert.That(Results(KeyCode.Escape), Is.EqualTo(HasteKeyIntent.Dismiss));
 
       // Nothing from the results list leaks through. The right arrow is NOT in this

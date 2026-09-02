@@ -20,7 +20,7 @@ namespace Haste {
     }
 
     // Perform fast subsequence filtering
-    IEnumerator Filter(string[] terms, IPromise<HasteItem[]> promise) {
+    IEnumerator Filter(string[] terms, HasteKind kinds, IPromise<HasteItem[]> promise) {
       if (terms.Length == 0) {
         promise.Resolve(emptyMatches);
         yield break;
@@ -63,6 +63,12 @@ namespace Haste {
       HasteItem m;
       for (var i = 0; i < bucketArr.Length; i++) {
         m = bucketArr[i];
+
+        // Scope first: it rejects on a couple of in-place string comparisons, which is
+        // cheaper than anything below it.
+        if (!HasteKinds.Matches(kinds, m)) {
+          continue;
+        }
 
         // Terms are matched independently and may overlap, so the path only has to be at
         // least as long as the longest single term, not as long as all of them together.
@@ -163,13 +169,17 @@ namespace Haste {
     }
 
     public IEnumerator Search(string query, int count, IPromise<IHasteResult[]> searchResult) {
+      return Search(query, HasteKind.Any, count, searchResult);
+    }
+
+    public IEnumerator Search(string query, HasteKind kinds, int count, IPromise<IHasteResult[]> searchResult) {
       // Whitespace separates terms that must all match; see HasteStringUtils.SplitQueryTerms.
       string[] terms = HasteStringUtils.SplitQueryTerms(query);
 
       // Grab a filtered subset from the index
       var filterResult = new Promise<HasteItem[]>();
       // using (new HasteStopwatch("Filter")) {
-      yield return Haste.Scheduler.Start(Filter(terms, filterResult)); // Wait on filter
+      yield return Haste.Scheduler.Start(Filter(terms, kinds, filterResult)); // Wait on filter
       // }
 
       if (filterResult.Reason != null) {

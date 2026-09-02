@@ -221,6 +221,46 @@ namespace Haste {
       return indices;
     }
 
+    // Highlight positions for ONE PART of a row -- the name, or the directory -- rather
+    // than the whole path.
+    //
+    // Terms that do not occur in `str` are skipped, and that is a correctness requirement
+    // rather than a nicety: with a multi-term query a term can match in the directory and
+    // not in the name, and GetWeightedSubsequence throws on a term it cannot place --
+    // its backtracker pops an empty stack.
+    public static int[] GetHighlightIndices(string str, string[] terms) {
+      if (string.IsNullOrEmpty(str) || terms == null || terms.Length == 0) {
+        return new int[0];
+      }
+
+      var lower = str.ToLowerInvariant();
+
+      var present = new List<string>(terms.Length);
+      for (int i = 0; i < terms.Length; i++) {
+        if (ContainsSubsequence(lower, terms[i], lower.Length, terms[i].Length)) {
+          present.Add(terms[i]);
+        }
+      }
+
+      if (present.Count == 0) {
+        return new int[0];
+      }
+
+      return GetWeightedSubsequence(lower, present.ToArray(), GetBoundaryIndices(str));
+    }
+
+    // The directory part of a path -- what the design shows right-aligned, opposite the
+    // name. "" for a bare name with no separator.
+    public static string GetDirectory(string path) {
+      if (string.IsNullOrEmpty(path)) {
+        return "";
+      }
+
+      var trimmed = path.TrimEnd('/');
+      var sep = trimmed.LastIndexOf('/');
+      return sep <= 0 ? "" : trimmed.Substring(0, sep);
+    }
+
     public static string GetFileName(string path) {
       var len = path.Length;
       if (len == 0) {

@@ -138,6 +138,13 @@ changelog for those releases is in the repository root.
   Scene objects cannot be favorited: a favorite is remembered by path, and a
   GameObject's path changes when it is renamed, reparented or its scene closes.
 
+### Fixed
+- Arrow keys scroll the same way in both directions. Moving down revealed the
+  next row; moving up revealed nothing until the highlight was already off the
+  top. Both now keep one row of context in the direction you are going.
+- The actions pane scrolls with the arrow keys at all — it was scrolling rows
+  that had no size yet, which does nothing.
+
 ### Changed
 - The actions pane scrolls, and its rows are built from the same measurements as
   the results list beside it — same height, padding, corner radius, hover and

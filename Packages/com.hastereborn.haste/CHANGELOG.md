@@ -5,7 +5,6 @@ All notable changes to this package. This project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [2.0.0-pre.1] - unreleased
-
 The Unity 6 revival. Haste last shipped as 1.8.6 for Unity 5.1 in 2019; the historical
 changelog for those releases is in the repository root.
 
@@ -21,6 +20,20 @@ changelog for those releases is in the repository root.
 - Distribution as a UPM package installable from a git URL.
 - A characterization test suite pinning the search ranking, the scoring ladder and the
   fuzzy-match highlighting, so behaviour changes are visible rather than silent.
+
+- **Favorites.** Press `Alt+Enter` on a row to favorite or unfavorite it, or
+  right-click an asset and choose `Haste > Add to Favorites`. A favorite scores
+  2× on top of every other weight, and its row shows the editor's star beside the
+  name. The list is under Preferences > Haste, where entries can be removed.
+  Favorites live in this project's `UserSettings` folder — yours, not committed.
+
+  Scene objects cannot be favorited: a favorite is remembered by path, and a
+  GameObject's path changes when it is renamed, reparented or its scene closes.
+
+- Menu items are now weighted by their menu rather than all together. Unity's own menus
+  start demoted at 0.7 as before, but a menu your project added — `Tools`,
+  `Dev Tools`, anything a `[MenuItem]` invented — starts at 1.0 and gets its own
+  slider under Preferences > Haste > Weights by menu as soon as Haste sees it.
 
 ### Changed
 - **Vendored and generated folders are ignored out of the box.** `Assets/Plugins`, the
@@ -128,23 +141,6 @@ changelog for those releases is in the repository root.
   installed read-only. Pre-2.0 recency data is discarded rather than migrated: it
   identified items by an unstable hash that cannot be resolved back to an object.
 
-### Added
-- **Favorites.** Press `Alt+Enter` on a row to favorite or unfavorite it, or
-  right-click an asset and choose `Haste > Add to Favorites`. A favorite scores
-  2× on top of every other weight, and its row shows the editor's star beside the
-  name. The list is under Preferences > Haste, where entries can be removed.
-  Favorites live in this project's `UserSettings` folder — yours, not committed.
-
-  Scene objects cannot be favorited: a favorite is remembered by path, and a
-  GameObject's path changes when it is renamed, reparented or its scene closes.
-
-### Fixed
-- The query line no longer moves when you type the first character. Its height
-  came from the text field, and Unity measures an empty one differently.
-- The actions pane scrolls with the arrow keys at all — it was scrolling rows
-  that had no size yet, which does nothing.
-
-### Changed
 - `Shift+Left` and `Shift+Right` move the caret through the query, since the
   plain arrows drive the palette. They move it rather than selecting with it.
 - Moving between levels of a context menu animates instead of snapping: a short
@@ -213,13 +209,12 @@ changelog for those releases is in the repository root.
   sigil as before, and the chip reads "menu". `t:command` and `t:cmd` still work
   but are no longer the name. The row badge reads `MENU`.
 
-### Added
-- Menu items are now weighted by their menu rather than all together. Unity's own menus
-  start demoted at 0.7 as before, but a menu your project added — `Tools`,
-  `Dev Tools`, anything a `[MenuItem]` invented — starts at 1.0 and gets its own
-  slider under Preferences > Haste > Weights by menu as soon as Haste sees it.
-
 ### Fixed
+- The query line no longer moves when you type the first character. Its height
+  came from the text field, and Unity measures an empty one differently.
+- The actions pane scrolls with the arrow keys at all — it was scrolling rows
+  that had no size yet, which does nothing.
+
 - Pressing Enter on a project asset no longer logs an error instead of focusing it. Haste
   was still asking for Unity 5's `Window/Project` menu item, which Unity 6 moved under
   `Window/General/`. The window menus are now looked up from the editor rather than

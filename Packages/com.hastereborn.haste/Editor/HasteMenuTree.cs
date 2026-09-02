@@ -136,6 +136,182 @@ namespace Haste {
       }
     }
 
+    // ------------------------------------------------------------ what to leave out
+    //
+    // Unity's "Assets" menu is a menu-bar menu that doubles as the Project window's
+    // context menu, so it holds two different kinds of thing: entries that act on the
+    // asset you clicked, and entries that act on the whole project. Only the first kind
+    // belongs in a palette whose entire job is doing something to one specific item --
+    // and for a .png the second kind was most of the list.
+    //
+    // The two are told apart by measurement rather than by taste: AN ENTRY THAT IS STILL
+    // ENABLED WITH NOTHING SELECTED CANNOT BE ACTING ON THE SELECTION. Measured on a
+    // stock 6000.3.17f1, that rule hides Refresh, Reimport All, Import New Asset...,
+    // Import Package, Open C# Project, Update UXML Schema, View in Import Activity Window
+    // and Seed XR Input Bindings -- and all seven "Mobile Dependency Resolver" entries,
+    // which is the point: it catches a package's project-wide tooling without being told
+    // that package's name, so it keeps working as a project grows.
+    //
+    // It has exactly two false positives and one bad case, all listed below.
+
+    // Enabled with an empty selection, but genuinely wanted anyway. Prefix-matched on
+    // segment boundaries, so "Assets/Create" covers the whole Create submenu.
+    static readonly string[] AlwaysShow = {
+      // 81 of the 119 Assets entries are under Create. They are all enabled with nothing
+      // selected -- creating does not need a selection -- so the rule would take the
+      // whole submenu, and creating something next to the thing you clicked is exactly
+      // what a context menu is for.
+      "Assets/Create",
+
+      // The two false positives. Both work with an empty selection, and both are useful
+      // with one.
+      "Assets/Reveal in Finder",
+      "Assets/Select Dependencies",
+    };
+
+    // Entries the rule does not catch -- they need a selection -- but which are still not
+    // what a palette is for. Kept deliberately short: every name here is one the rule
+    // cannot reason about, and a long list is a list that goes stale.
+    static readonly string[] NeverShow = {
+      // Authoring a UPM package out of a folder. Nothing to do with the asset you are
+      // looking for, and a menu away from a destructive-feeling operation.
+      "Assets/Create UPM Package...",
+      "Assets/Export As UPM Package...",
+    };
+
+    static bool Matches(string[] rules, string path) {
+      if (string.IsNullOrEmpty(path)) {
+        return false;
+      }
+
+      for (int i = 0; i < rules.Length; i++) {
+        var rule = rules[i];
+        if (!path.StartsWith(rule, StringComparison.Ordinal)) {
+          continue;
+        }
+        // A rule matches the path itself or a whole subtree of it, never a longer name
+        // that merely starts the same way.
+        if (path.Length == rule.Length || path[rule.Length] == '/') {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    // Roots the empty-selection rule is applied to.
+    //
+    // Assets only, and that is measured rather than cautious. Applying the same rule to
+    // GameObject cuts its 24 top-level entries to 3, taking "3D Object", "Light",
+    // "Camera", "Make Parent", "Move To View", "Center On Children" and most of the rest
+    // with it. Those are not project-wide -- they simply have no [MenuItem] validate
+    // function, so the editor reports them enabled at all times and the rule cannot tell
+    // them apart from Refresh. Unity's Assets entries overwhelmingly DO declare one,
+    // which is the whole reason the rule works there.
+    //
+    // So: apply it where it was measured to work, not where it was measured to fail.
+    // Before adding a root here, run the numbers for it first.
+    static readonly string[] RuleRoots = { "Assets" };
+
+    static bool UsesProjectWideRule(string root) {
+      return MatchesExactly(RuleRoots, root);
+    }
+
+    static bool MatchesExactly(string[] names, string name) {
+      for (int i = 0; i < names.Length; i++) {
+        if (String.Equals(names[i], name, StringComparison.Ordinal)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    // Leaf paths under this root that are enabled with NOTHING selected.
+    //
+    // Computed once per domain, by emptying the selection and putting it straight back.
+    // That is a real side effect, taken deliberately: there is no way to ask a [MenuItem]
+    // validate function "what would you say about an empty selection" without giving it
+    // one, since validate functions read Selection directly. It happens inside the same
+    // call that the actions pane already uses to select the row, so no repaint falls
+    // between the two, and the measured cost is a single ~2 ms pass over the 119 Assets
+    // entries.
+    static Dictionary<string, HashSet<string>> projectWide;
+
+    static HashSet<string> ProjectWide(string root) {
+      if (projectWide == null) {
+        projectWide = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+      }
+
+      HashSet<string> paths;
+      if (projectWide.TryGetValue(root, out paths)) {
+        return paths;
+      }
+
+      paths = new HashSet<string>(StringComparer.Ordinal);
+      var restore = Selection.objects;
+      try {
+        Selection.objects = new UnityEngine.Object[0];
+        foreach (var path in HasteMenuItemSource.ReadPaths(root)) {
+          try {
+            if (Menu.GetEnabled(path)) {
+              paths.Add(path);
+            }
+          } catch (Exception) {
+            // A validate function that throws tells us nothing, so assume nothing.
+          }
+        }
+      } finally {
+        Selection.objects = restore;
+      }
+
+      projectWide[root] = paths;
+      return paths;
+    }
+
+    public static bool IsVisible(HasteMenuNode node, string root) {
+      if (node == null) {
+        return false;
+      }
+
+      if (node.IsSubmenu) {
+        // A submenu is worth showing exactly when something inside it is.
+        for (int i = 0; i < node.Children.Count; i++) {
+          if (IsVisible(node.Children[i], root)) {
+            return true;
+          }
+        }
+        return false;
+      }
+
+      if (!IsEnabled(node)) {
+        return false;
+      }
+      if (Matches(NeverShow, node.Path)) {
+        return false;
+      }
+      if (Matches(AlwaysShow, node.Path)) {
+        return true;
+      }
+      if (!UsesProjectWideRule(root)) {
+        return true;
+      }
+      return !ProjectWide(root).Contains(node.Path);
+    }
+
+    // What the actions pane draws for one level.
+    public static List<HasteMenuNode> VisibleChildren(HasteMenuNode node, string root) {
+      var visible = new List<HasteMenuNode>();
+      if (node == null) {
+        return visible;
+      }
+
+      for (int i = 0; i < node.Children.Count; i++) {
+        if (IsVisible(node.Children[i], root)) {
+          visible.Add(node.Children[i]);
+        }
+      }
+      return visible;
+    }
+
     public static List<HasteMenuNode> EnabledChildren(HasteMenuNode node) {
       var enabled = new List<HasteMenuNode>();
       if (node == null) {

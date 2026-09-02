@@ -202,6 +202,107 @@ namespace Haste {
     }
 
     [Test]
+    public void ProjectWideEntriesAreLeftOutOfAnItemsContextMenu() {
+      // Unity's Assets menu is a menu-bar menu doing double duty as the context menu, so
+      // it holds entries that act on the whole project alongside ones that act on the
+      // asset. Only the second kind belongs in a palette that acts on one item.
+      //
+      // The test of which is which is measured, not editorial: an entry still enabled
+      // with nothing selected cannot be acting on the selection.
+      var asset = AssetDatabase.LoadMainAssetAtPath("Packages/com.hastereborn.haste/package.json");
+      Assert.That(asset, Is.Not.Null, "the probe asset moved");
+      Selection.objects = new[] { asset };
+
+      var tree = HasteMenuTree.BuildLive("Assets");
+      var shown = HasteMenuTree.VisibleChildren(tree, "Assets").Select(c => c.Label).ToArray();
+
+      foreach (var gone in new[] { "Refresh", "Reimport All", "Import New Asset...",
+                                   "Import Package", "Open C# Project", "Update UXML Schema",
+                                   "View in Import Activity Window" }) {
+        Assert.That(shown, Has.No.Member(gone), gone + " acts on the project, not the asset");
+      }
+
+      foreach (var kept in new[] { "Open", "Delete", "Rename", "Copy Path", "Reimport",
+                                   "Find References In Project", "Properties..." }) {
+        Assert.That(shown, Contains.Item(kept));
+      }
+
+      // A package's own project-wide tooling is caught by the same rule without the rule
+      // being told its name, which is the reason to prefer it to a list of names.
+      Assert.That(shown, Has.No.Member("Mobile Dependency Resolver"));
+    }
+
+    [Test]
+    public void TheTwoFalsePositivesAndTheCreateMenuAreExempt() {
+      var asset = AssetDatabase.LoadMainAssetAtPath("Packages/com.hastereborn.haste/package.json");
+      Selection.objects = new[] { asset };
+
+      var tree = HasteMenuTree.BuildLive("Assets");
+      var shown = HasteMenuTree.VisibleChildren(tree, "Assets").Select(c => c.Label).ToArray();
+
+      // 81 of the 119 Assets entries are under Create and every one is enabled with
+      // nothing selected, so the rule alone would take the whole submenu.
+      Assert.That(shown, Contains.Item("Create"));
+      var create = tree.Children.Single(c => c.Label == "Create");
+      Assert.That(HasteMenuTree.VisibleChildren(create, "Assets").Count, Is.GreaterThan(5));
+
+      // The rule's only two false positives on a stock editor.
+      Assert.That(shown, Contains.Item("Reveal in Finder"));
+      Assert.That(shown, Contains.Item("Select Dependencies"));
+
+      // And the short blocklist, for what the rule cannot reason about.
+      Assert.That(shown, Has.No.Member("Create UPM Package..."));
+      Assert.That(shown, Has.No.Member("Export As UPM Package..."));
+    }
+
+    [Test]
+    public void TheRuleIsNotAppliedToTheHierarchyMenu() {
+      // Measured: applying the empty-selection rule to GameObject leaves 3 of its 24
+      // entries. "3D Object", "Light", "Camera", "Make Parent", "Move To View" and the
+      // rest are not project-wide -- they have no [MenuItem] validate function, so the
+      // editor reports them enabled at all times and the rule cannot see them for what
+      // they are. Unity's Assets entries mostly do declare one, which is why it works
+      // there and only there.
+      var go = new GameObject("haste-menu-probe");
+      try {
+        Selection.objects = new Object[] { go };
+
+        var tree = HasteMenuTree.BuildLive("GameObject");
+        var shown = HasteMenuTree.VisibleChildren(tree, "GameObject").Select(c => c.Label).ToArray();
+
+        // Every one of these is enabled with nothing selected, so the rule would take
+        // all of them. Only entries the rule governs are asserted here -- "Make Parent",
+        // "Move To View" and "Center On Children" are genuinely disabled in a headless
+        // editor (no Scene view, one object selected, no children), and that is the
+        // availability filter doing its job rather than anything to do with the rule.
+        foreach (var kept in new[] { "2D Object", "3D Object", "Effects", "Light",
+                                     "Camera", "Create Empty Child" }) {
+          Assert.That(shown, Contains.Item(kept),
+            "the rule must not be extended to GameObject without measuring it again");
+        }
+        Assert.That(shown.Length, Is.GreaterThan(12),
+          "with the rule applied this drops to 3");
+      } finally {
+        Object.DestroyImmediate(go);
+        Selection.objects = new Object[0];
+      }
+    }
+
+    [Test]
+    public void AnExemptionMatchesASubtreeButNotALongerName() {
+      // "Assets/Create" must cover "Assets/Create/Folder" without also covering
+      // "Assets/Create UPM Package..." -- which is on the blocklist precisely because it
+      // is a different entry that happens to start the same way.
+      var tree = HasteMenuTree.Build("Assets", new[] {
+        "Assets/Create/Folder", "Assets/Create UPM Package...",
+      });
+
+      var shown = HasteMenuTree.VisibleChildren(tree, "Assets").Select(c => c.Label).ToArray();
+      Assert.That(shown, Contains.Item("Create"));
+      Assert.That(shown, Has.No.Member("Create UPM Package..."));
+    }
+
+    [Test]
     public void ASubmenuCountsAsEnabledWhenAnythingInsideItIs() {
       // Menu.GetEnabled answers for a leaf, because a submenu has no validate function to
       // run. Asking it about "Assets/Create" would drop the whole branch.

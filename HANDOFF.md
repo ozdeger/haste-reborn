@@ -631,6 +631,14 @@ implemented: the `[Shortcut]` binding and the double-tap-Shift gesture.
 
 From the palette rewrite, in the order worth checking:
 
+- **Whether anything useful went missing from the actions pane.** `HasteMenuTree` drops
+  `Assets` entries that stay enabled with an empty selection, on the grounds that they
+  cannot be acting on the selection. Measured on 6000.3.17f1: 17 non-`Create` entries hit,
+  15 of them correctly (including all 7 `Mobile Dependency Resolver` entries, caught
+  without the rule knowing that package's name), 2 false positives now on the keep-list.
+  **The rule is deliberately scoped to `Assets` alone** — applying it to `GameObject` cuts
+  24 entries to 3, because Unity's GameObject items mostly declare no validate function
+  and so read as always-enabled. Measure before adding a root to `RuleRoots`.
 - **What availability filtering feels like day to day.** `HasteSearch.Map` drops any menu
   item `Menu.GetEnabled` reports disabled, so results change with the selection. Measured
   on a stock 6000.3.17f1 with nothing selected: 241 of 538 menu items hidden, including

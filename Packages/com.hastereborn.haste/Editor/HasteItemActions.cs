@@ -47,7 +47,9 @@ namespace Haste {
         return actions;
       }
 
-      foreach (var child in HasteMenuTree.EnabledChildren(node)) {
+      var root = HasteMenuTree.RootFor(result.Item);
+
+      foreach (var child in HasteMenuTree.VisibleChildren(node, root)) {
         if (child.IsSubmenu) {
           actions.Add(new HasteItemAction {
             Label = child.Label,

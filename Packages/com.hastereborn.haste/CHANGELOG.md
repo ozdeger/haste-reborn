@@ -129,6 +129,12 @@ changelog for those releases is in the repository root.
   identified items by an unstable hash that cannot be resolved back to an object.
 
 ### Changed
+- The actions pane no longer lists the `Assets` menu's project-wide entries —
+  `Refresh`, `Reimport All`, `Import New Asset…`, `Import Package`,
+  `Open C# Project`, `Update UXML Schema`, `View in Import Activity Window`, and
+  any package's own project-wide tooling. They act on the project, not on the
+  asset you opened the pane for. `Create`, `Reveal in Finder` and
+  `Select Dependencies` are kept explicitly.
 - Menu items you cannot use right now no longer appear in results. A menu the
   editor would draw greyed out does nothing when you press Enter, so it is not
   offered — with nothing selected that hides 241 of the 538 menu items, including

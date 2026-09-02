@@ -309,6 +309,15 @@ Cecil also reads method bodies, which is how several of the findings below were 
   frame emits **one** event, for the root. Always treat the instanceId as a subtree root.
 - **`ChangeGameObjectOrComponentProperties` is the only rename signal** and also fires on
   every transform tweak. Without a name-compare guard the index thrashes on every drag.
+- **`ListView` puts its item USS classes on the element `makeItem` returns**, in the
+  default reorder mode — not on a wrapper around it. So `unity-collection-view__item` and
+  `…--selected` land on your own row element. Two things follow, and both cost time: a
+  selector written as `…--selected > .my-row` matches nothing, and any rule you write
+  against `.haste-list .unity-collection-view__item` is **(0,2,0)** and will out-specify a
+  single-class modifier like `.my-row--highlighted` at **(0,1,0)**. Clearing Unity's own
+  selection paint that way silently disables your highlight, and the only visible symptom
+  is that *descendant* rules still work — so child elements look selected while the row
+  never does.
 - **USS has no `cubic-bezier()`** — named easings only (`ease`, `ease-in-out`,
   `ease-out-cubic`, …). This one is worth knowing because of HOW it fails: an unsupported
   value is **not** an import error. The importer logs a *warning* and keeps the declaration

@@ -281,30 +281,45 @@
     background-color: #232323;
 }
 
+/* ListView, in its default reorder mode, puts its item classes on THE ELEMENT that
+ * makeItem RETURNS -- our .haste-row -- not on a wrapper around it. Two consequences,
+ * both of which bit:
+ *
+ *   - A rule written as `--selected > .haste-row` matches nothing. There is no child to
+ *     match; the selected item IS the row.
+ *   - This rule is (0,2,0) and `.haste-row--highlighted` was (0,1,0), so clearing the
+ *     background here silently out-specified the highlight and no row ever lit up. Only
+ *     the tag looked selected, because its rule was a descendant selector and did match.
+ *
+ * So: clear only what Unity itself paints, and set every state below it at a specificity
+ * that beats it. The descendant forms are kept as well, in case a future reorder mode
+ * does wrap the row. */
 .haste-list .unity-collection-view__item,
 .haste-list .unity-list-view__item {
     background-color: rgba(0, 0, 0, 0);
     border-width: 0;
 }
 
-/* Unity paints its own selection colour on the ListView item; the row inside carries the
- * design's highlight instead, so this has to be cleared or both show at once. */
-.haste-list .unity-collection-view__item--selected,
-.haste-list .unity-list-view__item--selected {
-    background-color: rgba(0, 0, 0, 0);
+.haste-list .haste-row:hover {
+    background-color: #2c2c2c;
 }
 
-/* The highlight is driven from the ListView's own selected state as well as from the
- * modifier class below. The class alone was not enough: it is written during bindItem, and
- * ListView does not rebind a row that is already realised when only the selection moves,
- * so arrowing down left the old row lit. */
-.haste-list .unity-collection-view__item--selected > .haste-row,
-.haste-list .unity-list-view__item--selected > .haste-row {
+/* The highlight comes from two places on purpose: ListView's own selected state, which
+ * follows the selection without needing a rebind, and the modifier class BindRow writes,
+ * which covers the first bind. ListView does not rebind an already-realised row when only
+ * the selection moves, so neither alone is enough. They always agree, because the keyboard
+ * highlight and the ListView selection are kept in step. */
+.haste-list .unity-collection-view__item--selected,
+.haste-list .unity-list-view__item--selected,
+.haste-list .unity-collection-view__item--selected .haste-row,
+.haste-list .haste-row--highlighted,
+.haste-list .haste-row--highlighted:hover {
     background-color: #343434;
 }
 
 .haste-list .unity-collection-view__item--selected .haste-tag,
-.haste-list .unity-list-view__item--selected .haste-tag {
+.haste-list .unity-list-view__item--selected .haste-tag,
+.haste-list .haste-row--highlighted .haste-tag {
     color: #a8a8a8;
     background-color: #3f3f3f;
     border-color: #4a4a4a;
@@ -318,15 +333,6 @@
     padding-left: 10px;
     border-radius: 7px;
     background-color: rgba(0, 0, 0, 0);
-}
-
-.haste-row:hover {
-    background-color: #2c2c2c;
-}
-
-.haste-row--highlighted,
-.haste-row--highlighted:hover {
-    background-color: #343434;
 }
 
 .haste-tag {
@@ -362,12 +368,6 @@
     color: #8a8a8a;
     -unity-text-align: middle-center;
     width: 100%;
-}
-
-.haste-row--highlighted .haste-tag {
-    color: #a8a8a8;
-    background-color: #3f3f3f;
-    border-color: #4a4a4a;
 }
 
 .haste-name {

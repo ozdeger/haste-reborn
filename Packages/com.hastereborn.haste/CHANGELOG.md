@@ -139,6 +139,10 @@ changelog for those releases is in the repository root.
   GameObject's path changes when it is renamed, reparented or its scene closes.
 
 ### Changed
+- The actions pane scrolls, and its rows are built from the same measurements as
+  the results list beside it — same height, padding, corner radius, hover and
+  selection greys. A long context menu used to squash its rows to a third of
+  their height with no way to reach the ones past the bottom.
 - Type filters are now recognised **anywhere in the query**, not only at the
   front. Search for `popup`, then type ` t:prefab ` on the end and it becomes a
   chip like it always should have. `prefab:` works the same way. Sigils (`>`,

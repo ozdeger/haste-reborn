@@ -231,6 +231,10 @@
     margin-left: 8px;
 }
 
+/* The actions pane is a list of rows, so it is built out of the same measurements as the
+ * results list beside it: 32px tall, 10px of side padding, a 7px radius, and the same two
+ * greys for hover and selection. They sit side by side in the track, so anything that did
+ * not line up read as a mistake -- which is what it was. */
 .haste-actions-list {
     flex-grow: 1;
     padding-right: 8px;
@@ -240,7 +244,13 @@
 .haste-pane-action {
     flex-direction: row;
     align-items: center;
-    height: 30px;
+    height: 32px;
+
+    /* Without this the rows do not keep that height. Flex items shrink by default, and a
+     * 26-entry context menu in a pane ten rows tall squeezed each one down to about 12px
+     * of crammed text. The ScrollView is the other half of the fix. */
+    flex-shrink: 0;
+
     padding-right: 10px;
     padding-left: 10px;
     border-radius: 7px;
@@ -256,18 +266,39 @@
     background-color: #343434;
 }
 
+/* Same treatment as .haste-name, so a row on this side of the track sits on the same
+ * baseline as a row on the other. */
 .haste-pane-action-label {
-    font-size: 12px;
-    color: #e6e6e6;
+    flex-shrink: 1;
+    font-size: 13px;
+    color: #eaeaea;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    -unity-text-align: middle-left;
 }
 
 .haste-pane-action--destructive .haste-pane-action-label {
     color: #d98a86;
 }
 
+/* And this is .haste-path's treatment: the trailing, quieter half of a row. */
 .haste-pane-action-keys {
-    font-size: 10px;
-    color: #7d7d7d;
+    flex-shrink: 0;
+    font-size: 11px;
+    color: #6b6b6b;
+    -unity-text-align: middle-right;
+    padding-left: 10px;
+}
+
+/* The chevron on a row that opens a submenu. Brighter than a key hint because it is an
+ * affordance rather than a legend -- it says the right arrow does something here. */
+.haste-pane-action--submenu .haste-pane-action-keys {
+    font-size: 13px;
+    color: #8f8f8f;
+}
+
+.haste-pane-action--selected .haste-pane-action-keys {
+    color: #a8a8a8;
 }
 
 .haste-flash {

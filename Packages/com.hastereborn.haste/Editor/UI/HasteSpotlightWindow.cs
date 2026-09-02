@@ -86,7 +86,7 @@ namespace Haste {
     Label statusLabel;
     Label placeholder;
     VisualElement track;
-    VisualElement actionsList;
+    ScrollView actionsList;
     Label paneTitle;
     Label flashLabel;
     Label revealLabel;
@@ -333,8 +333,13 @@ namespace Haste {
       divider.AddToClassList("haste-pane-divider");
       pane.Add(divider);
 
-      actionsList = new VisualElement();
+      // A ScrollView, not a plain element. A context menu is not a short list -- the
+      // Assets menu alone is 26 entries against a pane about ten rows tall -- and without
+      // one the rows had nowhere to go: flex items shrink by default, so they compressed
+      // from 32px to about 12 and the pane read as raw text rather than as rows.
+      actionsList = new ScrollView();
       actionsList.AddToClassList("haste-actions-list");
+      actionsList.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
       pane.Add(actionsList);
 
       flashLabel = new Label();
@@ -518,6 +523,7 @@ namespace Haste {
 
     void RebuildActions() {
       actionsList.Clear();
+      VisualElement selectedRow = null;
 
       for (var i = 0; i < actions.Count; i++) {
         var index = i;
@@ -526,7 +532,12 @@ namespace Haste {
         var row = new VisualElement();
         row.AddToClassList("haste-pane-action");
         row.EnableInClassList("haste-pane-action--destructive", action.Destructive);
+        row.EnableInClassList("haste-pane-action--submenu", action.Submenu != null);
         row.EnableInClassList("haste-pane-action--selected", i == actionIndex);
+
+        if (i == actionIndex) {
+          selectedRow = row;
+        }
 
         var label = new Label(action.Label);
         label.AddToClassList("haste-pane-action-label");
@@ -547,6 +558,16 @@ namespace Haste {
         });
 
         actionsList.Add(row);
+      }
+
+      // Scheduled rather than called here: ScrollTo needs the row to have geometry, and
+      // it has none until the panel lays out the list that was just rebuilt.
+      if (selectedRow != null) {
+        actionsList.schedule.Execute(() => {
+          if (selectedRow.panel != null) {
+            actionsList.ScrollTo(selectedRow);
+          }
+        });
       }
     }
 

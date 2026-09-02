@@ -154,6 +154,8 @@ namespace Haste {
         ".haste-tag-text", ".haste-name",
         ".haste-name--prefab", ".haste-name--broken", ".haste-name--disabled",
         ".haste-spacer", ".haste-path", ".haste-star", ".haste-dot", ".haste-message",
+        ".haste-pane-action", ".haste-pane-action--selected", ".haste-pane-action--submenu",
+        ".haste-pane-action-label", ".haste-pane-action-keys",
         ".haste-message-box", ".haste-message-title", ".haste-message-hint",
         ".haste-track", ".haste-track--actions", ".haste-pane", ".haste-pane-header",
         ".haste-back", ".haste-pane-title", ".haste-pane-divider", ".haste-actions-list",

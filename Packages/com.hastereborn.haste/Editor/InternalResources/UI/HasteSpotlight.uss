@@ -44,9 +44,8 @@
  * it fills the header's height by definition -- there is no alignment to set.
  *
  * The query text is not left stranded against the window edge by this: the mark's own
- * width and right margin are what inset it now, which is why that margin is larger than
- * the gap a chip would have needed. Everything to the right of the mark still centres
- * vertically in the row. */
+ * width and right margin are what inset it now. Everything to the right of the mark still
+ * centres vertically in the row. */
 .haste-header {
     flex-direction: row;
     align-items: center;
@@ -73,7 +72,13 @@
     width: 48px;
     height: 48px;
     flex-shrink: 0;
-    margin-right: 14px;
+
+    /* Small, because the mark does not fill its own 48px box -- haste_icon.png carries a
+     * transparent margin, so there is already a gap of empty pixels on the right of the
+     * flame before this margin starts. Measuring the box rather than the ink is what made
+     * the text look pushed away from a mark that sits tight against the window edge. */
+    margin-right: 4px;
+
     background-size: 48px 48px;
     background-position: center;
     background-repeat: no-repeat;

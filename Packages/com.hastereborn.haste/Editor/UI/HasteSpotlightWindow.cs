@@ -215,8 +215,12 @@ namespace Haste {
       var header = new VisualElement();
       header.AddToClassList("haste-header");
 
-      var badge = new Label("U");
+      // Haste's own mark. It was the letter "U" -- a placeholder from the design comp,
+      // standing in for a logo that did not exist yet.
+      var badge = new VisualElement();
       badge.AddToClassList("haste-badge");
+      badge.style.backgroundImage =
+        new StyleBackground(HasteResources.LoadTexture(HasteResources.IconPath));
       header.Add(badge);
 
       scopeChip = new VisualElement();

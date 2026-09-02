@@ -45,6 +45,23 @@ namespace Haste {
       return DefaultRoot;
     }
 
+    // Haste's own mark, for the badge in the palette's header.
+    public const string IconPath = "UI/haste_icon.png";
+
+    // Textures are loaded WITHOUT the hideFlags that Load applies.
+    //
+    // HideAndDontSave on the stylesheet keeps it from being written back. Setting it on an
+    // imported texture would mark the shared AssetDatabase object instead, which is not
+    // ours to flag and which Unity complains about when the object is unloaded.
+    public static Texture2D LoadTexture(string relativePath) {
+      var assetPath = Root + relativePath;
+      var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath);
+      if (texture == null) {
+        Debug.LogWarning("[Haste] Missing packaged resource: " + assetPath);
+      }
+      return texture;
+    }
+
     // Returns null rather than throwing if the asset is missing, so a damaged install
     // degrades to default styling instead of taking the window down.
     public static T Load<T>(string relativePath) where T : UnityEngine.Object {

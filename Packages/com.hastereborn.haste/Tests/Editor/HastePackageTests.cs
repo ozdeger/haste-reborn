@@ -198,6 +198,22 @@ namespace Haste {
     }
 
     [Test]
+    public void TheIconShipsWithThePackageAndImports() {
+      // A packaged binary is easy to leave out of a commit and impossible to notice
+      // headlessly otherwise -- the palette would just draw an empty badge.
+      var path = HasteResources.Root + HasteResources.IconPath;
+      Assert.That(File.Exists(path), Is.True, "missing from the package: " + path);
+
+      var icon = HasteResources.LoadTexture(HasteResources.IconPath);
+      Assert.That(icon, Is.Not.Null, "did not import as a Texture2D: " + path);
+      Assert.That(icon.width, Is.GreaterThan(0));
+
+      // The .meta has to be committed too, or the GUID is regenerated on every machine
+      // that pulls the package.
+      Assert.That(File.Exists(path + ".meta"), Is.True, "unversioned import settings");
+    }
+
+    [Test]
     public void TheEditorWindowMenuPathsResolveOnThisEditor() {
       // Haste shipped ExecuteMenuItem("Window/Project") from its Unity 5 days. Unity 6
       // moved those under "Window/General/", and a missing path does not throw -- it logs

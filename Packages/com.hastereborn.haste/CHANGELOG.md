@@ -143,6 +143,8 @@ changelog for those releases is in the repository root.
   that had no size yet, which does nothing.
 
 ### Changed
+- The palette header shows Haste's own mark instead of the placeholder letter
+  the design comp used.
 - Escape always closes Haste, wherever you are. It used to unwind one level of
   the actions pane, so the deeper you were the more times you had to press it.
   Going back is the left arrow's job and only the left arrow's.

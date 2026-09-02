@@ -48,6 +48,8 @@
     padding-left: 16px;
 }
 
+/* Haste's mark. The typography here is gone with the placeholder letter it centred --
+ * the badge carries haste_icon.png now, drawn inside the plate rather than filling it. */
 .haste-badge {
     width: 26px;
     height: 26px;
@@ -56,12 +58,10 @@
     background-color: #343434;
     border-width: 1px;
     border-color: #3f3f3f;
-    align-items: center;
-    justify-content: center;
-    font-size: 9px;
-    -unity-font-style: bold;
-    color: #8f8f8f;
     margin-right: 12px;
+    background-size: 18px 18px;
+    background-position: center;
+    background-repeat: no-repeat;
 }
 
 /* The committed scope chip, e.g. "prefab x". */

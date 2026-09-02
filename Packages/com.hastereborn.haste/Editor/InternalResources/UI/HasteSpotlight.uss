@@ -39,12 +39,17 @@
 
 /* ---------------------------------------------------------------- header */
 
+/* No vertical padding: the mark is 52px and IS the header's height, which is what the
+ * padding plus the query row used to add up to. So the header measures the same 52px it
+ * always did and nothing below it moves. What keeps the mark off the window's top edge is
+ * the transparent margin baked into haste_icon.png rather than padding here -- if it ever
+ * looks cramped, that is the thing to look at, not this rule. */
 .haste-header {
     flex-direction: row;
     align-items: center;
-    padding-top: 14px;
+    padding-top: 0;
     padding-right: 16px;
-    padding-bottom: 12px;
+    padding-bottom: 0;
     padding-left: 16px;
 }
 
@@ -52,14 +57,20 @@
  *
  * The plate and its border were there to give the placeholder LETTER a shape to sit in.
  * A logo does not need one -- and an 18px flame inside a 26px chip was small enough to
- * read as a smudge rather than as a mark. It fills the height of the query row now, which
- * is what the chip was taking up anyway. */
+ * read as a smudge rather than as a mark.
+ *
+ * It is the tallest thing in the header, so it is what sets the header's height. 52px is
+ * chosen to equal what the header measured before -- a ~26px query row plus 14 and 12 of
+ * padding -- so the mark grew into the space that was already there and the results list
+ * below did not lose a row. Changing this number changes the header's height directly;
+ * the header's vertical padding is zero precisely so that this is the only number
+ * involved. */
 .haste-badge {
-    width: 30px;
-    height: 30px;
+    width: 52px;
+    height: 52px;
     flex-shrink: 0;
     margin-right: 10px;
-    background-size: 30px 30px;
+    background-size: 52px 52px;
     background-position: center;
     background-repeat: no-repeat;
 }

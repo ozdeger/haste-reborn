@@ -9,13 +9,12 @@ namespace Haste {
 
     static Vector2 scrollPosition = Vector2.zero;
 
-    // The preferences page is the last IMGUI surface in Haste, and this is the only style
-    // it needs. HasteStyles used to build twenty-five of them, plus a light/dark colour
-    // matrix, behind an EditorStyles readiness gate at startup -- all to serve this one
-    // label once the palette moved to USS.
-    //
-    // Built lazily rather than in a static initialiser: EditorStyles is unusable outside
-    // an interactive editor, and guiHandler is the first point where it is safe to read.
+    // Foldout state. Note there is no GUIStyle here at all any more: HasteStyles used to
+    // build twenty-five of them plus a light/dark colour matrix, behind an EditorStyles
+    // readiness gate at startup, and the last survivor was a word-wrapping label for the
+    // paragraphs this page used to print. Do not bring it back. A control that needs
+    // explaining gets a tooltip, which needs no style and does not push the next control
+    // off the screen.
     static bool showWeights;
     static bool showMenuWeights;
     static bool showFavorites;
@@ -31,17 +30,6 @@ namespace Haste {
           menuRoots = HasteMenuItemSource.Roots;
         }
         return menuRoots;
-      }
-    }
-
-    static GUIStyle wrappedLabel;
-
-    static GUIStyle WrappedLabel {
-      get {
-        if (wrappedLabel == null) {
-          wrappedLabel = new GUIStyle(EditorStyles.label) { wordWrap = true };
-        }
-        return wrappedLabel;
       }
     }
 
@@ -66,39 +54,49 @@ namespace Haste {
       };
     }
 
+    // One line each, and a tooltip instead of a paragraph.
+    //
+    // This page used to carry four multi-paragraph HelpBoxes -- most of a screen of prose
+    // between the reader and the controls. The rule now is that a control explains itself
+    // in its tooltip and the page stays scannable; anything that genuinely needs three
+    // paragraphs belongs in the README, not here.
+    static void Section(string title) {
+      EditorGUILayout.Space();
+      EditorGUILayout.Space();
+      EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
+      EditorGUILayout.Space();
+    }
+
+    static GUIContent Label(string text, string tooltip) {
+      return new GUIContent(text, tooltip);
+    }
+
     public static void PreferencesGUI() {
       using (var scrollView = new HasteScrollView(scrollPosition)) {
         scrollPosition = scrollView.ScrollPosition;
 
         EditorGUILayout.Space();
 
-        EditorGUILayout.LabelField(String.Format("Haste has been opened {0:N0} times since {1} (about {2:N0} times per day).",
-          HasteSettings.UsageCount,
-          HasteSettings.UsageSinceDate.ToLongDateString(),
-          HasteSettings.UsageAverage
-        ), WrappedLabel);
+        // Version and usage in one line rather than a section apiece.
+        EditorGUILayout.LabelField(String.Format(
+          "Haste {0}  \u00b7  opened {1:N0} times since {2}, about {3:N0} a day",
+          Haste.VERSION, HasteSettings.UsageCount,
+          HasteSettings.UsageSinceDate.ToShortDateString(), HasteSettings.UsageAverage),
+          EditorStyles.miniLabel);
 
-        EditorGUILayout.Space();
-        EditorGUILayout.Space();
+        // ------------------------------------------------------------------ sources
+        Section("Search Sources");
 
-        EditorGUILayout.LabelField("Version", EditorStyles.boldLabel);
-        EditorGUILayout.Space();
-
-        EditorGUILayout.LabelField("Current Version", Haste.VERSION);
-
-        EditorGUILayout.Space();
-        EditorGUILayout.Space();
-
-        EditorGUILayout.LabelField("Available Sources", EditorStyles.boldLabel);
-        EditorGUILayout.Space();
-
-        using (var toggleGroup = new HasteToggleGroup("Haste Enabled", HasteSettings.Enabled)) {
+        using (var toggleGroup = new HasteToggleGroup("Enabled", HasteSettings.Enabled)) {
           HasteSettings.Enabled = toggleGroup.Enabled;
           EditorGUILayout.Space();
 
           foreach (var watcher in Haste.Watchers) {
-            string label = System.String.Format("{0} ({1})", watcher.Key, watcher.Value.IndexedCount);
-            bool watchedEnabled = EditorGUILayout.Toggle(label, watcher.Value.Enabled);
+            var label = Label(
+              String.Format("{0} ({1:N0})", watcher.Key, watcher.Value.IndexedCount),
+              "Include " + watcher.Key + " results. The number is how many are indexed.");
+
+            var watchedEnabled = EditorGUILayout.Toggle(label, watcher.Value.Enabled);
             if (watchedEnabled != watcher.Value.Enabled) {
               EditorPrefs.SetBool(HasteSettings.GetPrefKey(HasteSetting.Source, watcher.Key), watchedEnabled);
               Haste.Watchers.ToggleSource(watcher.Key, watchedEnabled);
@@ -107,86 +105,74 @@ namespace Haste {
         }
 
         EditorGUILayout.Space();
-        EditorGUILayout.Space();
-
-        EditorGUILayout.LabelField("Indexed Count", Haste.IndexedCount.ToString());
-
-        EditorGUILayout.Space();
-        EditorGUILayout.Space();
-
-        HasteIgnore.DrawPreferences();
+        EditorGUILayout.LabelField(
+          Label("Indexed", "Everything Haste can currently search."),
+          new GUIContent(Haste.IndexedCount.ToString("N0")));
 
         EditorGUILayout.Space();
-        EditorGUILayout.Space();
-
-        if (GUILayout.Button("Rebuild Index", GUILayout.Width(128))) {
+        if (GUILayout.Button(Label("Rebuild Index",
+              "Index everything again. Use this if results look stale."),
+              GUILayout.Width(128))) {
           Haste.Rebuild();
         }
-        EditorGUILayout.Space();
-        EditorGUILayout.HelpBox("Rebuilds the internal index used for fast searching in Haste. Use this if Haste starts providing weird results.", MessageType.Info);
 
-        EditorGUILayout.Space();
-        EditorGUILayout.Space();
+        // ------------------------------------------------------------------ opening
+        Section("Opening Haste");
 
-        EditorGUILayout.LabelField("Opening Haste", EditorStyles.boldLabel);
-        EditorGUILayout.Space();
+        EditorGUILayout.LabelField(
+          Label("Shortcut", "Rebind it under Edit > Shortcuts, like any other."),
+          new GUIContent(Application.platform == RuntimePlatform.OSXEditor
+            ? "\u2318\u21e7K" : "Ctrl+Shift+K"));
 
-        EditorGUILayout.LabelField("Shortcut", Application.platform == RuntimePlatform.OSXEditor
-          ? "\u2318\u21e7K  (rebind in Edit > Shortcuts)"
-          : "Ctrl+Shift+K  (rebind in Edit > Shortcuts)");
-        EditorGUILayout.Space();
-
-        var doubleTap = EditorGUILayout.Toggle("Double-tap Shift", HasteSettings.DoubleTapShiftEnabled);
+        var doubleTap = EditorGUILayout.Toggle(
+          Label("Double-tap Shift",
+            "Tap Shift twice quickly to open Haste. Ignored while typing, dragging, " +
+            "in play mode, and while indexing."),
+          HasteSettings.DoubleTapShiftEnabled);
         if (doubleTap != HasteSettings.DoubleTapShiftEnabled) {
           HasteSettings.DoubleTapShiftEnabled = doubleTap;
         }
 
         using (new HasteDisabled(!doubleTap)) {
-          var window = EditorGUILayout.IntSlider("Tap window (ms)",
+          var window = EditorGUILayout.IntSlider(
+            Label("Tap window (ms)", "How long between the two taps still counts as one gesture."),
             HasteSettings.DoubleTapShiftWindowMs, 120, 600);
           if (window != HasteSettings.DoubleTapShiftWindowMs) {
             HasteSettings.DoubleTapShiftWindowMs = window;
           }
 
-          var diagnostics = EditorGUILayout.Toggle("Log key events", HasteSettings.DoubleTapShiftDiagnostics);
+          var diagnostics = EditorGUILayout.Toggle(
+            Label("Log key events", "Writes every key Haste sees to the console."),
+            HasteSettings.DoubleTapShiftDiagnostics);
           if (diagnostics != HasteSettings.DoubleTapShiftDiagnostics) {
             HasteSettings.DoubleTapShiftDiagnostics = diagnostics;
           }
         }
 
+        // Conditional and genuinely surprising, so it stays a box -- but one line of it.
         if (HasteDoubleTapShift.IsDisabled) {
           EditorGUILayout.Space();
           EditorGUILayout.HelpBox(
-            "Double-tap Shift switched itself off this session, either because it fired " +
-            "repeatedly or because the editor hook failed. The keyboard shortcut is " +
-            "unaffected.", MessageType.Warning);
+            "Double-tap Shift switched itself off this session. The shortcut still works.",
+            MessageType.Warning);
           if (GUILayout.Button("Reset double-tap state", GUILayout.Width(180))) {
             HasteDoubleTapShift.ResetState();
           }
         }
 
-        EditorGUILayout.Space();
-        EditorGUILayout.HelpBox(
-          "Tap Shift twice, quickly, to open Haste. It is ignored while you are typing in " +
-          "a field, while dragging, in play mode, and while Haste is indexing.\n\n" +
-          "This cannot live in Edit > Shortcuts \u2014 Unity's shortcut system rejects " +
-          "modifier-only bindings \u2014 so the tap window is tuned here instead. The " +
-          "keyboard shortcut above always works regardless.\n\n" +
-          "\"Log key events\" writes every key Haste sees to the console. Turn it on only " +
-          "if the gesture is not firing and you want to report what your keyboard sends.",
-          MessageType.Info);
+        // ------------------------------------------------------------------ ignoring
+        Section("Ignored Paths");
+        HasteIgnore.DrawPreferences();
 
-        EditorGUILayout.Space();
-        EditorGUILayout.Space();
+        // ------------------------------------------------------------------ ranking
+        Section("Ranking");
 
-        EditorGUILayout.LabelField("Result Weights", EditorStyles.boldLabel);
-        EditorGUILayout.Space();
-
-        showWeights = EditorGUILayout.Foldout(showWeights, "Weights by type");
+        showWeights = EditorGUILayout.Foldout(showWeights, Label("Weights by type",
+          "Multiplies a type's score after matching. 1 is neutral, 0 sinks it."));
         if (showWeights) {
           foreach (var kind in HasteKinds.All) {
-            // Menu items are weighted by their root, below. Showing a slider here too
-            // would be a control that silently does nothing.
+            // Menu items are weighted by their root, below. A slider here would be a
+            // control that silently does nothing.
             if (HasteWeights.IsMenuDriven(kind)) {
               continue;
             }
@@ -201,14 +187,15 @@ namespace Haste {
           }
 
           EditorGUILayout.Space();
-          if (GUILayout.Button("Reset Weights", GUILayout.Width(128))) {
+          if (GUILayout.Button("Reset", GUILayout.Width(128))) {
             HasteWeights.ResetToDefaults();
           }
+          EditorGUILayout.Space();
         }
 
-        EditorGUILayout.Space();
-
-        showMenuWeights = EditorGUILayout.Foldout(showMenuWeights, "Weights by menu");
+        showMenuWeights = EditorGUILayout.Foldout(showMenuWeights, Label("Weights by menu",
+          "Unity's own menus start at " + HasteMenuWeights.BuiltinDefault +
+          "; menus this project added start at " + HasteMenuWeights.DiscoveredDefault + "."));
         if (showMenuWeights) {
           var wasBuiltin = true;
 
@@ -219,8 +206,7 @@ namespace Haste {
             // them is the whole reason this list exists, so it is drawn.
             if (wasBuiltin && !builtin) {
               EditorGUILayout.Space();
-              EditorGUILayout.LabelField("From this project and its packages",
-                EditorStyles.miniLabel);
+              EditorGUILayout.LabelField("From this project", EditorStyles.miniLabel);
             }
             wasBuiltin = builtin;
 
@@ -233,42 +219,22 @@ namespace Haste {
           }
 
           EditorGUILayout.Space();
-          if (GUILayout.Button("Reset Menu Weights", GUILayout.Width(148))) {
+          if (GUILayout.Button("Reset", GUILayout.Width(128))) {
             HasteMenuWeights.ResetToDefaults();
           }
+          EditorGUILayout.Space();
         }
-
-        EditorGUILayout.Space();
-        EditorGUILayout.HelpBox(
-          "Multiplies the score of every result of that type, after matching. Use it to " +
-          "push whole categories down without hiding them \u2014 scene objects start " +
-          "below 1 because there are a great many of them and they match short queries " +
-          "readily.\n\n" +
-          "Menu items are weighted by their menu instead, because they are not all alike: " +
-          "the ~529 commands Unity ships start at " + HasteMenuWeights.BuiltinDefault +
-          ", while a menu this project added \u2014 your own tools \u2014 starts at " +
-          HasteMenuWeights.DiscoveredDefault + " and is listed as soon as it is found.\n\n" +
-          "1 leaves a type where the match quality puts it. 0 sinks it to the bottom; to " +
-          "remove a type from results entirely, turn its source off above instead.\n\n" +
-          "These are yours, not the project's \u2014 they stay on this machine.",
-          MessageType.Info);
-
-        EditorGUILayout.Space();
-        EditorGUILayout.Space();
-
-        EditorGUILayout.LabelField("Favorites", EditorStyles.boldLabel);
-        EditorGUILayout.Space();
 
         var favorites = HasteFavorites.instance.ToArray();
 
-        showFavorites = EditorGUILayout.Foldout(showFavorites,
-          favorites.Length == 0 ? "Favorites" : "Favorites (" + favorites.Length + ")");
+        showFavorites = EditorGUILayout.Foldout(showFavorites, Label(
+          favorites.Length == 0 ? "Favorites" : "Favorites (" + favorites.Length + ")",
+          "Alt+Enter on a row. A favorite scores " + HasteFavorites.Multiplier +
+          "\u00d7 and shows a star. Scene objects cannot be favorited."));
 
         if (showFavorites) {
           if (favorites.Length == 0) {
-            EditorGUILayout.LabelField(
-              "Nothing yet. Press Alt+Enter on a row in Haste, or right-click an asset " +
-              "and choose Haste > Add to Favorites.", WrappedLabel);
+            EditorGUILayout.LabelField("Nothing yet.", EditorStyles.miniLabel);
           } else {
             // Collected rather than removed inside the loop: mutating the list being
             // drawn throws out of the middle of a layout group.
@@ -279,7 +245,7 @@ namespace Haste {
               EditorGUILayout.LabelField(new GUIContent(
                 HasteFavorites.PathOf(key),
                 HasteFavorites.SourceOf(key) + "  \u2014  " + HasteFavorites.PathOf(key)));
-              if (GUILayout.Button("\u00d7", GUILayout.Width(22))) {
+              if (GUILayout.Button(new GUIContent("\u00d7", "Remove"), GUILayout.Width(22))) {
                 remove = key;
               }
               EditorGUILayout.EndHorizontal();
@@ -290,35 +256,22 @@ namespace Haste {
             }
 
             EditorGUILayout.Space();
-            if (GUILayout.Button("Clear Favorites", GUILayout.Width(128))) {
+            if (GUILayout.Button("Clear", GUILayout.Width(128))) {
               HasteFavorites.instance.Clear();
             }
           }
         }
 
-        EditorGUILayout.Space();
-        EditorGUILayout.HelpBox(
-          "A favorite scores " + HasteFavorites.Multiplier + "\u00d7 its usual score, on " +
-          "top of every other weight, and its row shows a star.\n\n" +
-          "Scene objects cannot be favorited. A favorite is remembered by path, and a " +
-          "GameObject's path changes when it is renamed, reparented or its scene is " +
-          "closed \u2014 a favorite that silently stops matching is worse than not " +
-          "offering one.\n\n" +
-          "These live in this project's UserSettings folder: yours, and not committed.",
-          MessageType.Info);
+        // ------------------------------------------------------------------ browsing
+        Section("Browsing");
 
-        EditorGUILayout.Space();
-        EditorGUILayout.Space();
-
-        EditorGUILayout.LabelField("Advanced", EditorStyles.boldLabel);
-        EditorGUILayout.Space();
-
-        bool selectEnabled = EditorGUILayout.Toggle("Enable Select", HasteSettings.SelectEnabled);
+        var selectEnabled = EditorGUILayout.Toggle(
+          Label("Select as you move",
+            "Selects each result as you arrow past it. Expands folders as it goes."),
+          HasteSettings.SelectEnabled);
         if (selectEnabled != HasteSettings.SelectEnabled) {
           HasteSettings.SelectEnabled = selectEnabled;
         }
-        EditorGUILayout.Space();
-        EditorGUILayout.HelpBox("Temporarily selects each result as you scroll through it, so you can see it in the editor. Off by default, because selecting expands hierarchy and project folders as it goes.", MessageType.Info);
 
         EditorGUILayout.Space();
       }

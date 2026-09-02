@@ -167,7 +167,9 @@ namespace Haste {
     static bool showBuiltin;
 
     public static void DrawPreferences() {
-      var useBuiltin = EditorGUILayout.Toggle("Use recommended ignores", HasteSettings.UseRecommendedIgnores);
+      var useBuiltin = EditorGUILayout.Toggle(new GUIContent("Use recommended",
+        "Skip Plugins, vendored SDKs and Unity's generated folders."),
+        HasteSettings.UseRecommendedIgnores);
       if (useBuiltin != HasteSettings.UseRecommendedIgnores) {
         HasteSettings.UseRecommendedIgnores = useBuiltin;
         Haste.Rebuild();
@@ -175,8 +177,9 @@ namespace Haste {
 
       // Shown rather than merely counted: this list hides results silently, so the one
       // place it is documented had better be the place you go when something is missing.
-      showBuiltin = EditorGUILayout.Foldout(showBuiltin,
-        string.Format("Recommended ({0})", HasteIgnoreRules.Builtin.Length));
+      showBuiltin = EditorGUILayout.Foldout(showBuiltin, new GUIContent(
+        string.Format("Recommended ({0})", HasteIgnoreRules.Builtin.Length),
+        "What the setting above skips. Read-only."));
       if (showBuiltin) {
         using (new HasteDisabled(true)) {
           foreach (var rule in HasteIgnoreRules.Builtin) {
@@ -186,26 +189,25 @@ namespace Haste {
       }
 
       EditorGUILayout.Space();
+      EditorGUILayout.LabelField(new GUIContent("Shared with the project",
+        "Committed in ProjectSettings/HasteIgnorePaths.asset, so your team gets it."));
       SharedList.DoLayoutList();
-      if (GUILayout.Button("Save Shared Paths", GUILayout.Width(140))) {
+      if (GUILayout.Button("Save", GUILayout.Width(128))) {
         SharedProxy.Save();
       }
 
       EditorGUILayout.Space();
+      EditorGUILayout.LabelField(new GUIContent("Just for you",
+        "Stays on this machine. Right-clicking a folder > Haste > Ignore adds it here."));
       PersonalList.DoLayoutList();
-      if (GUILayout.Button("Save Your Paths", GUILayout.Width(140))) {
+      if (GUILayout.Button("Save", GUILayout.Width(128))) {
         PersonalProxy.Save();
       }
 
       EditorGUILayout.Space();
-      EditorGUILayout.HelpBox(
-        "Paths to skip when indexing assets. Shared paths are committed with the project " +
-        "in ProjectSettings/HasteIgnorePaths.asset; your own stay on this machine.\n\n" +
-        "A rule with a slash is a path (\"Assets/Plugins\"). A rule without one is a " +
-        "folder name matched at any depth (\"Firebase\"). Start a rule with ! to make an " +
-        "exception, which always wins \u2014 that is how Plugins/Android stays searchable.\n\n" +
-        "You can also right-click a folder and choose Haste > Ignore.",
-        MessageType.Info);
+      EditorGUILayout.LabelField(
+        "A slash makes it a path; no slash matches that folder name at any depth; ! excepts.",
+        EditorStyles.miniLabel);
     }
 
     [MenuItem("Assets/Haste/Ignore")]

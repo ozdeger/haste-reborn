@@ -36,6 +36,10 @@ changelog for those releases is in the repository root.
   slider under Preferences > Haste > Weights by menu as soon as Haste sees it.
 
 ### Changed
+- The preferences page is regrouped into Search Sources, Opening Haste, Ignored
+  Paths, Ranking and Browsing, with version and usage on one line at the top.
+  Every control explains itself in a tooltip; the four multi-paragraph help boxes
+  that used to sit between them are gone.
 - **Vendored and generated folders are ignored out of the box.** `Assets/Plugins`, the
   External Dependency Manager's folders, the common mobile SDKs and Unity's own magic
   folders no longer appear in results, so a search for "manager" returns your managers

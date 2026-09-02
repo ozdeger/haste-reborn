@@ -147,8 +147,13 @@
     overflow: hidden;
 }
 
-/* Results and actions sit side by side on a double-width track that slides. This is the
- * design's own 0.18s cubic-bezier; UI Toolkit animates `translate` natively. */
+/* Results and actions sit side by side on a double-width track that slides.
+ *
+ * The design specifies cubic-bezier(.4, 0, .2, 1). USS HAS NO cubic-bezier -- it takes
+ * named easings only. Writing one does not fail the import, it produces a declaration
+ * with ZERO values, and ComputedStyle.ApplyGlobalKeyword then indexes past the end of
+ * that empty list on every repaint: ArgumentOutOfRangeException the moment the palette
+ * opens. ease-in-out is the nearest named curve. */
 .haste-track {
     flex-direction: row;
     width: 200%;
@@ -156,7 +161,7 @@
     translate: 0 0;
     transition-property: translate;
     transition-duration: 0.18s;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-timing-function: ease-in-out;
 }
 
 .haste-track--actions {
@@ -482,6 +487,12 @@
     font-size: 10px;
     color: #9c9c9c;
     -unity-text-align: middle-center;
+}
+
+.haste-footer-hint {
+    flex-direction: row;
+    align-items: center;
+    margin-left: 10px;
 }
 
 .haste-footer-separator {

@@ -309,6 +309,15 @@ Cecil also reads method bodies, which is how several of the findings below were 
   frame emits **one** event, for the root. Always treat the instanceId as a subtree root.
 - **`ChangeGameObjectOrComponentProperties` is the only rename signal** and also fires on
   every transform tweak. Without a name-compare guard the index thrashes on every drag.
+- **USS has no `cubic-bezier()`** — named easings only (`ease`, `ease-in-out`,
+  `ease-out-cubic`, …). This one is worth knowing because of HOW it fails: an unsupported
+  value is **not** an import error. The importer logs a *warning* and keeps the declaration
+  with **zero values**, and `ComputedStyle.ApplyGlobalKeyword` then indexes past the end of
+  that empty list on the first repaint — `ArgumentOutOfRangeException` the moment the
+  window opens. A clean compile, a stylesheet that loads and every selector present all
+  prove nothing. `HasteStylesheetTests` asserts `StyleSheet.importedWithWarnings` is false
+  for exactly this reason; it was written after copying the design's timing function
+  verbatim cost an afternoon.
 - **Unity rewrote its own palette from IMGUI to UI Toolkit inside the Unity 6 cycle.**
   2022.3 has `QuickSearch` with `OnGUI`; 6000.x has `SearchWindow` with `CreateGUI` and a
   plain public `ListView`. IMGUI is not deprecated — 79 of 151 built-in editor windows
@@ -573,8 +582,7 @@ From the palette rewrite, in the order worth checking:
 - **Arrow keys.** They are intercepted on the root with `TrickleDown` so the text field
   does not eat them first.
 - **The actions pane slide.** `→` moves a double-width track by `translate: -50%` over
-  0.18s. If the transition does not animate, the USS `transition-property: translate` is
-  the thing to check.
+  0.18s, eased with `ease-in-out` because USS has no `cubic-bezier` (see 3.3).
 - **Destructive actions.** Delete opens a confirmation dialog, and it must do so *after*
   the palette has closed — the window dismisses on focus loss, so a modal raised while it
   is open would pull the palette out from under the dialog. Worth confirming once.

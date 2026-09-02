@@ -30,7 +30,7 @@ namespace Haste {
       // Saved window layouts. Few, but almost never what a search is for.
       { HasteKind.Layout,    0.7f },
 
-      // Menu, Tool and Component are all menu items and are NOT weighted here -- see
+      // Menu and Component are both menu items and are NOT weighted here -- see
       // HasteMenuWeights, which weights them by menu root instead so that a project's own
       // tools menu can sit above Unity's 529 stock commands. They stay in HasteKind
       // because scope tokens ("t:menu") still classify by them.
@@ -71,7 +71,7 @@ namespace Haste {
     // Kinds whose weight comes from the menu root rather than this table. Preferences
     // hides them so there is no slider that silently does nothing.
     public static bool IsMenuDriven(HasteKind kind) {
-      return kind == HasteKind.Menu || kind == HasteKind.Tool || kind == HasteKind.Component;
+      return kind == HasteKind.Menu || kind == HasteKind.Component;
     }
 
     // Read once per domain rather than per item. Map applies this to every match, and

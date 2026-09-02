@@ -233,6 +233,7 @@ namespace Haste {
       queryField = new TextField();
       queryField.AddToClassList("haste-query");
       queryField.RegisterValueChangedCallback(evt => OnQueryChanged(evt.newValue));
+      queryField.RegisterCallback<FocusOutEvent>(OnQueryFocusOut);
       slot.Add(queryField);
 
       placeholder = new Label("Search assets, objects, commands…");
@@ -588,20 +589,28 @@ namespace Haste {
       // GetCachedIcon is the Project window's own lookup, so prefabs, textures, audio
       // clips, animation clips and controllers all get the icon the user already knows.
       if (item.source == HasteProjectSource.NAME) {
-        return AssetDatabase.GetCachedIcon(item.path) as Texture2D;
+        var cached = AssetDatabase.GetCachedIcon(item.path) as Texture2D;
+        if (cached != null) {
+          return cached;
+        }
       }
 
       if (item.source == HasteHierarchySource.NAME) {
         var obj = result.Object;
-        if (obj == null) {
-          return null;
+        if (obj != null) {
+          // ObjectContent gives the same icon the Hierarchy draws, which is the component
+          // icon for things like a Camera rather than the generic GameObject cube.
+          var content = EditorGUIUtility.ObjectContent(obj, obj.GetType()).image as Texture2D;
+          if (content != null) {
+            return content;
+          }
         }
-        // ObjectContent gives the same icon the Hierarchy draws, which is the component
-        // icon for things like a Camera rather than the generic GameObject cube.
-        return EditorGUIUtility.ObjectContent(obj, obj.GetType()).image as Texture2D;
       }
 
-      return null;
+      // Menu items and layouts have no asset and no object, and so used to fall through
+      // to a text badge -- which read as a different class of row than everything around
+      // it. They get one of the editor's own icons instead.
+      return HasteIcons.For(HasteKinds.Classify(item));
     }
 
     void BindRow(VisualElement row, int index) {
@@ -681,6 +690,31 @@ namespace Haste {
 
     void OnQueryFieldLaidOut(GeometryChangedEvent evt) {
       queryField.UnregisterCallback<GeometryChangedEvent>(OnQueryFieldLaidOut);
+      queryField.Focus();
+    }
+
+    // The palette has one text field and nothing else that keyboard focus is any use to,
+    // so anything that takes focus is taking it away from the only place typing can land.
+    // Clicking a hint chip, a row, or a button in the actions pane all did.
+    //
+    // Restoring it from inside the click handler is not enough, and ApplyHint's Focus()
+    // call proved it: UI Toolkit's focus controller blurs on pointer-down and finishes
+    // AFTER the callback runs, so a Focus() made during the click is immediately undone.
+    // Scheduling lands on the next panel tick, after the controller has settled.
+    //
+    // The window is closed by Update() as soon as it is not the focused window, so the
+    // guards here are about not reaching for a field on a panel that is on its way out.
+    void OnQueryFocusOut(FocusOutEvent evt) {
+      if (queryField == null || Instance != this) {
+        return;
+      }
+      queryField.schedule.Execute(RefocusQuery);
+    }
+
+    void RefocusQuery() {
+      if (queryField == null || Instance != this || this != focusedWindow) {
+        return;
+      }
       queryField.Focus();
     }
 

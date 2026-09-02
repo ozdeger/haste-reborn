@@ -129,6 +129,16 @@ changelog for those releases is in the repository root.
   identified items by an unstable hash that cannot be resolved back to an object.
 
 ### Changed
+- Menu items and window layouts now show an editor icon instead of a text badge,
+  so every row reads the same way. Any row whose icon cannot be resolved falls
+  back to its type icon rather than to text.
+- `Tools/…` entries are no longer a separate type. They are menu items under a
+  root some package added, they get the menu icon like any other, and per-menu
+  weights are the knob for treating them differently. `t:tool` still works and
+  scopes to menu items.
+- The query field keeps keyboard focus for as long as the window is open —
+  clicking a filter chip, a row, or an action no longer leaves you typing into
+  nothing.
 - The filter for menu items is called `menu`, not `command` — `t:menu`, or the `>`
   sigil as before, and the chip reads "menu". `t:command` and `t:cmd` still work
   but are no longer the name. The row badge reads `MENU`.

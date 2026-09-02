@@ -45,7 +45,7 @@ namespace Haste {
       // Menu kinds are deliberately absent from this table -- HasteMenuWeights weights
       // them by root instead. They keep a neutral 1.0 here so that anything still reading
       // the kind table does not double-apply a demotion.
-      foreach (var kind in new[] { HasteKind.Menu, HasteKind.Tool, HasteKind.Component }) {
+      foreach (var kind in new[] { HasteKind.Menu, HasteKind.Component }) {
         Assert.That(HasteWeights.IsMenuDriven(kind), Is.True, kind.ToString());
         Assert.That(HasteWeights.Default(kind), Is.EqualTo(1.0f).Within(0.001f), kind.ToString());
       }

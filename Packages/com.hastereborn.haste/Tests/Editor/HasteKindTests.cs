@@ -89,7 +89,7 @@ namespace Haste {
     [Test]
     public void Classify_SplitsMenuItemsByRoot() {
       Assert.That(HasteKinds.Classify(Menu("Component/Physics/Rigidbody")), Is.EqualTo(HasteKind.Component));
-      Assert.That(HasteKinds.Classify(Menu("Tools/Atlas/Rebuild")), Is.EqualTo(HasteKind.Tool));
+      Assert.That(HasteKinds.Classify(Menu("Tools/Atlas/Rebuild")), Is.EqualTo(HasteKind.Menu));
       Assert.That(HasteKinds.Classify(Menu("File/Build Profiles")), Is.EqualTo(HasteKind.Menu));
       Assert.That(HasteKinds.Classify(Menu("Edit/Project Settings...")), Is.EqualTo(HasteKind.Menu));
     }
@@ -131,7 +131,7 @@ namespace Haste {
 
       // Sigils bind without a colon; word tokens need one.
       Assert.That(HasteKinds.SplitScope(">build", out kinds, out token), Is.EqualTo("build"));
-      Assert.That(kinds, Is.EqualTo(HasteKind.Menu | HasteKind.Tool));
+      Assert.That(kinds, Is.EqualTo(HasteKind.Menu));
       Assert.That(HasteKinds.SplitScope("#canvas", out kinds, out token), Is.EqualTo("canvas"));
       Assert.That(kinds, Is.EqualTo(HasteKind.Component));
 
@@ -145,11 +145,11 @@ namespace Haste {
       HasteKind kinds; string token;
 
       Assert.That(HasteKinds.SplitScope("t:menu build", out kinds, out token), Is.EqualTo("build"));
-      Assert.That(kinds, Is.EqualTo(HasteKind.Menu | HasteKind.Tool));
+      Assert.That(kinds, Is.EqualTo(HasteKind.Menu));
       Assert.That(token, Is.EqualTo("menu"));
 
       Assert.That(HasteKinds.SplitScope("menu:build", out kinds, out token), Is.EqualTo("build"));
-      Assert.That(kinds, Is.EqualTo(HasteKind.Menu | HasteKind.Tool));
+      Assert.That(kinds, Is.EqualTo(HasteKind.Menu));
 
       // "command" and "cmd" were the name until this rename and are what fingers
       // remember, so they still parse -- but they present as "menu", so the chip shows one
@@ -157,7 +157,7 @@ namespace Haste {
       foreach (var alias in new[] { "command", "cmd" }) {
         Assert.That(HasteKinds.SplitScope(alias + ":build", out kinds, out token),
           Is.EqualTo("build"), alias);
-        Assert.That(kinds, Is.EqualTo(HasteKind.Menu | HasteKind.Tool), alias);
+        Assert.That(kinds, Is.EqualTo(HasteKind.Menu), alias);
         Assert.That(token, Is.EqualTo("menu"), alias);
       }
 
@@ -166,7 +166,7 @@ namespace Haste {
       Assert.That(token, Is.EqualTo("menu"));
 
       Assert.That(HasteKinds.Label(HasteKind.Menu), Is.EqualTo("menu"));
-      Assert.That(HasteKinds.Label(HasteKind.Menu | HasteKind.Tool), Is.EqualTo("menu"));
+      Assert.That(HasteKinds.Label(HasteKind.Menu), Is.EqualTo("menu"));
       Assert.That(HasteKinds.Tag(Menu("File/Build Profiles")), Is.EqualTo("MENU"));
     }
 
@@ -238,7 +238,7 @@ namespace Haste {
       Assert.That(HasteKinds.Matches(HasteKind.Prefab, prefab), Is.True);
       Assert.That(HasteKinds.Matches(HasteKind.Prefab, script), Is.False);
       // A token naming several kinds matches any of them.
-      Assert.That(HasteKinds.Matches(HasteKind.Menu | HasteKind.Tool, Menu("Tools/X/Y")), Is.True);
+      Assert.That(HasteKinds.Matches(HasteKind.Menu, Menu("Tools/X/Y")), Is.True);
     }
 
     [Test]

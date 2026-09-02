@@ -631,6 +631,17 @@ implemented: the `[Shortcut]` binding and the double-tap-Shift gesture.
 
 From the palette rewrite, in the order worth checking:
 
+- **That focus never leaves the query field.** `OnQueryFocusOut` re-focuses on the next
+  panel tick, because UI Toolkit's focus controller blurs on pointer-down and finishes
+  after the click callback — a `Focus()` made during the click is undone. That is runtime
+  UI Toolkit behaviour with no headless surface, so the one-tick restore has not been seen
+  working, and whether it flickers is unknown. If it does, the alternative is preventing
+  the blur at `PointerDownEvent` rather than undoing it, which risks suppressing the
+  `MouseDownEvent` the rows and chips are built on.
+- **That the new row icons read at 16px.** `HasteIcons` maps every kind to a built-in
+  editor icon and a test proves each name resolves, but not that it *looks* right —
+  `_Menu` in particular is a small monochrome hamburger glyph sitting next to full-colour
+  asset icons.
 - **That it opens at all, focused, with the caret in the field.** `Update` closes the
   window when it is not the focused window, and only a `hasBeenFocused` guard stops that
   firing on the frames between `ShowPopup` and focus arriving.

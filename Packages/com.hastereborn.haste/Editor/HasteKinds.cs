@@ -20,7 +20,9 @@ namespace Haste {
     Hierarchy = 1 << 4,
     Component = 1 << 5,
     Menu      = 1 << 6,
-    Tool      = 1 << 7,
+    // 1 << 7 was Tool, for "Tools/..." menu paths. It was never a different KIND of
+    // thing, only a menu item under a root some package invented, and per-root weights
+    // now cover what it was really for. The bit is left as a gap rather than reused.
     Layout    = 1 << 8,
     Texture   = 1 << 9,
     Audio     = 1 << 10,
@@ -54,9 +56,6 @@ namespace Haste {
         case HasteMenuItemSource.NAME:
           if (item.path.StartsWith("Component/", StringComparison.Ordinal)) {
             return HasteKind.Component;
-          }
-          if (item.path.StartsWith("Tools/", StringComparison.Ordinal)) {
-            return HasteKind.Tool;
           }
           return HasteKind.Menu;
       }
@@ -147,7 +146,6 @@ namespace Haste {
         case HasteKind.Hierarchy: return "GO";
         case HasteKind.Component: return "CMP";
         case HasteKind.Menu:      return "MENU";
-        case HasteKind.Tool:      return "TL";
         case HasteKind.Layout:    return "LAY";
       }
 
@@ -170,7 +168,6 @@ namespace Haste {
         case HasteKind.Script:    return "script";
         case HasteKind.Hierarchy: return "hierarchy";
         case HasteKind.Component: return "component";
-        case HasteKind.Tool:      return "tool";
         case HasteKind.Layout:    return "layout";
         case HasteKind.Texture:   return "texture";
         case HasteKind.Audio:     return "audio";
@@ -180,7 +177,6 @@ namespace Haste {
         case HasteKind.Model:     return "model";
         case HasteKind.Shader:    return "shader";
         case HasteKind.Font:      return "font";
-        case HasteKind.Menu | HasteKind.Tool: return "menu";
         case HasteKind.Menu:      return "menu";
       }
       return "";
@@ -206,7 +202,14 @@ namespace Haste {
         case ">":
         case "menu":
         case "cmd":
-        case "command":  kinds = HasteKind.Menu | HasteKind.Tool; return true;
+        case "command":
+        // "Tools/..." used to be a kind of its own, with its own badge and its own scope.
+        // It was never a different KIND of thing -- it is a menu item under a root that
+        // some package invented, and the per-root weights in HasteMenuWeights are the
+        // knob that actually wanted to exist. The token still parses so nobody's muscle
+        // memory breaks; it just scopes to menu items now.
+        case "tool":
+        case "tools":    kinds = HasteKind.Menu; return true;
         case "#":
         case "component": kinds = HasteKind.Component; return true;
         case "?":
@@ -224,8 +227,6 @@ namespace Haste {
         case "h":
         case "go":
         case "hierarchy": kinds = HasteKind.Hierarchy; return true;
-        case "tool":
-        case "tools":    kinds = HasteKind.Tool; return true;
         case "l":
         case "layout":   kinds = HasteKind.Layout; return true;
 
@@ -350,7 +351,6 @@ namespace Haste {
       HasteKind.Hierarchy,
       HasteKind.Component,
       HasteKind.Menu,
-      HasteKind.Tool,
       HasteKind.Layout,
     };
 

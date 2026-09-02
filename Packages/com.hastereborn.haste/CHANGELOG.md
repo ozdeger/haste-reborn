@@ -18,6 +18,13 @@ changelog for those releases is in the repository root.
   fuzzy-match highlighting, so behaviour changes are visible rather than silent.
 
 ### Changed
+- **A new palette.** Haste is rebuilt on UI Toolkit against a Spotlight-style design:
+  a wider window, a single row per result with the file name on the left and its folder on
+  the right, a type badge, and a status bar. Matched characters are still highlighted, now
+  in both the name and the folder.
+- **Scope your search by type.** Start a query with `prefab:`, `script:`, `scene:`,
+  `asset:`, `h:` (hierarchy), `layout:`, `>` (commands), or `#` (components) to search only
+  that kind. The prefix turns into a chip; backspace on an empty query clears it.
 - **Spaces in a query now separate terms instead of killing the search.** Every term has
   to match, in any order, so "main camera" finds `MainCamera.mat` and "popup crimescene"
   finds `Popup_CrimeScene_Character_Banner_Sale.png`. Previously the whole query was one
@@ -100,6 +107,10 @@ changelog for those releases is in the repository root.
   every scheduler tick. Unity 5's older Mono tolerated it.
 
 ### Removed
+- The movable-window mode, and with it the "Window Position" preferences section. It
+  existed because the palette used to mis-centre itself, opening on the primary display
+  regardless of which monitor Unity was on. That is fixed — the palette now centres on the
+  editor's own window — so the workaround has nothing left to work around.
 - The `Reconnect to Prefab` action. Unity 2018.3 rebuilt the prefab system and removed
   disconnected prefab instances, so there is nothing left to reconnect — the API behind it
   does nothing at all, and the action was a row in the palette that silently did nothing

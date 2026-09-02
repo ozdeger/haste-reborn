@@ -15,12 +15,9 @@ namespace Haste {
     string[] Terms { get; }
 
     bool IsDraggable { get; }
-    bool IsSelected { get; }
     UnityEngine.Object Object { get; }
     string DragLabel { get; }
 
-    void Draw(bool isHighlighted);
-    float Height(bool isHighlighted);
     bool Validate();
     void Action();
     void Select();

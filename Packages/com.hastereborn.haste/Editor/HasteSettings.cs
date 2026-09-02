@@ -13,9 +13,9 @@ namespace Haste {
     IgnorePaths,
     UsageCount,
     UsageSince,
-    ShowHandle,
-    WindowX,
-    WindowY,
+    // ShowHandle, WindowX and WindowY were the movable-window mode. They are gone with
+    // the IMGUI palette; the enum entries are not reused, so a stale EditorPrefs key from
+    // an older install stays orphaned rather than being read as something else.
     Source,
     SelectEnabled,
   }
@@ -31,15 +31,6 @@ namespace Haste {
     public static event SettingChangedHandler<string> ChangedString;
     public static event SettingChangedHandler<float> ChangedFloat;
 
-    public static bool ShowHandle {
-      get {
-        return HasteSettings.GetBool(HasteSetting.ShowHandle, false);
-      }
-      set {
-        HasteSettings.SetBool(HasteSetting.ShowHandle, value);
-      }
-    }
-
     public static bool SelectEnabled {
       get {
         return HasteSettings.GetBool(HasteSetting.SelectEnabled, true);
@@ -49,17 +40,6 @@ namespace Haste {
       }
     }
 
-    public static Vector2 WindowPosition {
-      get {
-        var x = HasteSettings.GetFloat(HasteSetting.WindowX, 0.0f);
-        var y = HasteSettings.GetFloat(HasteSetting.WindowY, 0.0f);
-        return new Vector2(x, y);
-      }
-      set {
-        HasteSettings.SetFloat(HasteSetting.WindowX, value.x);
-        HasteSettings.SetFloat(HasteSetting.WindowY, value.y);
-      }
-    }
 
     public static int UsageAverage {
       get {

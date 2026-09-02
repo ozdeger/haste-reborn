@@ -102,11 +102,6 @@ namespace Haste {
     // which reports the primary display and put the palette on the wrong monitor -- and,
     // on a scaled display, off-centre on the right one.
     static Rect GetPosition() {
-      var saved = HasteSettings.WindowPosition;
-      if (saved != Vector2.zero) {
-        return new Rect(saved.x, saved.y, WindowWidth, WindowHeight);
-      }
-
       var area = HasteDisplay.MainWindowArea();
       return new Rect(
         area.x + (area.width - WindowWidth) / 2f,

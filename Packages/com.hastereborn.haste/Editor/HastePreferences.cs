@@ -92,53 +92,6 @@ namespace Haste {
         EditorGUILayout.Space();
         EditorGUILayout.Space();
 
-        EditorGUILayout.LabelField("Window Position", EditorStyles.boldLabel);
-        EditorGUILayout.Space();
-
-        bool showHandle = EditorGUILayout.Toggle("Enable Moving Window", HasteSettings.ShowHandle);
-        if (showHandle != HasteSettings.ShowHandle) {
-          HasteSettings.ShowHandle = showHandle;
-
-          // If we are showing the handle, open window
-          if (showHandle) {
-            HasteWindow.Open();
-
-          // If the window is open and we turned off the handle, close window
-          } else if (HasteWindow.IsOpen) {
-            HasteWindow.Instance.Close();
-          }
-        }
-        EditorGUILayout.Space();
-
-        using (new HasteHorizontal()) {
-          using (new HasteDisabled(!showHandle || !HasteWindow.IsOpen)) {
-            if (GUILayout.Button("Save Window Position", GUILayout.Width(128))) {
-              HasteSettings.WindowPosition = HasteWindow.Instance.position.position;
-
-              // Close window after saving its position.
-              if (HasteWindow.IsOpen) {
-                HasteWindow.Instance.Close();
-              }
-
-              HasteSettings.ShowHandle = false;
-            }
-          }
-
-          using (new HasteDisabled(HasteSettings.WindowPosition == Vector2.zero)) {
-            if (GUILayout.Button("Reset Window Position", GUILayout.Width(128))) {
-              HasteSettings.WindowPosition = Vector2.zero;
-
-              // Close window after restoring its position.
-              if (HasteWindow.IsOpen) {
-                HasteWindow.Instance.Close();
-              }
-            }
-          }
-        }
-
-        EditorGUILayout.Space();
-        EditorGUILayout.Space();
-
         EditorGUILayout.LabelField("Advanced", EditorStyles.boldLabel);
         EditorGUILayout.Space();
 

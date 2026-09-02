@@ -28,17 +28,6 @@ namespace Haste {
 
     public HasteProjectResult(HasteItem item, float score, string[] terms) : base(item, score, terms) {}
 
-    public override void Draw(bool isHighlighted) {
-      var icon = AssetDatabase.GetCachedIcon(Item.path);
-      if (icon != null) {
-        var rect = EditorGUILayout.GetControlRect(GUILayout.Width(32), GUILayout.Height(32));
-        rect.y += 5; // center the icon vertically
-        UnityEngine.GUI.DrawTexture(rect, icon);
-      }
-
-      base.Draw(isHighlighted);
-    }
-
     public override void Action() {
       EditorApplication.ExecuteMenuItem("Window/Project");
       EditorUtility.FocusProjectWindow();

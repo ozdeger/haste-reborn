@@ -117,14 +117,14 @@ namespace Haste {
       var flags = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic |
                   System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.DeclaredOnly;
 
-      Assert.That(typeof(HasteWindow).GetMethod("Close", flags), Is.Null,
-        "HasteWindow declares its own Close() again. Shadowing EditorWindow.Close is how " +
+      Assert.That(typeof(HasteSpotlightWindow).GetMethod("Close", flags), Is.Null,
+        "HasteSpotlightWindow declares its own Close() again. Shadowing EditorWindow.Close is how " +
         "the reload lock leaked -- release it from OnDestroy, which Unity always calls.");
 
-      Assert.That(typeof(HasteWindow).GetMethod("OnDestroy", flags), Is.Not.Null,
-        "HasteWindow.OnDestroy is where the reload lock is released.");
+      Assert.That(typeof(HasteSpotlightWindow).GetMethod("OnDestroy", flags), Is.Not.Null,
+        "HasteSpotlightWindow.OnDestroy is where the reload lock is released.");
 
-      Assert.That(typeof(HasteWindow).GetField("holdsReloadLock", flags), Is.Not.Null,
+      Assert.That(typeof(HasteSpotlightWindow).GetField("holdsReloadLock", flags), Is.Not.Null,
         "the lock is balanced by state, not by pairing call sites.");
     }
 

@@ -129,8 +129,8 @@ namespace Haste {
 
       HasteSettings.Version = VERSION;
 
-      // Pre-load icons and styles
-      HasteHierarchyResult.LoadGameObjectIcon();
+      // The palette's own styling is USS and loads with the window; this is only for the
+      // preferences page, which is still IMGUI.
       Scheduler.Start(HasteStyles.Init());
     }
 
@@ -254,7 +254,7 @@ namespace Haste {
     static void Update() {
       // We must delay the window action to handle actions
       // that affect layout state to prevent bugs in Unity.
-      if (WindowAction != null && HasteWindow.Instance == null) {
+      if (WindowAction != null && HasteSpotlightWindow.Instance == null) {
         try {
           WindowAction();
         } finally {

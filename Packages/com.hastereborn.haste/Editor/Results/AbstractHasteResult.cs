@@ -16,22 +16,12 @@ namespace Haste {
       get { return false; }
     }
 
-    public virtual float Height(bool isHighlighted) {
-      return HasteStyles.ItemHeight;
-    }
-
     public virtual UnityEngine.Object Object {
       get { return null; }
     }
 
     public virtual string DragLabel {
       get { return ""; }
-    }
-
-    public virtual bool IsSelected {
-      get {
-        return HasteWindow.Instance.IsSelected(Object);
-      }
     }
 
     private int[] indices;
@@ -82,26 +72,6 @@ namespace Haste {
 
     public virtual bool Validate() {
       return true;
-    }
-
-    public virtual void Draw(bool isHighlighted) {
-      using (new HasteVertical()) {
-        // Name
-        var nameStyle = isHighlighted ?
-          HasteStyles.GetStyle("HighlightedName") :
-          HasteStyles.GetStyle("Name");
-        EditorGUILayout.LabelField(HasteStringUtils.GetFileName(Item.path), nameStyle);
-
-        // Description
-        var descriptionStyle = isHighlighted ?
-          HasteStyles.GetStyle("HighlightedDescription") :
-          HasteStyles.GetStyle("Description");
-        var boldStart = isHighlighted ?
-          HasteStyles.HighlightedBoldStart :
-          HasteStyles.BoldStart;
-        var description = HasteStringUtils.BoldLabel(Item.path, Indices, boldStart, HasteStyles.BoldEnd);
-        EditorGUILayout.LabelField(description, descriptionStyle);
-      }
     }
 
     public virtual void Select() {

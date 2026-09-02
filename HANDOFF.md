@@ -134,8 +134,11 @@ neither indexing nor searching can stall the editor.
 | `Sources/*.cs` | The four enumerators. `HasteMenuItemSource` reads the editor's live menu tree; it used to ship hardcoded menu tables |
 | `Results/*.cs` | Per-source rendering and the `Action()`/`Select()` behaviour |
 | `GUI/*.cs` | IMGUI widgets, `IDisposable` layout wrappers, manual list virtualization |
-| `HasteWindow.cs` | The palette window and its 4-state machine (Intro/Loading/Results/Empty) |
-| `HasteStyles.cs`, `HastePalette.cs` | GUIStyle matrix and light/dark colour pairs |
+| `UI/HasteSpotlightWindow.cs` | The palette. UI Toolkit; replaced the IMGUI `HasteWindow` |
+| `InternalResources/UI/HasteSpotlight.uss` | All palette styling, values taken from the design |
+| `HasteKinds.cs` | Presentation taxonomy for row badges and scope tokens |
+| `HasteDisplay.cs` | Where the palette opens |
+| `HasteStyles.cs`, `HastePalette.cs` | GUIStyle matrix, now used only by the preferences page |
 | `HasteSettings.cs` | `EditorPrefs` wrapper keyed by a `HasteSetting` enum |
 | `HastePreferences.cs` | The preferences page |
 | `HasteRecommendations.cs` | Recency store, a `ScriptableSingleton` in `UserSettings/` |
@@ -490,9 +493,22 @@ Part 5 — Current state and what is next
 5.2 Not done
 ---
 
-**The obsolete-API burn-down is finished: 0 warnings, down from 32.** The remaining
-phases, in order: event-driven incremental indexing with stable identity keys; the rest of
-the search-core rewrite; the UI Toolkit palette; and settings consolidation.
+**The obsolete-API burn-down is finished: 0 warnings, down from 32, and the UI Toolkit
+palette has landed.** The remaining phases, in order: event-driven incremental indexing
+with stable identity keys; the rest of the search-core rewrite; and settings consolidation.
+
+Left over from the palette work, in rough order of value:
+
+- **`HasteStyles` and `HastePalette` are nearly dead.** With results no longer drawing
+  themselves, the only surviving caller is `HastePreferences` asking for one style
+  (`"Usage"`). That is ~25 GUIStyle definitions and a whole light/dark colour matrix built
+  at startup, behind an `EditorStyles` readiness gate, to serve a single label. Trimming
+  them is self-contained.
+- **The actions pane** (`→` / `Cmd+K`) from the design, and its 0.18s slide.
+- **"Suggested commands"** on the launch screen. Recents are real; suggestions need a
+  signal that does not exist yet.
+- **Row density** is fixed at the design's standard 32px. The design exposes compact (24)
+  and two-line (40) as well; they would be a preference.
 
 3.2's `HierarchyProperty` note is worth reading before the incremental-indexing work: it is
 public in Unity 6 and gives name, depth, instanceID and `colorCode` with no managed object
@@ -532,8 +548,30 @@ double-tap-Shift design, which is designed but not implemented.
   a millisecond and the scan is paid once, in the background, after them. If it ever needs
   to be cheaper, the honest fix is a cache keyed on assembly MVIDs, not a name filter.
 
-5.2.2 Unverified by the burn-down
+5.2.2 Unverified — needs the editor open
 ---
+
+From the palette rewrite, in the order worth checking:
+
+- **That it opens at all, focused, with the caret in the field.** `Update` closes the
+  window when it is not the focused window, and only a `hasBeenFocused` guard stops that
+  firing on the frames between `ShowPopup` and focus arriving.
+- **The corners.** The design has a 12px radius and a large drop shadow. USS has no
+  box-shadow at all, so the shadow is simply absent; the radius is applied, but a Unity
+  popup is an opaque rectangular OS window, so the corners may well render square. If they
+  do, that is a platform limit rather than a bug — worth confirming before anyone tries to
+  "fix" it.
+- **The text field.** Unity's `TextField` has its own nested input element and default
+  chrome; the stylesheet targets `.unity-text-field__input` to strip it. If a border or a
+  pale background survives, that selector is the place to look.
+- **Highlighting on a short name.** `GetWeightedSubsequence` prefers word boundaries, so
+  "popup" in `Popup.prefab` bolds P-o-p-u and then the `p` of `.prefab`. Correct for
+  acronyms, odd on a short name shown by itself — which the new row does far more than the
+  old full-path label did.
+- **Arrow keys.** They are intercepted on the root with `TrickleDown` so the text field
+  does not eat them first.
+
+From the burn-down:
 
 - **The preferences page has not been looked at since it moved to `[SettingsProvider]`.**
   Its body is unchanged and still draws its own `HasteScrollView`, which now sits inside
@@ -555,8 +593,12 @@ double-tap-Shift design, which is designed but not implemented.
    `GameObject/Create Empty` at 9 on one shared boundary character. Tightening that needs
    a real corpus and real users, not more derivation.
 2. Whether to index only mutable packages, all packages, or none.
-3. Whether the movable-window mode survives, given the centring bug that motivated it is
-   being fixed.
+3. ~~Whether the movable-window mode survives, given the centring bug that motivated it is
+   being fixed.~~ **Decided: removed.** The centring bug is fixed —
+   `Screen.currentResolution` reports the primary display regardless of which monitor Unity
+   is on, and `HasteDisplay` now centres on the editor's own window — so the workaround has
+   nothing left to work around. The new palette is a fixed borderless popup with no drag
+   affordance, so the toggle would have been a preference that does nothing.
 4. Ignore-list scope (team-shared vs per-user) and semantics (literal prefixes vs globs).
 5. Whether `Image Assets/` — the old Asset Store marketing artwork — stays in the repo.
 
@@ -596,6 +638,20 @@ is version-specific. This matters more than it sounds: `ProjectSettings/ProjectV
 still reads `5.1.1f1`, so any run pointed at the repo silently upgrades it and dirties the
 tree. `rsync -a --exclude .git --exclude Library --exclude 'Image Assets'` gives a ~25 MB
 copy that runs fine.
+
+6.1.1 The palette cannot be verified this way at all
+---
+
+`HasteSpotlightWindow` is UI Toolkit, and none of it — layout, styling, focus, keyboard —
+runs under `-batchmode`. What is pinned instead is everything that could be moved out of
+the window: the kind taxonomy and scope-token parsing (`HasteKindTests`), multi-term
+matching and per-part highlighting (`HasteCharacterizationTests`), and the stylesheet's
+packaging plus the fact that it declares every selector the window adds
+(`HastePackageTests`). A renamed selector is otherwise a silently unstyled window rather
+than an error.
+
+That leaves a real list needing a human at the keyboard, and it is written down in 5.2.2
+rather than assumed away.
 
 6.2 What headless verification cannot tell you
 ---

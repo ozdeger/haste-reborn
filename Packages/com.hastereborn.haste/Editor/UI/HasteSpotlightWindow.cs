@@ -63,6 +63,11 @@ namespace Haste {
     bool holdsReloadLock;
     bool wasIndexing;
 
+    // Update closes the palette when it loses focus. Without this it would also close on
+    // the frames between ShowPopup and focus actually arriving, which reads as the window
+    // never opening at all.
+    bool hasBeenFocused;
+
     // ------------------------------------------------------------- elements
 
     TextField queryField;
@@ -117,6 +122,10 @@ namespace Haste {
         prevSelection = new UnityEngine.Object[Selection.objects.Length];
         Array.Copy(Selection.objects, prevSelection, Selection.objects.Length);
       }
+    }
+
+    void OnFocus() {
+      hasBeenFocused = true;
     }
 
     void OnDestroy() {
@@ -535,7 +544,10 @@ namespace Haste {
 
       // "Soft" selection: browsing results previews them in the editor. Switchable off,
       // because it expands Hierarchy and Project folders as it goes.
-      if (HasteSettings.SelectEnabled) {
+      //
+      // Only for rows that actually have an object. A menu item has none, and selecting
+      // it would clear whatever the user had selected simply for arrowing past a command.
+      if (HasteSettings.SelectEnabled && results[highlighted].Object != null) {
         results[highlighted].Select();
       }
     }
@@ -647,7 +659,7 @@ namespace Haste {
       // Close on focus loss. OnLostFocus is avoided here for the same reason the IMGUI
       // window avoided it: it fires during layout in cases that leave the palette drawn
       // but dead.
-      if (this != focusedWindow) {
+      if (hasBeenFocused && this != focusedWindow) {
         Dismiss();
       }
     }

@@ -79,10 +79,27 @@ off it. If you prefer the original chord, take it back in Edit > Shortcuts.
 
 (Additional settings are available in the "Haste" tab of "Unity Preferences".)
 
-Searching By File Type
+Narrowing your search
 ---
 
-With Haste you can also find assets by their type simply by searching for their extension. A few examples:
+Type more than one word and every word has to match, in any order — `popup crime` finds
+`Popup_CrimeScene_Root.prefab`.
+
+Start the query with a prefix to search only one kind of thing. The prefix turns into a
+chip; backspace on an empty query clears it.
+
+Prefix | Searches
+---|---
+`asset:` | any project asset
+`prefab:` | prefabs
+`scene:` | scenes
+`script:` | C# scripts
+`h:` | GameObjects in the open scenes
+`layout:` | saved window layouts
+`>` | menu commands
+`#` | components
+
+You can also find assets by type simply by searching for their extension:
 
 - `.cs` for C# scripts
 - `.unity` for scenes

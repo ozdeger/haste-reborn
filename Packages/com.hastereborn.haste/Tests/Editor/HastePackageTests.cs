@@ -196,6 +196,27 @@ namespace Haste {
     }
 
     [Test]
+    public void TheEditorWindowMenuPathsResolveOnThisEditor() {
+      // Haste shipped ExecuteMenuItem("Window/Project") from its Unity 5 days. Unity 6
+      // moved those under "Window/General/", and a missing path does not throw -- it logs
+      // a native error and returns false -- so pressing Enter on any asset printed a stack
+      // trace and focused nothing. Resolving from the live menu is only safe if it
+      // actually resolves, which is what this asserts.
+      Assert.That(HasteEditorWindows.ProjectMenuPath, Is.Not.Null.And.Not.Empty,
+        "the Project window's menu path could not be found");
+      Assert.That(HasteEditorWindows.HierarchyMenuPath, Is.Not.Null.And.Not.Empty,
+        "the Hierarchy window's menu path could not be found");
+
+      var window = UnityEditor.Unsupported.GetSubmenus("Window");
+      Assert.That(window, Contains.Item(HasteEditorWindows.ProjectMenuPath));
+      Assert.That(window, Contains.Item(HasteEditorWindows.HierarchyMenuPath));
+
+      // Matched on the last segment, so a similarly-named window does not win.
+      Assert.That(HasteEditorWindows.HierarchyMenuPath, Does.EndWith("/Hierarchy"));
+      Assert.That(HasteEditorWindows.ProjectMenuPath, Does.EndWith("/Project"));
+    }
+
+    [Test]
     public void EditorStateIsEventDrivenRatherThanPolled() {
       // Haste.Update runs on every editor tick. It used to compare cached copies of
       // Selection.activeInstanceID and EditorApplication.currentScene against live values

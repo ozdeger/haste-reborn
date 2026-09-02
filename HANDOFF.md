@@ -272,6 +272,13 @@ Cecil also reads method bodies, which is how several of the findings below were 
   native walker Unity's own Hierarchy uses; gives name, depth, instanceID and `colorCode`
   with zero managed object loads, and `colorCode` is `{0 Normal, 1 Prefab, 2 BrokenPrefab}`.
 - **`ObjectChangeEvents.changesPublished`** — precise incremental hierarchy deltas.
+- **Unity 6 moved the editor windows under `Window/General/`** — `Window/General/Project`,
+  `Window/General/Hierarchy`, `Window/General/Inspector`, `Window/General/Console`. The
+  Unity 5 paths are gone, and `ExecuteMenuItem` on a path that does not exist **does not
+  throw**: it logs a native error and returns false. Haste focused nothing and printed a
+  stack trace for years' worth of that. `HasteEditorWindows` resolves these from
+  `Unsupported.GetSubmenus("Window")` by last path segment instead of hardcoding them,
+  for the same reason `HasteMenuItemSource` stopped shipping a menu table.
 - **A prefab ASSET reports `activeInHierarchy == false`.** Not because it is disabled —
   because it is not in a scene at all. Combined with `AssetDatabase.LoadMainAssetAtPath`
   returning a prefab's **root GameObject**, any code that decides "is this a hierarchy

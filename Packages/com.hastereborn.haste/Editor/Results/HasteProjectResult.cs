@@ -43,8 +43,7 @@ namespace Haste {
     }
 
     public override void Action() {
-      EditorApplication.ExecuteMenuItem("Window/Project");
-      EditorUtility.FocusProjectWindow();
+      HasteEditorWindows.FocusProject();
       Selection.objects = new UnityEngine.Object[]{Object};
       EditorGUIUtility.PingObject(Selection.activeObject);
     }

@@ -129,6 +129,10 @@ changelog for those releases is in the repository root.
   identified items by an unstable hash that cannot be resolved back to an object.
 
 ### Fixed
+- Pressing Enter on a project asset no longer logs an error instead of focusing it. Haste
+  was still asking for Unity 5's `Window/Project` menu item, which Unity 6 moved under
+  `Window/General/`. The window menus are now looked up from the editor rather than
+  written down.
 - Ignore rules no longer match partial folder names. `Assets/Plugins` used to also hide
   `Assets/PluginsCustom`, because the comparison had no segment boundary — and it was
   culture-sensitive, which diverges in Turkish locales.

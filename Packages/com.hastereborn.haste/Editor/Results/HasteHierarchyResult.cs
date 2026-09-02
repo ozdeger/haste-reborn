@@ -102,7 +102,7 @@ namespace Haste {
     }
 
     public override void Action() {
-      EditorApplication.ExecuteMenuItem("Window/Hierarchy");
+      HasteEditorWindows.FocusHierarchy();
 
       // Results outlive the objects they point at -- the scene can change between the
       // search and the Enter. This used to call Object.GetInstanceID() unguarded.

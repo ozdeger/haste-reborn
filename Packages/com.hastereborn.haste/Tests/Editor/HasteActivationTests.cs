@@ -35,26 +35,51 @@ namespace Haste {
     }
 
     [Test]
-    public void OpenShortcut_HasANonEmptyDefaultBinding() {
-      var binding = BindingOf(HasteShortcut.ShortcutId);
-      var combos = binding.keyCombinationSequence.ToList();
+    public void OpenShortcut_RegistersANonEmptyBinding() {
+      // The guard this exists for: a malformed [Shortcut] attribute COMPILES, logs only a
+      // discovery warning, and registers the id with an EMPTY binding. Nothing else
+      // catches that.
+      //
+      // Deliberately not asserting WHICH chord. ShortcutManager returns the ACTIVE
+      // binding, and rebinding in Edit > Shortcuts is a supported thing to do -- the
+      // README tells people to. Asserting the chord here made a developer's own rebinding
+      // fail the suite. The declared default is checked below, where an override cannot
+      // reach it.
+      var combos = BindingOf(HasteShortcut.ShortcutId).keyCombinationSequence.ToList();
 
       Assert.That(combos, Is.Not.Empty,
         "the shortcut registered with an empty binding, which is what a malformed " +
         "[Shortcut] attribute produces -- it compiles, logs a warning, and does nothing");
       Assert.That(combos.Count, Is.EqualTo(1), "expected a single chord, not a sequence");
+    }
 
-      var combo = combos[0];
-      Assert.That(combo.keyCode, Is.EqualTo(KeyCode.K));
-      Assert.That(combo.modifiers,
-        Is.EqualTo(ShortcutModifiers.Action | ShortcutModifiers.Shift));
+    [Test]
+    public void OpenShortcut_DeclaresCommandShiftKAsItsDefault() {
+      // Read from the attribute rather than from ShortcutManager, so a user override in
+      // Edit > Shortcuts cannot change the answer.
+      var method = typeof(HasteShortcut).GetMethod("OpenShortcut",
+        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+      Assert.That(method, Is.Not.Null);
+
+      var attribute = System.Reflection.CustomAttributeData.GetCustomAttributes(method)
+        .FirstOrDefault(a => a.AttributeType == typeof(ShortcutAttribute));
+      Assert.That(attribute, Is.Not.Null, "OpenShortcut lost its [Shortcut] attribute");
+
+      var args = attribute.ConstructorArguments;
+      var keyCode = args.Where(a => a.ArgumentType == typeof(KeyCode))
+        .Select(a => (KeyCode)a.Value).ToList();
+      var modifiers = args.Where(a => a.ArgumentType == typeof(ShortcutModifiers))
+        .Select(a => (ShortcutModifiers)a.Value).ToList();
+
+      Assert.That(keyCode, Is.EqualTo(new[] { KeyCode.K }));
 
       // Action is the cross-platform modifier: Cmd on macOS, Ctrl everywhere else.
-      // ShortcutModifiers.Control would mean the literal Ctrl key even on a Mac.
-      Assert.That(combo.action, Is.True);
-      Assert.That(combo.shift, Is.True);
-      Assert.That(combo.control, Is.False, "must not bind the literal Control key");
-      Assert.That(combo.alt, Is.False);
+      // ShortcutModifiers.Control would mean the literal Ctrl key even on a Mac, which is
+      // the whole reason this is asserted rather than assumed.
+      Assert.That(modifiers, Is.EqualTo(new[] { ShortcutModifiers.Action | ShortcutModifiers.Shift }));
+      Assert.That(modifiers[0].HasFlag(ShortcutModifiers.Control), Is.False,
+        "must not bind the literal Control key");
+      Assert.That(modifiers[0].HasFlag(ShortcutModifiers.Alt), Is.False);
     }
 
     [Test]

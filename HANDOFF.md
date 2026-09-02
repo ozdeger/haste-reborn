@@ -140,6 +140,7 @@ neither indexing nor searching can stall the editor.
 | `HasteKinds.cs` | Presentation taxonomy for row badges and scope tokens |
 | `HasteItemActions.cs` | What the actions pane offers, per kind |
 | `HasteKeyMap.cs` | The keyboard map, as a pure function so it can be tested |
+| `HasteWeights.cs` | Per-kind score multipliers, per-user, applied in `HasteSearch.Map` |
 | `HasteIgnoreRules.cs` | The shipped ignore list and the matcher, pure and testable |
 | `HasteIgnorePaths.cs` | The project's shared ignore list, committed in `ProjectSettings/` |
 | `HasteDoubleTapShiftGesture.cs` | Double-tap-Shift recognition, pure and clock-injected |
@@ -186,8 +187,16 @@ damped, only the boundary terms above it are:
 | query ≥ 3 chars and `pathLower` contains query | +15 |
 | first character of `pathLower` matches | +10 |
 
-The result is multiplied by `1 + userScore/10`. A result scoring exactly 0 is discarded by
-`HasteSearch.Map` rather than shown.
+The result is multiplied by `1 + userScore/10`, and then in `HasteSearch.Map` by
+`HasteWeights.For(item)` — a per-kind multiplier that is a *preference*, not a measure of
+the match. Keeping it out of `HasteScoring` is deliberate: the ladder answers "how well
+does this match", the weight answers "how much is this kind wanted at all", and only the
+first belongs in the golden tables. Defaults demote hierarchy objects to 0.5 and menu
+items to 0.7; project assets stay at 1.
+
+A result scoring exactly 0 is discarded by `HasteSearch.Map` rather than shown — which
+means a weight of 0 removes a kind from results entirely. That is documented in the
+preferences page rather than prevented.
 
 Every comparison in the ladder is `Ordinal`, per the rule in 6.3 — the two prefix rungs
 used `InvariantCulture` until the recall fix.

@@ -57,6 +57,12 @@ changelog for those releases is in the repository root.
   a wider window, a single row per result with the file name on the left and its folder on
   the right, a type badge, and a status bar. Matched characters are still highlighted, now
   in both the name and the folder.
+- **Results can be weighted by type.** Every result's score is multiplied by a per-type
+  weight, so whole categories can be pushed down without being hidden. Scene objects start
+  at 0.5, and menu commands, components, tools and layouts at 0.7 — there are hundreds of
+  each and they match short queries readily, which was burying project assets. Everything
+  in the project stays at 1. Adjust them under Preferences ▸ Haste ▸ Result Weights; they
+  are yours rather than the project's, and stay on your machine.
 - **Filter by type with `t:`** — the same syntax Unity's own Project search uses:
   `t:prefab`, `t:texture`, `t:audio`, `t:anim`, `t:animator`, `t:material`, `t:model`,
   `t:shader`, `t:font`, `t:script`, `t:scene`. `h:` scopes to the open scenes, `>` to menu

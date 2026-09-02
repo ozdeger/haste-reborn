@@ -167,6 +167,17 @@ This brings up the `TutorialPrefab.prefab` in the project's assets.
 
 Haste provides access to as many built-in MenuItems as possible with Unity's exposed APIs. Haste also indexes custom MenuItems from other editor extensions making it easy to extend Haste's capabilities.
 
+Ranking
+---
+
+Every result's score is multiplied by a weight for its type, so whole categories can be
+pushed down without being hidden. Scene objects start at 0.5, and menu commands,
+components, tools and layouts at 0.7 — there are hundreds of each and they match short
+queries readily. Everything in your project stays at 1.
+
+Adjust them under **Preferences > Haste > Result Weights**. They are yours rather than the
+project's, so they stay on your machine.
+
 Ignoring Assets
 ---
 

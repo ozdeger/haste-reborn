@@ -22,6 +22,8 @@ namespace Haste {
     DoubleTapShiftEnabled,
     DoubleTapShiftWindowMs,
     DoubleTapShiftDiagnostics,
+    // Suffixed with the kind name, like Source: "Haste:Weight:Command".
+    Weight,
   }
 
   public delegate void SettingChangedHandler<T>(HasteSetting setting, T before, T after);

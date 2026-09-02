@@ -105,7 +105,11 @@ namespace Haste {
       for (var i = 0; i < matches.Length; i++) {
         m = matches[i];
 
-        var score = HasteScoring.Score(m, terms);
+        // Match quality from HasteScoring, then how much that kind is wanted at all.
+        // Deliberately applied here rather than inside Score: the scoring ladder is a
+        // measure of the match and stays independent of taste, which is also what keeps
+        // its golden tables meaningful.
+        var score = HasteScoring.Score(m, terms) * HasteWeights.For(m);
 
         // A zero score means the item matched only as characters scattered through word
         // interiors: no boundary character shared with the query, no substring run, and

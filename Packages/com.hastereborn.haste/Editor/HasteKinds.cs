@@ -331,6 +331,28 @@ namespace Haste {
       return item != null && item.source == HasteHierarchySource.NAME;
     }
 
+    // Every individual kind, in the order the preferences page lists them. Excludes None
+    // and Any, which are masks rather than kinds.
+    public static readonly HasteKind[] All = {
+      HasteKind.Asset,
+      HasteKind.Prefab,
+      HasteKind.Scene,
+      HasteKind.Script,
+      HasteKind.Texture,
+      HasteKind.Audio,
+      HasteKind.Animation,
+      HasteKind.Animator,
+      HasteKind.Material,
+      HasteKind.Model,
+      HasteKind.Shader,
+      HasteKind.Font,
+      HasteKind.Hierarchy,
+      HasteKind.Component,
+      HasteKind.Command,
+      HasteKind.Tool,
+      HasteKind.Layout,
+    };
+
     public static bool Matches(HasteKind kinds, HasteItem item) {
       return kinds == HasteKind.Any || (kinds & Classify(item)) != 0;
     }

@@ -16,6 +16,8 @@ namespace Haste {
     //
     // Built lazily rather than in a static initialiser: EditorStyles is unusable outside
     // an interactive editor, and guiHandler is the first point where it is safe to read.
+    static bool showWeights;
+
     static GUIStyle wrappedLabel;
 
     static GUIStyle WrappedLabel {
@@ -156,6 +158,41 @@ namespace Haste {
           "keyboard shortcut above always works regardless.\n\n" +
           "\"Log key events\" writes every key Haste sees to the console. Turn it on only " +
           "if the gesture is not firing and you want to report what your keyboard sends.",
+          MessageType.Info);
+
+        EditorGUILayout.Space();
+        EditorGUILayout.Space();
+
+        EditorGUILayout.LabelField("Result Weights", EditorStyles.boldLabel);
+        EditorGUILayout.Space();
+
+        showWeights = EditorGUILayout.Foldout(showWeights, "Weights by type");
+        if (showWeights) {
+          foreach (var kind in HasteKinds.All) {
+            var current = HasteWeights.Get(kind);
+            var updated = EditorGUILayout.Slider(
+              ObjectNames.NicifyVariableName(kind.ToString()),
+              current, HasteWeights.Min, HasteWeights.Max);
+            if (!Mathf.Approximately(updated, current)) {
+              HasteWeights.Set(kind, updated);
+            }
+          }
+
+          EditorGUILayout.Space();
+          if (GUILayout.Button("Reset Weights", GUILayout.Width(128))) {
+            HasteWeights.ResetToDefaults();
+          }
+        }
+
+        EditorGUILayout.Space();
+        EditorGUILayout.HelpBox(
+          "Multiplies the score of every result of that type, after matching. Use it to " +
+          "push whole categories down without hiding them \u2014 scene objects and menu " +
+          "commands start below 1 because there are a great many of them and they match " +
+          "short queries readily.\n\n" +
+          "1 leaves a type where the match quality puts it. 0 sinks it to the bottom; to " +
+          "remove a type from results entirely, turn its source off above instead.\n\n" +
+          "These are yours, not the project's \u2014 they stay on this machine.",
           MessageType.Info);
 
         EditorGUILayout.Space();

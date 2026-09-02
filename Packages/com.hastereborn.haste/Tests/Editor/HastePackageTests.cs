@@ -25,6 +25,21 @@ namespace Haste {
     }
 
     [Test]
+    public void TheAssemblysVersionMatchesTheManifests() {
+      // These drift silently and both matter. package.json's version is what the Package
+      // Manager compares to decide an update is available; Haste.VERSION is what
+      // HasteSettings.Version compares to decide an upgrade should rebuild the index. A
+      // stale Haste.VERSION means upgrading quietly keeps the old one.
+      var info = UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(HasteResources).Assembly);
+      Assert.That(info, Is.Not.Null);
+      Assert.That(Haste.VERSION, Is.EqualTo(info.version),
+        "Haste.VERSION and package.json's \"version\" have to be changed together.");
+
+      // And it has to be parseable, since Haste.Version reads it eagerly.
+      Assert.That(Haste.Version, Is.Not.Null);
+    }
+
+    [Test]
     public void PackagedResources_LoadByPackageRelativePath() {
       // The old implementation scanned every path in the AssetDatabase looking for a
       // "/Haste/Editor/InternalResources/" substring. Package-relative paths work
@@ -89,8 +104,8 @@ namespace Haste {
       var skin = EditorGUIUtility.GetBuiltinSkin(EditorSkin.Inspector);
       Assert.That(skin, Is.Not.Null);
       Assert.That(skin.font == null, Is.True,
-        "EditorSkin.Inspector now has a font assigned; see HANDOFF.md 3.3, which records " +
-        "this as measured behaviour.");
+        "EditorSkin.Inspector now has a font assigned. It was null on both 6000.0.80f1 " +
+        "and 6000.3.17f1, measured, which is why the font pre-cache below is gone.");
     }
 
     [Test]
@@ -108,8 +123,8 @@ namespace Haste {
       foreach (var type in typeof(HasteResources).Assembly.GetTypes()) {
         foreach (var member in type.GetMembers(flags)) {
           Assert.That(member.Name, Does.Not.Contain("PreCache"),
-            type.Name + "." + member.Name + " looks like the deleted font pre-cache. See " +
-            "HANDOFF.md 3.3 before adding it back.");
+            type.Name + "." + member.Name + " looks like the deleted font pre-cache, " +
+            "which threw on import because the builtin skin's font is null on Unity 6.");
         }
       }
     }

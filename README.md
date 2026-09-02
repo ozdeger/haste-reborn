@@ -1,19 +1,29 @@
-Haste Search Engine for Unity 3D
+Haste Reborn
 ===
 
-Haste is a search engine for Unity 3D. Navigate your project with speed.
+A Spotlight-style search palette for the Unity editor. Navigate your project with speed.
 
 > "It’s like Spotlight or Alfred for Unity", said by a friend of ours.
 
 **Usage: Open Haste by pressing Command/Control+Shift+K — or tapping Shift twice — and
 begin typing to search.**
 
-Development
+Thank you, Barking Mouse Studio
 ---
 
-If you are picking up work on Haste, start with [HANDOFF.md](HANDOFF.md): what the tool
-does, how it is built, verified Unity 6 API facts, known behaviours that look like bugs,
-and the current state of the revival.
+Haste was created by **Jim Fleming** at **Barking Mouse Studio** and open-sourced under the
+MIT licence at **<https://github.com/BarkingMouseStudio/haste>** — *"Open-source
+implementation of the original quick search for Unity 3D."*
+
+Nearly everything that makes this tool worth using came from there: the fuzzy acronym
+matching, the scoring ladder, the index, the palette itself. This repository is a revival
+rather than a rewrite. Its history still begins with Jim's first commit in April 2014, and
+the original copyright stays in [LICENSE.md](LICENSE.md) where it belongs.
+
+The original is still up and still MIT. If you need Haste for Unity 4.6 or 5.x, that is
+where to get it — this fork requires Unity 6.
+
+Maintained by [ozdeger](https://github.com/ozdeger).
 
 Installation
 ---
@@ -57,16 +67,24 @@ Reference
 Action | Keyboard | Mouse
 ---|---|---
 Open Haste | ⌘ + ⇧ + K (Ctrl + Shift + K on Windows), or tap ⇧ twice | Click "Window/Haste"
-Navigate Search Results | ↑ or ↓ | Click search result
-Reveal Highlighted Result | Enter | Double-click search result
-Open Highlighted Result | ⇧ + Enter |
-Show Item Actions | → (or ⌘/Ctrl + K) | Click "Item actions"
+Navigate search results | ↑ or ↓ | Click a search result
+Reveal highlighted result | Enter | Double-click a search result
+Open highlighted result | ⇧ + Enter |
+Show item actions | → (or ⌘/Ctrl + K) | Click "Item actions"
+Go into a submenu | → or Enter | Click the row
+Go back one level | ← | Click "←"
+Favorite / unfavorite | ⌥ + Enter (Alt + Enter on Windows) | Click "Favorite"
+Move the text caret | ⇧ + ← or ⇧ + → |
+Clear the type filter | Backspace on an empty query | Click the × on the chip
 Go to beginning | Fn + ← (Home on Windows) |
 Go to end | Fn + → (End on Windows) |
 Go up a page | Fn + ↑ (Page Up on Windows) |
 Go down a page | Fn + ↓ (Page Down on Windows) |
-Multi-Select Highlighted Result | ⌘ + Enter (Ctrl + Enter on Windows) | ⌘ + Click (Ctrl + Click on Windows)
-Dismiss Haste | ESC | Click anywhere outside of Haste
+Multi-select highlighted result | ⌘ + Enter (Ctrl + Enter on Windows) | ⌘ + Click (Ctrl + Click on Windows)
+Dismiss Haste | ESC, from anywhere | Click anywhere outside of Haste
+
+The left arrow is the only way back: it steps out of a submenu, and closes the actions
+pane once there is nothing left to step out of. ESC always closes Haste outright.
 
 Configuring Haste
 ---
@@ -111,10 +129,13 @@ Prefix | Searches
 `t:shader` | shaders
 `t:font` | fonts
 `t:asset` | anything else in the project
+`t:menu` | menu commands — or just `>`
 `h:` | GameObjects in the open scenes
 `layout:` | saved window layouts
-`>` | menu commands
 `#` | components
+
+A filter is recognised anywhere in the query, not only at the front: search for `popup`,
+then type ` t:prefab ` on the end and it becomes a chip.
 
 You can also find assets by type simply by searching for their extension:
 
@@ -170,13 +191,19 @@ Haste provides access to as many built-in MenuItems as possible with Unity's exp
 Ranking
 ---
 
-Every result's score is multiplied by a weight for its type, so whole categories can be
-pushed down without being hidden. Scene objects start at 0.5, and menu commands,
-components, tools and layouts at 0.7 — there are hundreds of each and they match short
-queries readily. Everything in your project stays at 1.
+Every result's score is multiplied by a weight, so whole categories can be pushed down
+without being hidden. Scene objects start at 0.5 — there are hundreds of them and they
+match short queries readily. Everything in your project stays at 1.
 
-Adjust them under **Preferences > Haste > Result Weights**. They are yours rather than the
-project's, so they stay on your machine.
+Menu items are weighted by **which menu they are in**, because they are not all alike: the
+~529 commands Unity ships start at 0.7, while a menu your project added — `Tools`,
+`Dev Tools`, anything one of your own `[MenuItem]` methods invented — starts at 1 and gets
+its own slider as soon as Haste sees it.
+
+Favourite anything with `Alt+Enter` and it scores double, on top of all of that.
+
+Adjust the weights under **Preferences > Haste**. They are yours rather than the project's,
+so they stay on your machine.
 
 Ignoring Assets
 ---

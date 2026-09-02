@@ -112,9 +112,9 @@ namespace Haste {
       }
 
       // Selection.instanceIDs and activeInstanceID are obsolete, and their suggested
-      // replacements (entityIds, activeEntityId) do not exist in 6000.0 -- see HANDOFF
-      // 3.3. Selection.objects is clean on both editors and PingObject takes the object
-      // directly, so nothing has to round-trip through an id at all.
+      // replacements (entityIds, activeEntityId) do not exist in 6000.0 -- measured, not
+      // assumed. Selection.objects is clean on both editors and PingObject takes the
+      // object directly, so nothing has to round-trip through an id at all.
       Selection.objects = new UnityEngine.Object[] { target };
       EditorGUIUtility.PingObject(target);
     }

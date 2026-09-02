@@ -32,6 +32,8 @@ reference, keyboard shortcuts and the step-by-step tutorial.
 History
 ---
 
-Haste was written by Jim Fleming at Barking Mouse Studio and released for Unity 4.6 and
-5.x, then abandoned in 2019 and relicensed under MIT. This package is a revival targeting
-Unity 6.
+Haste was created by Jim Fleming at Barking Mouse Studio, released for Unity 4.6 and 5.x,
+and open-sourced under MIT at <https://github.com/BarkingMouseStudio/haste>. This package
+is a revival of that work targeting Unity 6; the original copyright stays in LICENSE.md.
+
+Maintained by <https://github.com/ozdeger>.

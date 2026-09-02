@@ -64,3 +64,6 @@ Thumbs.db
 # Editors
 *.sublime-project
 *.sublime-workspace
+
+# Claude Code session data
+.claude/

@@ -396,7 +396,7 @@ namespace Haste {
     [Test]
     public void Actions_NameTheFileBrowserAfterThePlatformAtRuntime() {
       // Runtime check, never a compile symbol: a Windows-built editor assembly bakes in
-      // the compiling editor's symbol (HANDOFF 6.3).
+      // the compiling editor's symbol, not the running one's.
       var expected = Application.platform == RuntimePlatform.OSXEditor
         ? "Show in Finder" : "Show in Explorer";
       Assert.That(LabelsFor("Assets/Sprites/Icon.png", HasteProjectSource.NAME),

@@ -57,8 +57,9 @@ namespace Haste {
 
     [Test]
     public void ComparisonIsOrdinalButCaseInsensitive() {
-      // Ordinal per HANDOFF 6.3 -- culture-sensitive comparison diverges in tr-TR, and
-      // these are paths. Case-insensitive because the rules are typed by hand.
+      // Ordinal, not culture-sensitive: these are paths, and culture-sensitive comparison
+      // genuinely diverges on a tr-TR machine, where "I".ToLower() is the dotless 'i'.
+      // Case-insensitive because the rules are typed by hand.
       Assert.That(Ignored("Assets/plugins/Thing.cs", "Assets/Plugins"), Is.True);
       Assert.That(Ignored("Assets/FIREBASE/App.cs", "firebase"), Is.True);
     }

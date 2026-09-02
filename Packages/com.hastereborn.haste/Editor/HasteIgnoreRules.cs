@@ -102,7 +102,7 @@ namespace Haste {
         return false;
       }
 
-      // Ordinal throughout, per HANDOFF 6.3: these are paths, and culture-sensitive
+      // Ordinal throughout: these are paths, and culture-sensitive
       // comparison genuinely diverges in tr-TR. IgnoreCase because the rules are typed by
       // hand and most of the filesystems under them are case-insensitive anyway.
       if (rule.IndexOf('/') >= 0) {

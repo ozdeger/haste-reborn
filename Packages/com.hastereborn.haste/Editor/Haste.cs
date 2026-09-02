@@ -17,13 +17,20 @@ namespace Haste {
   [InitializeOnLoad]
   public static class Haste {
 
-    public static readonly string VERSION = "1.8.6";
+    // Must equal package.json's "version". HastePackageTests pins the two together,
+    // because nothing else notices when they drift: this one is what HasteSettings.Version
+    // compares against to decide whether an upgrade should reindex, so a stale value means
+    // upgrading silently keeps the old index.
+    public static readonly string VERSION = "2.0.0";
 
     private static Version version;
     public static Version Version {
       get {
         if (version == null) {
-          version = new Version(VERSION);
+          // System.Version cannot parse a pre-release suffix, and package versions are
+          // semver: "2.1.0-pre.1" would throw here on the first property read.
+          var dash = VERSION.IndexOf('-');
+          version = new Version(dash < 0 ? VERSION : VERSION.Substring(0, dash));
         }
         return version;
       }
@@ -113,9 +120,9 @@ namespace Haste {
       EditorSceneManager.newSceneCreated += NewSceneCreated;
 
       // Likewise: this replaces comparing Selection.activeInstanceID against a cached copy
-      // on every update. Per HANDOFF 3.3 the obsolete property's own suggested
-      // replacement, activeEntityId, does not exist in 6000.0 -- Selection.objects and
-      // Selection.selectionChanged are clean on both editors.
+      // on every update. The obsolete property's own suggested replacement,
+      // activeEntityId, does not exist in 6000.0 -- measured, not assumed -- while
+      // Selection.objects and Selection.selectionChanged are clean on both editors.
       Selection.selectionChanged += OnSelectionChanged;
 
       SceneChanged += HandleSceneChanged;

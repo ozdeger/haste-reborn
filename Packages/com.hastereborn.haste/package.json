@@ -1,12 +1,12 @@
 {
   "name": "com.hastereborn.haste",
-  "version": "2.0.0-pre.1",
+  "version": "2.0.0",
   "displayName": "Haste Reborn",
   "description": "Spotlight-style fuzzy search palette for the Unity editor. Jump to any GameObject, asset or menu item by typing an acronym: \"mc\" finds Main Camera.",
   "unity": "6000.0",
   "unityRelease": "80f1",
   "documentationUrl": "https://github.com/ozdeger/haste-reborn#readme",
-  "changelogUrl": "https://github.com/ozdeger/haste-reborn/blob/master/CHANGELOG.md",
+  "changelogUrl": "https://github.com/ozdeger/haste-reborn/blob/master/Packages/com.hastereborn.haste/CHANGELOG.md",
   "licensesUrl": "https://github.com/ozdeger/haste-reborn/blob/master/LICENSE.md",
   "keywords": [
     "editor",
@@ -16,8 +16,8 @@
     "productivity"
   ],
   "author": {
-    "name": "Haste Reborn contributors",
-    "url": "https://github.com/ozdeger/haste-reborn"
+    "name": "Gokay Ozdeger",
+    "url": "https://github.com/ozdeger"
   },
   "dependencies": {}
 }

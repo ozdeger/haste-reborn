@@ -1,6 +1,13 @@
 Activation design
 ===
 
+> **Note.** Two constants in this document were later overturned by measurement on real
+> keyboards, and the code is right where they disagree: the tap window is **250 ms**, not
+> the 120 ms specified here, and the runaway breaker fires at **6 activations in 2 seconds**,
+> not 3 in 10. `HasteDoubleTapShiftGesture` records what was measured and why. The rest of
+> the design stands.
+
+
 How the palette gets opened, and why. Everything here was verified against the shipped
 assemblies of Unity 6000.0.80f1 and 6000.3.17f1 (Cecil metadata plus IL reads), not taken
 from documentation.

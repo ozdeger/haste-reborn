@@ -5,7 +5,8 @@ Haste is a search engine for Unity 3D. Navigate your project with speed.
 
 > "It’s like Spotlight or Alfred for Unity", said by a friend of ours.
 
-**Usage: Open Haste by pressing Command/Control+Shift+K and begin typing to search.**
+**Usage: Open Haste by pressing Command/Control+Shift+K — or tapping Shift twice — and
+begin typing to search.**
 
 Development
 ---
@@ -55,7 +56,7 @@ Reference
 
 Action | Keyboard | Mouse
 ---|---|---
-Open Haste | ⌘ + ⇧ + K (Ctrl + Shift + K on Windows) | Click "Window/Haste"
+Open Haste | ⌘ + ⇧ + K (Ctrl + Shift + K on Windows), or tap ⇧ twice | Click "Window/Haste"
 Navigate Search Results | ↑ or ↓ | Click search result
 Reveal Highlighted Result | Enter | Double-click search result
 Open Highlighted Result | ⇧ + Enter |

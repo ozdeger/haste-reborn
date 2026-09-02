@@ -10,6 +10,11 @@ The Unity 6 revival. Haste last shipped as 1.8.6 for Unity 5.1 in 2019; the hist
 changelog for those releases is in the repository root.
 
 ### Added
+- **Tap Shift twice to open Haste.** A second way in, alongside the keyboard shortcut. It
+  stays out of the way: ignored while you are typing in a field, while dragging, in play
+  mode, and while Haste is indexing, and it will not mistake holding Shift for capitals as
+  two taps. If it ever misfires repeatedly it switches itself off rather than keep
+  interrupting. Tune the tap window, or turn it off, under Preferences ▸ Haste.
 - Assembly definitions (`Haste.Editor`, `Haste.Editor.Tests`), both Editor-only. Haste no
   longer compiles into `Assembly-CSharp-Editor`, so unrelated broken scripts in a project
   can no longer stop it from building — and vice versa.

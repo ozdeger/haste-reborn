@@ -142,6 +142,8 @@ neither indexing nor searching can stall the editor.
 | `HasteKeyMap.cs` | The keyboard map, as a pure function so it can be tested |
 | `HasteIgnoreRules.cs` | The shipped ignore list and the matcher, pure and testable |
 | `HasteIgnorePaths.cs` | The project's shared ignore list, committed in `ProjectSettings/` |
+| `HasteDoubleTapShiftGesture.cs` | Double-tap-Shift recognition, pure and clock-injected |
+| `HasteDoubleTapShift.cs` | The `beforeEventProcessed` hook that feeds it |
 | `HasteDisplay.cs` | Where the palette opens |
 | `HasteSettings.cs` | `EditorPrefs` wrapper keyed by a `HasteSetting` enum |
 | `HastePreferences.cs` | The preferences page |
@@ -542,9 +544,8 @@ object. Pair it with `ObjectChangeEvents.changesPublished` and the traps in 3.3 
 `CreateGameObjectHierarchy` coalescing and
 `ChangeGameObjectOrComponentProperties` being the only rename signal.
 
-The UI decision is settled — **UI Toolkit**, added alongside the working IMGUI window and
-made default only once its own tests pass. See `Documentation~/activation-design.md` for the
-double-tap-Shift design, which is designed but not implemented.
+See `Documentation~/activation-design.md` for the activation design. Both tiers are now
+implemented: the `[Shortcut]` binding and the double-tap-Shift gesture.
 
 5.2.1 What the menu rewrite deliberately did not do
 ---
@@ -600,6 +601,12 @@ From the palette rewrite, in the order worth checking:
 - **Destructive actions.** Delete opens a confirmation dialog, and it must do so *after*
   the palette has closed — the window dismisses on focus loss, so a modal raised while it
   is open would pull the palette out from under the dialog. Worth confirming once.
+- **Double-tap Shift.** Every *rule* is pinned by `HasteDoubleTapShiftTests` against a pure
+  state machine, but whether the events arrive at all is exactly what cannot be tested —
+  and on macOS a bare Shift is an `NSEvent flagsChanged`, which nobody has confirmed Unity
+  forwards as `KeyDown`/`KeyUp`. If the gesture does nothing, turn on
+  Preferences > Haste > "Log key events" and read the console: that says whether the hook
+  sees the Shift at all, which is the fork between "wrong rules" and "no events".
 - **Typography.** The design sets paths, type badges and key chips in a monospace
   (`ui-monospace, Menlo`) and everything else in the system UI face. The stylesheet sets
   neither, so all of it renders in Unity's default editor font — the proportional text is

@@ -19,6 +19,9 @@ namespace Haste {
     Source,
     SelectEnabled,
     UseRecommendedIgnores,
+    DoubleTapShiftEnabled,
+    DoubleTapShiftWindowMs,
+    DoubleTapShiftDiagnostics,
   }
 
   public delegate void SettingChangedHandler<T>(HasteSetting setting, T before, T after);
@@ -47,6 +50,39 @@ namespace Haste {
       }
       set {
         HasteSettings.SetBool(HasteSetting.UseRecommendedIgnores, value);
+      }
+    }
+
+    // Tap Shift twice to open the palette. An extra, never the only way in -- the
+    // Ctrl/Cmd+Shift+K shortcut is unaffected by it.
+    public static bool DoubleTapShiftEnabled {
+      get {
+        return HasteSettings.GetBool(HasteSetting.DoubleTapShiftEnabled, true);
+      }
+      set {
+        HasteSettings.SetBool(HasteSetting.DoubleTapShiftEnabled, value);
+      }
+    }
+
+    // The only tunable part of the gesture: typing rhythm varies, and this cannot appear
+    // in Edit > Shortcuts, so here is the only place to widen it or escape it.
+    public static int DoubleTapShiftWindowMs {
+      get {
+        return Mathf.Clamp(HasteSettings.GetInt(HasteSetting.DoubleTapShiftWindowMs, 250), 120, 600);
+      }
+      set {
+        HasteSettings.SetInt(HasteSetting.DoubleTapShiftWindowMs, Mathf.Clamp(value, 120, 600));
+      }
+    }
+
+    // Logs every key event the gesture sees. For working out why the gesture is not
+    // firing on a platform where nobody has watched it yet.
+    public static bool DoubleTapShiftDiagnostics {
+      get {
+        return HasteSettings.GetBool(HasteSetting.DoubleTapShiftDiagnostics, false);
+      }
+      set {
+        HasteSettings.SetBool(HasteSetting.DoubleTapShiftDiagnostics, value);
       }
     }
 

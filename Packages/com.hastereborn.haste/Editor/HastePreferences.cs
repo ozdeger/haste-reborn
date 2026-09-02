@@ -110,6 +110,46 @@ namespace Haste {
         EditorGUILayout.Space();
         EditorGUILayout.Space();
 
+        EditorGUILayout.LabelField("Opening Haste", EditorStyles.boldLabel);
+        EditorGUILayout.Space();
+
+        EditorGUILayout.LabelField("Shortcut", Application.platform == RuntimePlatform.OSXEditor
+          ? "\u2318\u21e7K  (rebind in Edit > Shortcuts)"
+          : "Ctrl+Shift+K  (rebind in Edit > Shortcuts)");
+        EditorGUILayout.Space();
+
+        var doubleTap = EditorGUILayout.Toggle("Double-tap Shift", HasteSettings.DoubleTapShiftEnabled);
+        if (doubleTap != HasteSettings.DoubleTapShiftEnabled) {
+          HasteSettings.DoubleTapShiftEnabled = doubleTap;
+        }
+
+        using (new HasteDisabled(!doubleTap)) {
+          var window = EditorGUILayout.IntSlider("Tap window (ms)",
+            HasteSettings.DoubleTapShiftWindowMs, 120, 600);
+          if (window != HasteSettings.DoubleTapShiftWindowMs) {
+            HasteSettings.DoubleTapShiftWindowMs = window;
+          }
+
+          var diagnostics = EditorGUILayout.Toggle("Log key events", HasteSettings.DoubleTapShiftDiagnostics);
+          if (diagnostics != HasteSettings.DoubleTapShiftDiagnostics) {
+            HasteSettings.DoubleTapShiftDiagnostics = diagnostics;
+          }
+        }
+
+        EditorGUILayout.Space();
+        EditorGUILayout.HelpBox(
+          "Tap Shift twice, quickly, to open Haste. It is ignored while you are typing in " +
+          "a field, while dragging, in play mode, and while Haste is indexing.\n\n" +
+          "This cannot live in Edit > Shortcuts \u2014 Unity's shortcut system rejects " +
+          "modifier-only bindings \u2014 so the tap window is tuned here instead. The " +
+          "keyboard shortcut above always works regardless.\n\n" +
+          "\"Log key events\" writes every key Haste sees to the console. Turn it on only " +
+          "if the gesture is not firing and you want to report what your keyboard sends.",
+          MessageType.Info);
+
+        EditorGUILayout.Space();
+        EditorGUILayout.Space();
+
         EditorGUILayout.LabelField("Advanced", EditorStyles.boldLabel);
         EditorGUILayout.Space();
 

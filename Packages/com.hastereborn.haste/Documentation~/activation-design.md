@@ -37,7 +37,9 @@ Edit > Shortcuts.
   `HasteMenuItemSource`'s exact-string self-filter (`menuItem == "Window/Haste"`) working so
   Haste does not index itself.
 
-**Tier 1 — double-tap Shift.** A toggleable extra, never the only way in.
+**Tier 1 — double-tap Shift.** A toggleable extra, never the only way in. **Implemented**
+in `HasteDoubleTapShift` (the hook) and `HasteDoubleTapShiftGesture` (the recognition),
+split that way because the second half is pure and can therefore be tested — see below.
 
 **Tier 2 — degradation.** If the internal fields disappear, log once and offer
 `EditorApplication.modifierKeysChanged` (public, parameterless) as an explicitly less
@@ -148,11 +150,28 @@ So:
 `[InitializeOnLoad]` re-hooks every domain reload, and statics reset, so cross-reload
 duplicates are structurally impossible. Guard against double-hooking within one domain.
 
+How the invariants are actually tested
+---
+
+Every rule in this document is a *rejection* rule, and a rejection rule that silently does
+not apply is only discovered by a user whose palette keeps opening mid-sentence. So the
+recognition is a pure state machine with an injected clock —
+`HasteDoubleTapShiftGesture.Feed(type, key, modifiers, time, suppressed)` — and
+`HasteDoubleTapShiftTests` drives it directly: key repeat from holding Shift, a tap held too
+long, taps too far apart, mismatched Shift keys, an intervening letter, a chord modifier,
+incidental CapsLock/NumLock/fn bits, mouse activity, suppression mid-gesture, and the
+runaway breaker.
+
+What that does **not** cover is the hook: whether the events arrive at all, in that order,
+with those keycodes. That is the part below.
+
 What is still unproven
 ---
 
-Two things cannot be settled from a Windows machine in batch mode, and both are why Tier 0
-exists:
+Two things could not be settled from a Windows machine in batch mode, and both are why
+Tier 0 exists. The first is now partly answered — the fields are confirmed present on
+6000.3.17f1 with the exact expected types, checked by reflection on the running editor —
+but delivery of real keystrokes is not, and cannot be:
 
 - **No physical keystroke has ever been observed.** `-batchmode -nographics` cannot inject
   input. That a bare Shift press produces `EventType.KeyDown` with `keyCode ==
@@ -160,10 +179,13 @@ exists:
   `KeyCombination.k_KeyCodeToEventModifiers` mapping LeftShift/RightShift to
   `EventModifiers.Shift`, and on `Trigger.HandleKeyEvent` being gated on KeyDown/KeyUp.
   High confidence, not observation.
-- **macOS is entirely unobserved.** A bare Shift there is an `NSEvent flagsChanged`, and the
-  only public alternative (`EditorApplication.modifierKeysChanged`) is parameterless. Gate
-  the gesture on a runtime `Application.platform` check and enable it on macOS only after
-  someone presses Shift twice on a Mac.
+- **macOS delivery is still unobserved.** A bare Shift there is an `NSEvent flagsChanged`,
+  and the only public alternative (`EditorApplication.modifierKeysChanged`) is
+  parameterless. Rather than gate the gesture off by platform, it ships enabled everywhere
+  and simply never fires if the events do not arrive — which is a harmless degradation,
+  since Tier 0 is untouched. Preferences > Haste has a **"Log key events"** toggle that
+  writes every key the hook sees to the console; that is the instrument for settling this
+  on a platform nobody has watched it on.
 
 Also: `UnityEngine.Event` carries no timestamp — only the internal `Event.GetDoubleClickTime()`
 exists — so the window is measured on the dispatch clock with

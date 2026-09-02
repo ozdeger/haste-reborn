@@ -112,12 +112,29 @@ namespace Haste {
     }
 
     [Test]
-    public void Actions_OfferOpenForEverything() {
+    public void Actions_LeadWithWhatEnterActuallyDoes() {
+      // The first entry used to be called "Open" for everything, which was wrong twice
+      // over: Enter reveals rather than opens, and for a menu item it runs. Open is now
+      // Shift+Enter and only appears where there is something to open.
+      Assert.That(ActionsFor("Assets/Thing.prefab", HasteProjectSource.NAME)[0].Label,
+        Is.EqualTo("Reveal in Project window"));
+      Assert.That(ActionsFor("Main Camera", HasteHierarchySource.NAME)[0].Label,
+        Is.EqualTo("Reveal in Hierarchy"));
+      Assert.That(ActionsFor("File/Build Profiles", HasteMenuItemSource.NAME)[0].Label,
+        Is.EqualTo("Run"));
+      Assert.That(ActionsFor("Default", HasteLayoutSource.NAME)[0].Label,
+        Is.EqualTo("Switch to layout"));
+
       foreach (var source in new[] { HasteProjectSource.NAME, HasteHierarchySource.NAME,
                                      HasteMenuItemSource.NAME, HasteLayoutSource.NAME }) {
-        Assert.That(LabelsFor("Assets/Thing.prefab", source), Contains.Item("Open"),
-          source + " has no Open action");
+        Assert.That(ActionsFor("Assets/Thing.prefab", source)[0].Keys, Is.EqualTo("↵"));
       }
+
+      // An asset can always be opened; a menu command never can.
+      Assert.That(LabelsFor("Assets/Thing.prefab", HasteProjectSource.NAME), Contains.Item("Open"));
+      Assert.That(LabelsFor("File/Build Profiles", HasteMenuItemSource.NAME), Has.No.Member("Open"));
+      Assert.That(ActionsFor("Assets/Thing.prefab", HasteProjectSource.NAME)
+        .Single(a => a.Label == "Open").Keys, Is.EqualTo("⇧↵"));
     }
 
     [Test]
@@ -136,9 +153,9 @@ namespace Haste {
       Assert.That(hierarchy, Has.No.Member("Duplicate"));
       Assert.That(hierarchy, Has.No.Member("Delete"));
 
-      // A menu command is neither: Open and the path, nothing more.
+      // A menu command is neither: run it, or copy its path. Nothing else applies.
       Assert.That(LabelsFor("File/Build Profiles", HasteMenuItemSource.NAME),
-        Is.EqualTo(new[] { "Open", "Copy Path" }));
+        Is.EqualTo(new[] { "Run", "Copy Path" }));
     }
 
     [Test]

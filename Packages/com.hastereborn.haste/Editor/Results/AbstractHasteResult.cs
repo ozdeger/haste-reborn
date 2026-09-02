@@ -83,5 +83,13 @@ namespace Haste {
     public virtual void Action() {
       // NO-OP
     }
+
+    public virtual bool CanOpen {
+      get { return false; }
+    }
+
+    public virtual void Open() {
+      Action();
+    }
   }
 }

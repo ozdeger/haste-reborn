@@ -28,6 +28,20 @@ namespace Haste {
 
     public HasteProjectResult(HasteItem item, float score, string[] terms) : base(item, score, terms) {}
 
+    public override bool CanOpen {
+      get { return true; }
+    }
+
+    // OpenAsset routes through Unity's registered open handlers, so a script goes to the
+    // external IDE, a scene to the editor (with its own save prompt), a prefab to Prefab
+    // Mode, and a texture to whatever the OS opens images with.
+    public override void Open() {
+      var obj = Object;
+      if (obj != null) {
+        AssetDatabase.OpenAsset(obj);
+      }
+    }
+
     public override void Action() {
       EditorApplication.ExecuteMenuItem("Window/Project");
       EditorUtility.FocusProjectWindow();

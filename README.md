@@ -57,7 +57,9 @@ Action | Keyboard | Mouse
 ---|---|---
 Open Haste | ⌘ + ⇧ + K (Ctrl + Shift + K on Windows) | Click "Window/Haste"
 Navigate Search Results | ↑ or ↓ | Click search result
-Select Highlighted Result | Enter | Double-click search result
+Reveal Highlighted Result | Enter | Double-click search result
+Open Highlighted Result | ⇧ + Enter |
+Show Item Actions | → (or ⌘/Ctrl + K) | Click "Item actions"
 Go to beginning | Fn + ← (Home on Windows) |
 Go to end | Fn + → (End on Windows) |
 Go up a page | Fn + ↑ (Page Up on Windows) |

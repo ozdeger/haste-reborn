@@ -34,6 +34,26 @@ namespace Haste {
   // rather than a one-shot action, and half of one is worse than none.
   public static class HasteItemActions {
 
+    // The short form, for the footer hint where there is no room for the long one.
+    public static string RevealLabelFor(HasteItem item) {
+      switch (item.source) {
+        case HasteProjectSource.NAME:
+        case HasteHierarchySource.NAME: return "Reveal";
+        case HasteLayoutSource.NAME:    return "Switch";
+        default:                        return "Run";
+      }
+    }
+
+    // What Enter does to this item, said plainly.
+    static string RevealLabel(HasteItem item) {
+      switch (item.source) {
+        case HasteProjectSource.NAME:   return "Reveal in Project window";
+        case HasteHierarchySource.NAME: return "Reveal in Hierarchy";
+        case HasteLayoutSource.NAME:    return "Switch to layout";
+        default:                        return "Run";
+      }
+    }
+
     public static List<HasteItemAction> For(IHasteResult result) {
       var actions = new List<HasteItemAction>();
       if (result == null) {
@@ -42,30 +62,25 @@ namespace Haste {
 
       var item = result.Item;
       var isAsset = item.source == HasteProjectSource.NAME;
-      var isHierarchy = item.source == HasteHierarchySource.NAME;
 
+      // First entry is whatever Enter does, named for what that actually is. It used to be
+      // called "Open" for everything, which was wrong twice over: Enter reveals rather
+      // than opens, and for a menu item it runs.
       actions.Add(new HasteItemAction {
-        Label = "Open",
+        Label = RevealLabel(item),
         Keys = "↵",
         Run = result.Action,
       });
 
-      if (isAsset) {
+      if (result.CanOpen) {
         actions.Add(new HasteItemAction {
-          Label = "Reveal in Project window",
-          Keys = "",
-          Run = () => {
-            var obj = AssetDatabase.LoadMainAssetAtPath(item.path);
-            if (obj == null) {
-              return;
-            }
-            EditorApplication.ExecuteMenuItem("Window/Project");
-            EditorUtility.FocusProjectWindow();
-            Selection.objects = new UnityEngine.Object[] { obj };
-            EditorGUIUtility.PingObject(obj);
-          },
+          Label = "Open",
+          Keys = "⇧↵",
+          Run = result.Open,
         });
+      }
 
+      if (isAsset) {
         // Runtime platform check, never a compile symbol: a Windows-built editor assembly
         // bakes in the compiling editor's symbol.
         actions.Add(new HasteItemAction {
@@ -73,22 +88,6 @@ namespace Haste {
             ? "Show in Finder" : "Show in Explorer",
           Keys = "",
           Run = () => EditorUtility.RevealInFinder(item.path),
-        });
-      }
-
-      if (isHierarchy) {
-        actions.Add(new HasteItemAction {
-          Label = "Reveal in Hierarchy",
-          Keys = "",
-          Run = () => {
-            var obj = result.Object;
-            if (obj == null) {
-              return;
-            }
-            EditorApplication.ExecuteMenuItem("Window/Hierarchy");
-            Selection.objects = new UnityEngine.Object[] { obj };
-            EditorGUIUtility.PingObject(obj);
-          },
         });
       }
 

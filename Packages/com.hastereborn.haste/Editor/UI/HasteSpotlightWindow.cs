@@ -87,6 +87,8 @@ namespace Haste {
     VisualElement actionsList;
     Label paneTitle;
     Label flashLabel;
+    Label revealLabel;
+    VisualElement openHint;
     Label countLabel;
     VisualElement footerIcon;
 
@@ -467,13 +469,27 @@ namespace Haste {
       spacer.AddToClassList("haste-spacer");
       footer.Add(spacer);
 
-      var open = new Label("Open");
-      open.AddToClassList("haste-action-label");
-      footer.Add(open);
+      // Named for what Enter actually does, which depends on the highlighted row.
+      revealLabel = new Label("Reveal");
+      revealLabel.AddToClassList("haste-action-label");
+      footer.Add(revealLabel);
 
       var key = new Label("↵");
       key.AddToClassList("haste-key");
       footer.Add(key);
+
+      openHint = new VisualElement();
+      openHint.AddToClassList("haste-footer-hint");
+
+      var openLabel = new Label("Open");
+      openLabel.AddToClassList("haste-action-label");
+      openHint.Add(openLabel);
+
+      var openKey = new Label("⇧↵");
+      openKey.AddToClassList("haste-key");
+      openHint.Add(openKey);
+
+      footer.Add(openHint);
 
       var separator = new VisualElement();
       separator.AddToClassList("haste-footer-separator");
@@ -778,6 +794,11 @@ namespace Haste {
 
       countLabel.style.display = multiSelection.Count > 0 ? DisplayStyle.Flex : DisplayStyle.None;
       countLabel.text = multiSelection.Count.ToString();
+
+      var current = highlighted >= 0 && highlighted < results.Length ? results[highlighted] : null;
+      revealLabel.text = current == null ? "Reveal" : HasteItemActions.RevealLabelFor(current.Item);
+      openHint.style.display =
+        current != null && current.CanOpen ? DisplayStyle.Flex : DisplayStyle.None;
     }
 
     // ------------------------------------------------------------ selection
@@ -794,6 +815,7 @@ namespace Haste {
       }
       listView.ScrollToItem(highlighted);
       listView.RefreshItems();
+      SyncStatus();
 
       // "Soft" selection: browsing results previews them in the editor. Switchable off,
       // because it expands Hierarchy and Project folders as it goes.
@@ -834,7 +856,7 @@ namespace Haste {
       SyncStatus();
     }
 
-    void Act(int index) {
+    void Act(int index, bool open = false) {
       if (index < 0 || index >= results.Length) {
         return;
       }
@@ -850,9 +872,12 @@ namespace Haste {
 
       Selection.objects = prevSelection;
 
-      // Deferred until after the window is gone: acting can change layouts and other
-      // editor state that Unity does not like being changed while a window is open.
-      Haste.WindowAction += result.Action;
+      // Deferred until after the window is gone: acting can change layouts, open scenes
+      // and raise dialogs, none of which Unity likes while a window is open.
+      //
+      // Open falls back to Action on results where opening means nothing, so the
+      // Shift+Enter path is always safe even on a menu item.
+      Haste.WindowAction += open ? (HasteWindowAction)result.Open : result.Action;
       Close();
     }
 
@@ -872,10 +897,11 @@ namespace Haste {
 
         case KeyCode.Return:
         case KeyCode.KeypadEnter:
+          // Enter reveals, Shift+Enter opens, Cmd/Ctrl+Enter builds the multi-selection.
           if (evt.actionKey) {
             ToggleMultiSelection(highlighted);
           } else {
-            Act(highlighted);
+            Act(highlighted, evt.shiftKey);
           }
           evt.StopPropagation();
           break;

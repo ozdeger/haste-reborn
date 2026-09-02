@@ -18,6 +18,10 @@ changelog for those releases is in the repository root.
   fuzzy-match highlighting, so behaviour changes are visible rather than silent.
 
 ### Changed
+- **Enter reveals, Shift+Enter opens.** Enter still focuses and selects the thing, as it
+  always did. Shift+Enter now opens it in whatever edits it — a script in your IDE, a scene
+  in the editor, a prefab in Prefab Mode. On a GameObject that came from a prefab, it opens
+  that prefab. Where opening means nothing, Shift+Enter simply does what Enter does.
 - **Item actions.** Press `→` (or `Cmd/Ctrl+K`) on a result to slide across to what you can
   do with it — reveal it, show it in Finder, copy its path or GUID, duplicate it, delete it.
   `←` or Escape goes back. Which actions appear depends on what the thing is; a menu
@@ -88,6 +92,10 @@ changelog for those releases is in the repository root.
   identified items by an unstable hash that cannot be resolved back to an object.
 
 ### Fixed
+- The palette no longer throws `ArgumentOutOfRangeException` when it opens. Its stylesheet
+  used a CSS timing function that UI Toolkit does not support; Unity keeps such a
+  declaration with no values rather than rejecting it, and then reads past the end of it on
+  the first repaint.
 - Selecting a hierarchy result no longer throws if the object was destroyed between the
   search and pressing Enter.
 - Haste no longer leaks a script-compilation lock. It holds one while the palette is open

@@ -79,6 +79,28 @@ namespace Haste {
       }
     }
 
+    // A GameObject cannot be "opened", but the prefab behind one can.
+    public override bool CanOpen {
+      get { return SourcePrefab() != null; }
+    }
+
+    public override void Open() {
+      var prefab = SourcePrefab();
+      if (prefab != null) {
+        AssetDatabase.OpenAsset(prefab);
+        return;
+      }
+      base.Open();
+    }
+
+    UnityEngine.Object SourcePrefab() {
+      var go = Object as GameObject;
+      if (go == null || !PrefabUtility.IsPartOfPrefabInstance(go)) {
+        return null;
+      }
+      return PrefabUtility.GetCorrespondingObjectFromSource(go);
+    }
+
     public override void Action() {
       EditorApplication.ExecuteMenuItem("Window/Hierarchy");
 

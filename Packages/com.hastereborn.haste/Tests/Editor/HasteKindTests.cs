@@ -20,8 +20,68 @@ namespace Haste {
       Assert.That(HasteKinds.Classify(Project("Assets/Prefabs/Popup.prefab")), Is.EqualTo(HasteKind.Prefab));
       Assert.That(HasteKinds.Classify(Project("Assets/Scenes/Dev.unity")), Is.EqualTo(HasteKind.Scene));
       Assert.That(HasteKinds.Classify(Project("Assets/Scripts/Player.cs")), Is.EqualTo(HasteKind.Script));
-      Assert.That(HasteKinds.Classify(Project("Assets/Sprites/Icon.png")), Is.EqualTo(HasteKind.Asset));
+      Assert.That(HasteKinds.Classify(Project("Assets/Sprites/Icon.png")), Is.EqualTo(HasteKind.Texture));
+
+      // Anything without a recognised extension, and folders, stay generic.
       Assert.That(HasteKinds.Classify(Project("Assets/Folder")), Is.EqualTo(HasteKind.Asset));
+      Assert.That(HasteKinds.Classify(Project("Assets/Data/Config.asset")), Is.EqualTo(HasteKind.Asset));
+      Assert.That(HasteKinds.Classify(Project("Assets/Notes.txt")), Is.EqualTo(HasteKind.Asset));
+    }
+
+    [Test]
+    public void Classify_RecognisesTheAssetTypesTheChipsOffer() {
+      var expected = new System.Collections.Generic.Dictionary<string, HasteKind> {
+        { "Assets/Art/Hero.png",            HasteKind.Texture },
+        { "Assets/Art/Hero.tga",            HasteKind.Texture },
+        { "Assets/Art/Hero.psd",            HasteKind.Texture },
+        { "Assets/Sfx/Hit.wav",             HasteKind.Audio },
+        { "Assets/Sfx/Theme.mp3",           HasteKind.Audio },
+        { "Assets/Sfx/Amb.ogg",             HasteKind.Audio },
+        { "Assets/Anim/Walk.anim",          HasteKind.Animation },
+        { "Assets/Anim/Hero.controller",    HasteKind.Animator },
+        { "Assets/Mat/Wall.mat",            HasteKind.Material },
+        { "Assets/Models/Hero.fbx",         HasteKind.Model },
+        { "Assets/Shaders/Water.shader",    HasteKind.Shader },
+        { "Assets/Fonts/Inter.ttf",         HasteKind.Font },
+      };
+
+      foreach (var pair in expected) {
+        Assert.That(HasteKinds.Classify(Project(pair.Key)), Is.EqualTo(pair.Value), pair.Key);
+      }
+
+      // A folder called "prefab" is not a prefab: only the extension counts.
+      Assert.That(HasteKinds.Classify(Project("Assets/prefab/Thing.txt")), Is.EqualTo(HasteKind.Asset));
+      // And a dot in a folder name is not an extension.
+      Assert.That(HasteKinds.Classify(Project("Assets/v1.2/Thing")), Is.EqualTo(HasteKind.Asset));
+    }
+
+    [Test]
+    public void SplitScope_UnderstandsTheProjectWindowsTSyntax() {
+      HasteKind kinds; string token;
+
+      // "t:" is what Unity's own Project search uses, so it is what people already type,
+      // and it is what the chips insert.
+      Assert.That(HasteKinds.SplitScope("t:prefab popup", out kinds, out token), Is.EqualTo("popup"));
+      Assert.That(kinds, Is.EqualTo(HasteKind.Prefab));
+      Assert.That(token, Is.EqualTo("prefab"));
+
+      Assert.That(HasteKinds.SplitScope("t:texture ", out kinds, out token), Is.EqualTo(""));
+      Assert.That(kinds, Is.EqualTo(HasteKind.Texture));
+
+      Assert.That(HasteKinds.SplitScope("t:audio", out kinds, out token), Is.EqualTo(""));
+      Assert.That(kinds, Is.EqualTo(HasteKind.Audio));
+
+      // Aliases, because "audioclip" is Unity's name and "audio" is what people type.
+      foreach (var alias in new[] { "audio", "audioclip", "sound" }) {
+        HasteKinds.SplitScope("t:" + alias + " x", out kinds, out token);
+        Assert.That(kinds, Is.EqualTo(HasteKind.Audio), alias);
+      }
+
+      // A half-typed name is not a scope yet, so the query keeps working as you type.
+      Assert.That(HasteKinds.SplitScope("t:pre", out kinds, out token), Is.EqualTo("t:pre"));
+      Assert.That(kinds, Is.EqualTo(HasteKind.Any));
+      Assert.That(HasteKinds.SplitScope("t:banana x", out kinds, out token), Is.EqualTo("t:banana x"));
+      Assert.That(kinds, Is.EqualTo(HasteKind.Any));
     }
 
     [Test]
@@ -43,7 +103,11 @@ namespace Haste {
 
     [Test]
     public void Tag_UsesTheExtensionForPlainAssetsAndAFixedLabelOtherwise() {
+      // The badge stays the real extension for assets -- PNG and TGA are more use than a
+      // shared "TEX" would be, even though both classify as Texture.
       Assert.That(HasteKinds.Tag(Project("Assets/Sprites/Icon.png")), Is.EqualTo("PNG"));
+      Assert.That(HasteKinds.Tag(Project("Assets/Sprites/Icon.tga")), Is.EqualTo("TGA"));
+      Assert.That(HasteKinds.Tag(Project("Assets/Anim/Walk.anim")), Is.EqualTo("ANIM"));
       Assert.That(HasteKinds.Tag(Project("Assets/Mat/Wall.material")), Is.EqualTo("MATE"), "over-long extensions are clipped");
       Assert.That(HasteKinds.Tag(Project("Assets/Folder")), Is.EqualTo("ASS"));
       Assert.That(HasteKinds.Tag(Project("Assets/P/Popup.prefab")), Is.EqualTo("PRE"));

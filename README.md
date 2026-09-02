@@ -91,12 +91,23 @@ Type more than one word and every word has to match, in any order — `popup cri
 Start the query with a prefix to search only one kind of thing. The prefix turns into a
 chip; backspace on an empty query clears it.
 
+Filter by type with `t:`, the same syntax Unity's own Project search uses. The chips under
+the search field are buttons — click one and it types the tag for you.
+
 Prefix | Searches
 ---|---
-`asset:` | any project asset
-`prefab:` | prefabs
-`scene:` | scenes
-`script:` | C# scripts
+`t:prefab` | prefabs
+`t:script` | C# scripts
+`t:scene` | scenes
+`t:texture` | textures and sprites (`.png`, `.tga`, `.psd`, …)
+`t:audio` | audio clips (`.wav`, `.mp3`, `.ogg`, …) — also `t:audioclip`
+`t:anim` | animation clips — also `t:animation`
+`t:animator` | animator controllers
+`t:material` | materials
+`t:model` | models (`.fbx`, `.obj`, …)
+`t:shader` | shaders
+`t:font` | fonts
+`t:asset` | anything else in the project
 `h:` | GameObjects in the open scenes
 `layout:` | saved window layouts
 `>` | menu commands

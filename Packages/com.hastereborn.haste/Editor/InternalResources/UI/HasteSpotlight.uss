@@ -120,6 +120,7 @@
     padding-left: 16px;
 }
 
+/* Clickable: each one types its tag into the query. Styled to say so. */
 .haste-hint {
     padding-top: 3px;
     padding-right: 8px;
@@ -132,6 +133,12 @@
     border-color: rgba(201, 118, 44, 0.5);
     font-size: 10px;
     color: #f0d0ac;
+}
+
+.haste-hint:hover {
+    background-color: rgba(201, 118, 44, 0.45);
+    border-color: #c9762c;
+    color: #ffe9cf;
 }
 
 .haste-divider {

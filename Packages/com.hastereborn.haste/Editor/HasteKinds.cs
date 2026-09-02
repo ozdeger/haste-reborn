@@ -21,6 +21,14 @@ namespace Haste {
     Command   = 1 << 6,
     Tool      = 1 << 7,
     Layout    = 1 << 8,
+    Texture   = 1 << 9,
+    Audio     = 1 << 10,
+    Animation = 1 << 11,
+    Animator  = 1 << 12,
+    Material  = 1 << 13,
+    Model     = 1 << 14,
+    Shader    = 1 << 15,
+    Font      = 1 << 16,
 
     Any       = ~0,
   }
@@ -52,17 +60,79 @@ namespace Haste {
           return HasteKind.Command;
       }
 
-      var path = item.pathLower;
-      if (path.EndsWith(".prefab", StringComparison.Ordinal)) {
-        return HasteKind.Prefab;
+      return FromExtension(item.pathLower);
+    }
+
+    // Extension -> kind, compared in place so that classifying every candidate during a
+    // scoped search allocates nothing. The length check in Extension short-circuits almost
+    // all of these before any character is read.
+    static HasteKind FromExtension(string pathLower) {
+      var start = ExtensionStart(pathLower);
+      if (start < 0) {
+        return HasteKind.Asset;
       }
-      if (path.EndsWith(".unity", StringComparison.Ordinal)) {
-        return HasteKind.Scene;
+
+      if (Is(pathLower, start, "prefab")) return HasteKind.Prefab;
+      if (Is(pathLower, start, "unity")) return HasteKind.Scene;
+      if (Is(pathLower, start, "cs")) return HasteKind.Script;
+      if (Is(pathLower, start, "anim")) return HasteKind.Animation;
+      if (Is(pathLower, start, "mat")) return HasteKind.Material;
+
+      if (Is(pathLower, start, "controller") || Is(pathLower, start, "overridecontroller")) {
+        return HasteKind.Animator;
       }
-      if (path.EndsWith(".cs", StringComparison.Ordinal)) {
-        return HasteKind.Script;
+
+      if (Is(pathLower, start, "png") || Is(pathLower, start, "jpg") ||
+          Is(pathLower, start, "jpeg") || Is(pathLower, start, "tga") ||
+          Is(pathLower, start, "psd") || Is(pathLower, start, "gif") ||
+          Is(pathLower, start, "bmp") || Is(pathLower, start, "tif") ||
+          Is(pathLower, start, "tiff") || Is(pathLower, start, "exr") ||
+          Is(pathLower, start, "hdr") || Is(pathLower, start, "webp") ||
+          Is(pathLower, start, "svg")) {
+        return HasteKind.Texture;
       }
+
+      if (Is(pathLower, start, "wav") || Is(pathLower, start, "mp3") ||
+          Is(pathLower, start, "ogg") || Is(pathLower, start, "aif") ||
+          Is(pathLower, start, "aiff") || Is(pathLower, start, "flac") ||
+          Is(pathLower, start, "m4a")) {
+        return HasteKind.Audio;
+      }
+
+      if (Is(pathLower, start, "fbx") || Is(pathLower, start, "obj") ||
+          Is(pathLower, start, "blend") || Is(pathLower, start, "dae") ||
+          Is(pathLower, start, "3ds") || Is(pathLower, start, "max")) {
+        return HasteKind.Model;
+      }
+
+      if (Is(pathLower, start, "shader") || Is(pathLower, start, "shadergraph") ||
+          Is(pathLower, start, "compute") || Is(pathLower, start, "cginc") ||
+          Is(pathLower, start, "hlsl")) {
+        return HasteKind.Shader;
+      }
+
+      if (Is(pathLower, start, "ttf") || Is(pathLower, start, "otf")) {
+        return HasteKind.Font;
+      }
+
       return HasteKind.Asset;
+    }
+
+    // Index of the first character after the final "." of the file name, or -1.
+    static int ExtensionStart(string pathLower) {
+      var dot = pathLower.LastIndexOf('.');
+      if (dot < 0 || dot == pathLower.Length - 1) {
+        return -1;
+      }
+      if (dot < pathLower.LastIndexOf('/')) {
+        return -1;
+      }
+      return dot + 1;
+    }
+
+    static bool Is(string pathLower, int start, string extension) {
+      return pathLower.Length - start == extension.Length &&
+        string.CompareOrdinal(pathLower, start, extension, 0, extension.Length) == 0;
     }
 
     // The short badge shown at the left of a row. Generic assets use their own extension,
@@ -101,6 +171,14 @@ namespace Haste {
         case HasteKind.Component: return "component";
         case HasteKind.Tool:      return "tool";
         case HasteKind.Layout:    return "layout";
+        case HasteKind.Texture:   return "texture";
+        case HasteKind.Audio:     return "audio";
+        case HasteKind.Animation: return "animation";
+        case HasteKind.Animator:  return "animator";
+        case HasteKind.Material:  return "material";
+        case HasteKind.Model:     return "model";
+        case HasteKind.Shader:    return "shader";
+        case HasteKind.Font:      return "font";
         case HasteKind.Command | HasteKind.Tool: return "command";
         case HasteKind.Command:   return "command";
       }
@@ -148,6 +226,28 @@ namespace Haste {
         case "tools":    kinds = HasteKind.Tool; return true;
         case "l":
         case "layout":   kinds = HasteKind.Layout; return true;
+
+        // Asset types. Aliases are generous on purpose: these are typed by hand, and
+        // "audioclip" is what Unity calls it while "audio" is what people type.
+        case "tex":
+        case "texture":
+        case "image":
+        case "sprite":   kinds = HasteKind.Texture; return true;
+        case "audio":
+        case "audioclip":
+        case "sound":    kinds = HasteKind.Audio; return true;
+        case "anim":
+        case "animation":
+        case "clip":     kinds = HasteKind.Animation; return true;
+        case "animator":
+        case "controller": kinds = HasteKind.Animator; return true;
+        case "mat":
+        case "material": kinds = HasteKind.Material; return true;
+        case "model":
+        case "mesh":
+        case "fbx":      kinds = HasteKind.Model; return true;
+        case "shader":   kinds = HasteKind.Shader; return true;
+        case "font":     kinds = HasteKind.Font; return true;
       }
       return false;
     }
@@ -177,6 +277,25 @@ namespace Haste {
       var colon = query.IndexOf(':');
       if (colon > 0) {
         var word = query.Substring(0, colon);
+
+        // "t:<type>" -- the syntax Unity's own Project window search uses, so it is what
+        // people already have in their fingers. The type name runs to the first space.
+        if (word.Length == 1 && (word[0] == 't' || word[0] == 'T')) {
+          var rest = query.Substring(colon + 1);
+          var end = rest.IndexOf(' ');
+          var name = end < 0 ? rest : rest.Substring(0, end);
+
+          if (TryParseToken(name, out kinds)) {
+            token = Label(kinds);
+            return end < 0 ? "" : rest.Substring(end + 1).TrimStart();
+          }
+
+          // A half-typed name is not a scope yet, so "t:pre" stays a plain query and
+          // commits only once it reads as a type.
+          kinds = HasteKind.Any;
+          return query;
+        }
+
         if (TryParseToken(word, out kinds)) {
           token = Label(kinds);
           return query.Substring(colon + 1).TrimStart();

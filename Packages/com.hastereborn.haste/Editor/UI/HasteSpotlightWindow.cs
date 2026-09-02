@@ -35,8 +35,10 @@ namespace Haste {
     const string PathHighlightStart = "<color=#b9b9b9>";
     const string HighlightEnd = "</color>";
 
+    // The chips under the query field. Clicking one types its tag, so they are the
+    // discoverable form of the scope syntax rather than a legend for it.
     static readonly string[] PrefixHints = {
-      "asset:", "prefab:", "scene:", "script:", "h:", ">", "#",
+      "t:prefab", "t:script", "t:texture", "t:audio", "t:anim", "h:", ">",
     };
 
     public static HasteSpotlightWindow Instance { get; private set; }
@@ -253,8 +255,10 @@ namespace Haste {
       hintsRow.AddToClassList("haste-hints");
 
       foreach (var hint in PrefixHints) {
-        var chip = new Label(hint);
+        var tag = hint;
+        var chip = new Label(tag);
         chip.AddToClassList("haste-hint");
+        chip.RegisterCallback<MouseDownEvent>(evt => { ApplyHint(tag); evt.StopPropagation(); });
         hintsRow.Add(chip);
       }
 
@@ -701,6 +705,19 @@ namespace Haste {
       // Otherwise the pane would keep offering actions for a row that is no longer there.
       HideActions();
       Research();
+    }
+
+    // Types the chip's tag in front of whatever is already in the field, so clicking
+    // "t:prefab" after typing "popup" scopes the search rather than replacing it. The
+    // value change runs through OnQueryChanged, which peels the tag into the scope chip.
+    void ApplyHint(string tag) {
+      if (queryField == null) {
+        return;
+      }
+
+      var rest = query ?? "";
+      queryField.value = rest.Length > 0 ? tag + " " + rest : tag + " ";
+      queryField.Focus();
     }
 
     void SyncPlaceholder() {

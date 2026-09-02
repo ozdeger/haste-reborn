@@ -57,9 +57,14 @@ changelog for those releases is in the repository root.
   a wider window, a single row per result with the file name on the left and its folder on
   the right, a type badge, and a status bar. Matched characters are still highlighted, now
   in both the name and the folder.
-- **Scope your search by type.** Start a query with `prefab:`, `script:`, `scene:`,
-  `asset:`, `h:` (hierarchy), `layout:`, `>` (commands), or `#` (components) to search only
-  that kind. The prefix turns into a chip; backspace on an empty query clears it.
+- **Filter by type with `t:`** — the same syntax Unity's own Project search uses:
+  `t:prefab`, `t:texture`, `t:audio`, `t:anim`, `t:animator`, `t:material`, `t:model`,
+  `t:shader`, `t:font`, `t:script`, `t:scene`. `h:` scopes to the open scenes, `>` to menu
+  commands, `#` to components. The prefix turns into a chip; backspace on an empty query
+  clears it.
+- **The chips under the search field are buttons now.** Clicking one types its tag, in
+  front of whatever you have already typed — so type "popup", click `t:prefab`, and you
+  have narrowed rather than started over.
 - **Spaces in a query now separate terms instead of killing the search.** Every term has
   to match, in any order, so "main camera" finds `MainCamera.mat` and "popup crimescene"
   finds `Popup_CrimeScene_Character_Banner_Sale.png`. Previously the whole query was one

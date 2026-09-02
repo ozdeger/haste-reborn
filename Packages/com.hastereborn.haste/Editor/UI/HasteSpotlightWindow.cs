@@ -110,7 +110,10 @@ namespace Haste {
       window.minSize = window.maxSize = new Vector2(WindowWidth, WindowHeight);
       window.ShowPopup();
       window.Focus();
-      window.FocusQuery();
+
+      // Deliberately no FocusQuery() here. CreateGUI has not run yet, so queryField is
+      // still null and the call did nothing -- it just looked like the field was being
+      // focused early. The real focus happens from CreateGUI.
     }
 
     // Centres on the display the mouse is on rather than on Screen.currentResolution,
@@ -655,11 +658,23 @@ namespace Haste {
       if (queryField == null) {
         return;
       }
-      EditorApplication.delayCall += () => {
-        if (queryField != null) {
-          queryField.Focus();
-        }
-      };
+
+      // Focus on the first layout pass, which is the earliest moment Focus() actually
+      // takes -- an element with no geometry yet cannot receive it.
+      //
+      // This used to go through EditorApplication.delayCall, which costs a whole editor
+      // tick ON TOP of the one the open itself is already deferred by. Two ticks between
+      // tapping Shift and the caret arriving is long enough to swallow the first
+      // characters of what you were typing.
+      queryField.RegisterCallback<GeometryChangedEvent>(OnQueryFieldLaidOut);
+
+      // And immediately, in case the panel is already laid out -- harmless if it is not.
+      queryField.Focus();
+    }
+
+    void OnQueryFieldLaidOut(GeometryChangedEvent evt) {
+      queryField.UnregisterCallback<GeometryChangedEvent>(OnQueryFieldLaidOut);
+      queryField.Focus();
     }
 
     void OnQueryChanged(string value) {

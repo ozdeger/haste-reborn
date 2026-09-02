@@ -32,9 +32,8 @@ namespace Haste {
       Assert.That(HasteResources.Root,
         Is.EqualTo("Packages/" + HasteResources.PackageName + "/Editor/InternalResources/"));
 
-      var font = HasteResources.Load<Font>("Fonts/FiraSans-Regular.ttf");
-      Assert.That(font, Is.Not.Null, "the bundled query font failed to load");
-      Assert.That(font.name, Is.EqualTo("FiraSans-Regular"));
+      var sheet = HasteResources.Load<UnityEngine.UIElements.StyleSheet>("UI/HasteSpotlight.uss");
+      Assert.That(sheet, Is.Not.Null, "the palette stylesheet failed to load");
     }
 
     [Test]
@@ -43,7 +42,7 @@ namespace Haste {
       // Load logs a warning, so tell the test framework to expect it.
       UnityEngine.TestTools.LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(
         @"\[Haste\] Missing packaged resource"));
-      Assert.That(HasteResources.Load<Font>("Fonts/NoSuchFont.ttf"), Is.Null);
+      Assert.That(HasteResources.Load<UnityEngine.UIElements.StyleSheet>("UI/NoSuchSheet.uss"), Is.Null);
     }
 
     [Test]
@@ -77,10 +76,11 @@ namespace Haste {
       // Documents the Unity 6 behaviour that broke Haste on import.
       //
       // HasteStyles.PreCacheDynamicFonts() asked every rich-text style's font to warm its
-      // glyph atlas. Styles with richText set ("Tip", "Description", ...) do not set their
-      // own font, so it fell back to the built-in Inspector skin's font -- and reading it
-      // succeeds while USING it throws UnassignedReferenceException from the native call.
-      // That fired on every scheduler tick from Haste.Update as soon as the package loaded.
+      // glyph atlas. Styles with richText set did not set their own font, so it fell back
+      // to the built-in Inspector skin's font -- and reading it succeeds while USING it
+      // throws UnassignedReferenceException from the native call. That fired on every
+      // scheduler tick from Haste.Update as soon as the package loaded. Both the pre-cache
+      // and HasteStyles itself are gone now; this keeps the Unity fact under a test.
       //
       // If a future Unity assigns this again, this test fails and tells us the ground
       // shifted. It does not mean the pre-cache should come back:
@@ -89,22 +89,28 @@ namespace Haste {
       var skin = EditorGUIUtility.GetBuiltinSkin(EditorSkin.Inspector);
       Assert.That(skin, Is.Not.Null);
       Assert.That(skin.font == null, Is.True,
-        "EditorSkin.Inspector now has a font assigned; revisit the note in HasteStyles " +
-        "where PreCacheDynamicFonts used to be.");
+        "EditorSkin.Inspector now has a font assigned; see HANDOFF.md 3.3, which records " +
+        "this as measured behaviour.");
     }
 
     [Test]
     public void FontPrecacheStaysDeleted() {
       // Guard against reintroducing the pre-cache, which throws on Unity 6 and warms
-      // nothing. A null-guarded version would just be a slower no-op.
-      var members = typeof(HasteStyles).GetMembers(
-        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic |
-        System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Instance);
+      // nothing -- Font.RequestCharactersInTexture has no callers left in Unity's own
+      // editor assemblies, so a null-guarded version would just be a slower no-op.
+      //
+      // This used to scan HasteStyles, which no longer exists. Scanning the whole editor
+      // assembly is the stronger guard anyway: it does not matter which type it comes
+      // back in.
+      var flags = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic |
+                  System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Instance;
 
-      foreach (var member in members) {
-        Assert.That(member.Name, Does.Not.Contain("PreCache"),
-          "HasteStyles." + member.Name + " looks like the deleted font pre-cache. See the " +
-          "note in HasteStyles.cs before adding it back.");
+      foreach (var type in typeof(HasteResources).Assembly.GetTypes()) {
+        foreach (var member in type.GetMembers(flags)) {
+          Assert.That(member.Name, Does.Not.Contain("PreCache"),
+            type.Name + "." + member.Name + " looks like the deleted font pre-cache. See " +
+            "HANDOFF.md 3.3 before adding it back.");
+        }
       }
     }
 
@@ -126,20 +132,6 @@ namespace Haste {
 
       Assert.That(typeof(HasteSpotlightWindow).GetField("holdsReloadLock", flags), Is.Not.Null,
         "the lock is balanced by state, not by pairing call sites.");
-    }
-
-    [Test]
-    public void Styles_InitStopsInsteadOfSpinningWhenEditorStylesNeverArrive() {
-      // EditorStyles needs an interactive editor -- it throws under -batchmode even with a
-      // real graphics device. WaitUntilReady used to loop until that changed, which never
-      // happens headlessly, so this call would hang the whole run rather than fail it.
-      Assert.That(() => HasteScheduler.Sync(HasteStyles.Init()), Throws.Nothing);
-
-      // Nothing downstream of the readiness gate may assume it opened.
-      if (!HasteStyles.IsReady) {
-        Assert.That(HasteStyles.GetStyle("Name"), Is.Null.Or.Not.Null,
-          "GetStyle must not throw when styles were never built");
-      }
     }
 
     [Test]

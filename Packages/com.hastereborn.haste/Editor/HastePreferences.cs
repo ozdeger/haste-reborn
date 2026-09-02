@@ -9,6 +9,24 @@ namespace Haste {
 
     static Vector2 scrollPosition = Vector2.zero;
 
+    // The preferences page is the last IMGUI surface in Haste, and this is the only style
+    // it needs. HasteStyles used to build twenty-five of them, plus a light/dark colour
+    // matrix, behind an EditorStyles readiness gate at startup -- all to serve this one
+    // label once the palette moved to USS.
+    //
+    // Built lazily rather than in a static initialiser: EditorStyles is unusable outside
+    // an interactive editor, and guiHandler is the first point where it is safe to read.
+    static GUIStyle wrappedLabel;
+
+    static GUIStyle WrappedLabel {
+      get {
+        if (wrappedLabel == null) {
+          wrappedLabel = new GUIStyle(EditorStyles.label) { wordWrap = true };
+        }
+        return wrappedLabel;
+      }
+    }
+
     // Where Haste appears in Unity Preferences. SettingsProvider keys user overrides and
     // the settings search index by this path, so renaming it moves the page.
     public const string SettingsPath = "Preferences/Haste";
@@ -40,7 +58,7 @@ namespace Haste {
           HasteSettings.UsageCount,
           HasteSettings.UsageSinceDate.ToLongDateString(),
           HasteSettings.UsageAverage
-        ), HasteStyles.GetStyle("Usage"));
+        ), WrappedLabel);
 
         EditorGUILayout.Space();
         EditorGUILayout.Space();

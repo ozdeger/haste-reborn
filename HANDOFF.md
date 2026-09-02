@@ -138,7 +138,6 @@ neither indexing nor searching can stall the editor.
 | `InternalResources/UI/HasteSpotlight.uss` | All palette styling, values taken from the design |
 | `HasteKinds.cs` | Presentation taxonomy for row badges and scope tokens |
 | `HasteDisplay.cs` | Where the palette opens |
-| `HasteStyles.cs`, `HastePalette.cs` | GUIStyle matrix, now used only by the preferences page |
 | `HasteSettings.cs` | `EditorPrefs` wrapper keyed by a `HasteSetting` enum |
 | `HastePreferences.cs` | The preferences page |
 | `HasteRecommendations.cs` | Recency store, a `ScriptableSingleton` in `UserSettings/` |
@@ -467,6 +466,14 @@ Part 5 — Current state and what is next
   by damping rather than filtering, and the golden tables were re-baselined as a
   deliberate diff.
 - **The trailing-ellipsis fix (4.2)**, and a correction to what that bug actually cost.
+- **The IMGUI styling layer, deleted.** `HasteStyles` and `HastePalette` went with the
+  palette they existed for: ~25 GUIStyle definitions and a light/dark colour matrix, built
+  at startup behind an `EditorStyles` readiness gate. Once results stopped drawing
+  themselves the only caller left was the preferences page asking for one wrapped label,
+  which is now a lazily-built `GUIStyle` on the page itself. The bundled `FiraSans-Regular`
+  went too — it existed only for the old query field, and the new palette styles text from
+  USS. **The package now ships no font at all**, which is what 5.2.2's typography note is
+  about.
 - **The obsolete-API burn-down, complete.** 32 warnings to 0. Beyond the prefab work below:
   scene and selection tracking moved off per-frame polling of `EditorApplication.currentScene`
   and `Selection.activeInstanceID` onto `EditorSceneManager`'s events and
@@ -499,11 +506,6 @@ with stable identity keys; the rest of the search-core rewrite; and settings con
 
 Left over from the palette work, in rough order of value:
 
-- **`HasteStyles` and `HastePalette` are nearly dead.** With results no longer drawing
-  themselves, the only surviving caller is `HastePreferences` asking for one style
-  (`"Usage"`). That is ~25 GUIStyle definitions and a whole light/dark colour matrix built
-  at startup, behind an `EditorStyles` readiness gate, to serve a single label. Trimming
-  them is self-contained.
 - **The actions pane** (`→` / `Cmd+K`) from the design, and its 0.18s slide.
 - **"Suggested commands"** on the launch screen. Recents are real; suggestions need a
   signal that does not exist yet.
@@ -570,6 +572,11 @@ From the palette rewrite, in the order worth checking:
   old full-path label did.
 - **Arrow keys.** They are intercepted on the root with `TrickleDown` so the text field
   does not eat them first.
+- **Typography.** The design sets paths, type badges and key chips in a monospace
+  (`ui-monospace, Menlo`) and everything else in the system UI face. The stylesheet sets
+  neither, so all of it renders in Unity's default editor font — the proportional text is
+  close, the monospace runs are not. Fixing it means shipping a font and pointing
+  `-unity-font-definition` at it; the package deliberately ships none (see 5.1).
 
 From the burn-down:
 

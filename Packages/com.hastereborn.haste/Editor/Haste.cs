@@ -129,9 +129,6 @@ namespace Haste {
 
       HasteSettings.Version = VERSION;
 
-      // The palette's own styling is USS and loads with the window; this is only for the
-      // preferences page, which is still IMGUI.
-      Scheduler.Start(HasteStyles.Init());
     }
 
     // static void AddGlobalEventHandler() {

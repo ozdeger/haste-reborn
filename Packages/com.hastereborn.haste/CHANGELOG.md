@@ -107,6 +107,9 @@ changelog for those releases is in the repository root.
   every scheduler tick. Unity 5's older Mono tolerated it.
 
 ### Removed
+- The IMGUI styling layer that the old palette needed — twenty-five editor styles and a
+  light/dark colour matrix built every time Unity started, plus the font bundled with them.
+  The new palette styles itself, and the preferences page needs exactly one label style.
 - The movable-window mode, and with it the "Window Position" preferences section. It
   existed because the palette used to mis-centre itself, opening on the primary display
   regardless of which monitor Unity was on. That is fixed — the palette now centres on the

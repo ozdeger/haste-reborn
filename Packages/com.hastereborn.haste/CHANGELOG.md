@@ -57,6 +57,14 @@ changelog for those releases is in the repository root.
   identified items by an unstable hash that cannot be resolved back to an object.
 
 ### Fixed
+- Haste no longer leaks a script-compilation lock. It holds one while the palette is open
+  so the window cannot be destroyed mid-use, but released it only on one of several ways
+  the window can close — and took a second lock if you reopened the palette while one was
+  already open. A leaked lock is invisible and stops your script changes compiling until
+  you restart the editor.
+- Indexing and search now get the full 16 ms per editor update they were designed around.
+  An error in the budget arithmetic meant they were getting closer to a tenth of it, so
+  large projects took far longer to become searchable than intended.
 - Menu items ending in "..." are no longer mis-parsed as having an extension of "..", so
   they can be found by typing their own name. A lone trailing dot still separates an
   extension, so a file named "test." is still named "test".

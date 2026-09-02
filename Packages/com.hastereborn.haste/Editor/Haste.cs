@@ -239,12 +239,22 @@ namespace Haste {
           Watchers.RestartSource(HasteLayoutSource.NAME);
         }
 
+        // The condition measures elapsed time from `start` on every pass. It used to
+        // accumulate (now - start) into a running total each iteration, which sums
+        // t + 2t + 3t + ... rather than n*t -- a triangular series that reached the 16 ms
+        // budget after about sqrt(2 * MAX_ITER_TIME / t) iterations instead of
+        // MAX_ITER_TIME / t. At a 0.1 ms tick that is ~18 iterations per frame where the
+        // budget allows ~160, so indexing and search ran close to an order of magnitude
+        // slower than this constant says they do.
+        //
+        // Fixing the arithmetic makes MAX_ITER_TIME mean what it claims, which is a real
+        // increase in work done per frame. If that proves too aggressive in a live editor,
+        // MAX_ITER_TIME is the dial -- do not reintroduce the bug to get the old feel.
         var start = EditorApplication.timeSinceStartup;
-        var duration = 0.0;
 
-        while (duration < MAX_ITER_TIME && Scheduler.IsRunning) {
+        while (Scheduler.IsRunning &&
+               (EditorApplication.timeSinceStartup - start) < MAX_ITER_TIME) {
           Scheduler.Tick();
-          duration += (EditorApplication.timeSinceStartup - start);
         }
       }
     }

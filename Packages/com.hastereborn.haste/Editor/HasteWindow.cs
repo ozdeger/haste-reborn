@@ -72,8 +72,6 @@ namespace Haste {
     }
 
     public static void Open() {
-      EditorApplication.LockReloadAssemblies();
-
       if (HasteWindow.Instance == null) {
         HasteWindow.Init();
       } else {
@@ -104,7 +102,44 @@ namespace Haste {
       HasteWindow.Instance.Focus();
     }
 
+    // Whether this window holds a reload lock. The lock and its release are balanced by
+    // state rather than by pairing call sites.
+    //
+    // EditorApplication.LockReloadAssemblies is a counter. The old code locked in the
+    // static Open() -- including when a window was already open, so re-opening locked
+    // twice -- and released only inside a `new`-shadowed Close(), which any destruction
+    // path not going through that exact method skipped. A leaked reload lock is silent
+    // and severe: script changes simply stop compiling until the editor is restarted.
+    bool holdsReloadLock;
+
+    void LockReload() {
+      if (!holdsReloadLock) {
+        holdsReloadLock = true;
+        EditorApplication.LockReloadAssemblies();
+      }
+    }
+
+    void UnlockReload() {
+      if (holdsReloadLock) {
+        holdsReloadLock = false;
+        EditorApplication.UnlockReloadAssemblies();
+      }
+    }
+
+    // Unity calls this however the window goes away -- Escape, Enter, clicking outside, a
+    // layout change, the editor closing it for its own reasons. That is why the cleanup
+    // lives here rather than in a Close() only our own call sites reach.
+    void OnDestroy() {
+      if (searching != null && searching.IsRunning) {
+        searching.Stop();
+      }
+
+      UnlockReload();
+    }
+
     void InitializeInstance() {
+      LockReload();
+
       this.title = "Haste";
       this.position = GetPosition();
 
@@ -249,16 +284,6 @@ namespace Haste {
       Selection.objects = prevSelection;
       Haste.WindowAction += item.Action;
       Close();
-    }
-
-    new void Close() {
-      if (searching != null && searching.IsRunning) {
-        searching.Stop();
-      }
-
-      EditorApplication.UnlockReloadAssemblies();
-
-      base.Close();
     }
 
     void OnHome(Event e) {

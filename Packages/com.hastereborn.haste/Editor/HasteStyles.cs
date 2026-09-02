@@ -84,6 +84,12 @@ namespace Haste {
     public static IEnumerator Init() {
       yield return Haste.Scheduler.Start(WaitUntilReady());
 
+      // Every AddStyle below reads EditorStyles. Without this guard the whole method
+      // throws in batch mode instead of simply having nothing to do.
+      if (!IsReady) {
+        yield break;
+      }
+
       AddStyle(new Style() { name = "Query", other = EditorStyles.textField, fixedHeight = 64, font = HasteResources.Load<Font>("Fonts/FiraSans-Regular.ttf"), alignment = TextAnchor.MiddleLeft });
 
       AddStyle(new Style() { name = "Intro", other = EditorStyles.largeLabel, fixedHeight = 64, fontSize = 32, alignment = TextAnchor.MiddleCenter });
@@ -161,19 +167,37 @@ namespace Haste {
       styles.Add(style.name, guiStyle);
     }
 
+    // False until EditorStyles becomes usable. It never does under -batchmode -- editor
+    // GUI styles need an interactive editor, not merely a graphics device -- so anything
+    // downstream of this gate is unreachable headlessly, and must check rather than
+    // assume.
+    public static bool IsReady { get; private set; }
+
+    // Roughly ten seconds at editor update rate. Long enough to cover a slow interactive
+    // startup, short enough that a headless run stops burning a scheduler slot every
+    // frame for its whole duration -- which is what looping forever here used to do.
+    const int MAX_READY_ATTEMPTS = 600;
+
     static IEnumerator WaitUntilReady() {
-      GUIStyle test = null;
-      bool failing = false;
-      while (failing || test == null) {
+      for (int attempt = 0; attempt < MAX_READY_ATTEMPTS; attempt++) {
+        bool ready;
         try {
-          test = EditorStyles.textField;
-          failing = false;
+          ready = EditorStyles.textField != null;
         } catch {
-          failing = true;
-          test = null;
+          ready = false;
         }
+
+        if (ready) {
+          IsReady = true;
+          yield break;
+        }
+
         yield return null;
       }
+
+      // Not an error: this is the expected outcome of every headless run.
+      HasteDebug.Info("Haste styles unavailable (EditorStyles never became usable). " +
+        "This is expected in batch mode.");
     }
 
     // PreCacheDynamicFonts() lived here and is deliberately gone.

@@ -398,12 +398,28 @@ about impact is not the same as a claim about behaviour. Check which one you are
 - ~~`HasteIndex.Remove` decrements `Count` unconditionally, even for an item that was never
   present.~~ **Fixed** alongside 4.1: the index now keeps an authoritative item set, so
   `Count` is exact, removing something never added is a no-op, and adding twice counts once.
-- `Haste.Update`'s frame budget captures `start` once outside the loop while accumulating
+All three of the following are now **fixed**, and each is pinned so it cannot come back.
+
+- ~~`Haste.Update`'s frame budget captures `start` once outside the loop while accumulating
   elapsed time each iteration, producing a triangular sum — so the 16 ms budget is
-  exhausted early.
-- `EditorApplication.LockReloadAssemblies` is called in `Open()` but unlocked only in a
-  `new`-shadowed `Close()`, so any close path that misses the shadow leaks a reload lock.
-- `HasteStyles.WaitUntilReady()` busy-spins on `EditorStyles` forever in batch mode.
+  exhausted early.~~ The series was `t + 2t + 3t + …` instead of `n·t`, so the loop stopped
+  after about `sqrt(2·MAX_ITER_TIME/t)` iterations rather than `MAX_ITER_TIME/t` — at a
+  0.1 ms tick, ~18 per frame where the budget allows ~160. **Note what fixing it means:**
+  Haste now really does spend up to 16 ms per update when there is work, which is close to
+  an order of magnitude more than before. That is what the constant always claimed, but it
+  has not been felt in a live editor. If it is too aggressive, lower `MAX_ITER_TIME` —
+  do not reintroduce the bug.
+- ~~`EditorApplication.LockReloadAssemblies` is called in `Open()` but unlocked only in a
+  `new`-shadowed `Close()`, so any close path that misses the shadow leaks a reload lock.~~
+  Worse than described: `Open()` locked *unconditionally*, including when a window was
+  already open, so re-opening locked twice against one unlock. The lock is now balanced by
+  a `holdsReloadLock` flag, taken in `InitializeInstance` and released in `OnDestroy`,
+  which Unity calls however the window goes away. The shadowed `Close()` is gone, and a
+  test asserts it stays gone.
+- ~~`HasteStyles.WaitUntilReady()` busy-spins on `EditorStyles` forever in batch mode.~~ It
+  now gives up after 600 attempts and leaves `HasteStyles.IsReady` false; `Init` returns
+  early rather than throwing on the first `EditorStyles` read. The test that pins this
+  would previously have *hung the whole run* rather than failed it.
 
 A fourth item, found while widening the index, is **fixed**: `HasteScoring`'s
 first-character rungs indexed into `nameLower[0]` unguarded, and

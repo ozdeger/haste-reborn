@@ -109,6 +109,40 @@ namespace Haste {
     }
 
     [Test]
+    public void WindowBalancesItsReloadLockThroughOnDestroy() {
+      // A leaked EditorApplication reload lock is silent and severe -- script changes stop
+      // compiling until the editor restarts. It used to be released only from a
+      // `new`-shadowed Close(), which every destruction path Unity drives itself skipped,
+      // while Open() took the lock even when a window was already open.
+      var flags = System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic |
+                  System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.DeclaredOnly;
+
+      Assert.That(typeof(HasteWindow).GetMethod("Close", flags), Is.Null,
+        "HasteWindow declares its own Close() again. Shadowing EditorWindow.Close is how " +
+        "the reload lock leaked -- release it from OnDestroy, which Unity always calls.");
+
+      Assert.That(typeof(HasteWindow).GetMethod("OnDestroy", flags), Is.Not.Null,
+        "HasteWindow.OnDestroy is where the reload lock is released.");
+
+      Assert.That(typeof(HasteWindow).GetField("holdsReloadLock", flags), Is.Not.Null,
+        "the lock is balanced by state, not by pairing call sites.");
+    }
+
+    [Test]
+    public void Styles_InitStopsInsteadOfSpinningWhenEditorStylesNeverArrive() {
+      // EditorStyles needs an interactive editor -- it throws under -batchmode even with a
+      // real graphics device. WaitUntilReady used to loop until that changed, which never
+      // happens headlessly, so this call would hang the whole run rather than fail it.
+      Assert.That(() => HasteScheduler.Sync(HasteStyles.Init()), Throws.Nothing);
+
+      // Nothing downstream of the readiness gate may assume it opened.
+      if (!HasteStyles.IsReady) {
+        Assert.That(HasteStyles.GetStyle("Name"), Is.Null.Or.Not.Null,
+          "GetStyle must not throw when styles were never built");
+      }
+    }
+
+    [Test]
     public void RecencyStore_LivesOutsideThePackage() {
       // Writing into the package's own folder fails once Haste is installed read-only.
       var store = HasteRecommendations.instance;

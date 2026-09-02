@@ -51,6 +51,9 @@ changelog for those releases is in the repository root.
   identified items by an unstable hash that cannot be resolved back to an object.
 
 ### Fixed
+- Menu items ending in "..." are no longer mis-parsed as having an extension of "..", so
+  they can be found by typing their own name. A lone trailing dot still separates an
+  extension, so a file named "test." is still named "test".
 - Scoring no longer throws on an item whose name is empty. A path that is nothing but an
   extension — a GameObject named ".x", say — produced an empty name, and the scorer
   indexed into it unguarded.

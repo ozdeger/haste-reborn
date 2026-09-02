@@ -471,15 +471,33 @@ namespace Haste {
 
     [Test]
     [Category("Primitives")]
-    public void FileNameAndExtension_TrailingEllipsisIsMishandled() {
-      // BUG: a menu path ending in "..." -- which is most Unity dialog menu items -- has
-      // its last two dots eaten from the display name and reported as an extension of
-      // "..". Both values are wrong; they are pinned here so the fix is visible as a
-      // deliberate change to this test.
-      Assert.That(HasteStringUtils.GetFileNameWithoutExtension("Component/Add..."), Is.EqualTo("Add.."));
-      Assert.That(HasteStringUtils.GetExtension("Component/Add..."), Is.EqualTo(".."));
-      Assert.That(HasteStringUtils.GetFileNameWithoutExtension("File/Build Settings..."), Is.EqualTo("Build Settings.."));
-      Assert.That(HasteStringUtils.GetExtension("File/Build Settings..."), Is.EqualTo(".."));
+    public void FileNameAndExtension_TrailingEllipsisIsAnEllipsisNotAnExtension() {
+      // FIXED. A menu path ending in "..." used to have its last two dots eaten from the
+      // name ("Add..") and the remainder reported as an extension ("..").
+      //
+      // The blast radius was narrower than it looks, and worth recording so nobody hunts
+      // for symptoms that were never there: the result row renders GetFileName, which was
+      // always correct, and HasteItem.extensionLower is never read by anything. What the
+      // wrong name actually cost was scoring -- the exact-name, prefix-name and
+      // substring-name rungs all compare against it, so "Component/Add..." could not be
+      // matched by typing its own name.
+      Assert.That(HasteStringUtils.GetFileNameWithoutExtension("Component/Add..."), Is.EqualTo("Add..."));
+      Assert.That(HasteStringUtils.GetExtension("Component/Add..."), Is.EqualTo(""));
+      Assert.That(HasteStringUtils.GetFileNameWithoutExtension("File/Build Settings..."), Is.EqualTo("Build Settings..."));
+      Assert.That(HasteStringUtils.GetExtension("File/Build Settings..."), Is.EqualTo(""));
+
+      // Real extensions are untouched, including one that follows a dotted stem.
+      Assert.That(HasteStringUtils.GetFileNameWithoutExtension("Assets/Some.Thing.cs"), Is.EqualTo("Some.Thing"));
+      Assert.That(HasteStringUtils.GetExtension("Assets/Some.Thing.cs"), Is.EqualTo("Thing.cs"));
+
+      // A name that is only dots has no name and no extension, and does not throw.
+      Assert.That(HasteStringUtils.GetExtension("Menu/..."), Is.EqualTo(""));
+      Assert.That(HasteStringUtils.GetFileNameWithoutExtension("Menu/..."), Is.EqualTo("..."));
+
+      // Typing the menu item's own name now reaches the exact-name rung.
+      var add = new HasteItem("Component/Add...", 0, "");
+      Assert.That(add.nameLower, Is.EqualTo("add..."));
+      Assert.That(HasteScoring.Score(add, "add...", 6), Is.GreaterThan(HasteScoring.Score(add, "add..", 5)));
 
       // The same path's boundaries and full file name are unaffected.
       Assert.That(HasteStringUtils.GetFileName("Component/Add..."), Is.EqualTo("Add..."));

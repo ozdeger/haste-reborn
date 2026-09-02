@@ -150,6 +150,22 @@ namespace Haste {
       return results.Reverse().ToArray();
     }
 
+    // Whether the '.' at `index` separates a file extension.
+    //
+    // A dot with another dot beside it does not: Unity dialog menu items end in "...",
+    // and reading that ellipsis as an extension gave "Component/Add..." the name "Add.."
+    // and the extension "..". A lone trailing dot is still a separator with an empty
+    // extension, which is the long-standing reading of "test." as name "test".
+    static bool IsExtensionSeparator(string path, int index) {
+      if (index > 0 && path[index - 1] == '.') {
+        return false;
+      }
+      if (index < path.Length - 1 && path[index + 1] == '.') {
+        return false;
+      }
+      return true;
+    }
+
     public static string GetFileName(string path) {
       var len = path.Length;
       if (len == 0) {
@@ -190,7 +206,7 @@ namespace Haste {
         ext = path.LastIndexOf('.');
       }
 
-      if (ext != -1) {
+      if (ext != -1 && IsExtensionSeparator(path, ext)) {
         return path.Substring(ext + 1);
       } else {
         return "";
@@ -212,6 +228,10 @@ namespace Haste {
       }
 
       var ext = path.LastIndexOf('.');
+      if (ext != -1 && !IsExtensionSeparator(path, ext)) {
+        ext = -1;
+      }
+
       if (sep != -1 && ext != -1) {
         if (ext < sep) {
           sep = sep + 1;

@@ -353,12 +353,34 @@ because the boundary bucket for a common first character was already most of the
 (The 77 ms for `pc` at 50,000 items is **pre-existing** — it was 69.5 ms before this
 change — and is worth attacking in the search-core rewrite.)
 
-4.2 Menu paths ending in `...` get a corrupted name
+4.2 ~~Menu paths ending in `...` get a corrupted name~~ — FIXED, and it was overstated
 ---
 
-`GetFileNameWithoutExtension("Component/Add...")` returns `Add..` and
-`GetExtension` returns `..`. Most Unity dialog menu items end in `...`, so a large fraction
-of menu rows have a wrong display name and a bogus extension polluting extension search.
+`GetFileNameWithoutExtension("Component/Add...")` returned `Add..` and `GetExtension`
+returned `..`. Both are fixed: a dot with another dot beside it is no longer read as an
+extension separator, so the ellipsis stays part of the name. A *lone* trailing dot still
+separates — `test.` still yields the name `test` — which is why the rule is adjacency
+rather than "strip trailing dots".
+
+**The claimed impact was wrong, and the correction is worth more than the fix.** This
+section previously said the bug gave menu rows "a wrong display name and a bogus extension
+polluting extension search". Neither was true:
+
+- **The display name was always correct.** `AbstractHasteResult.Draw` renders
+  `HasteStringUtils.GetFileName(Item.path)`, not `Item.name`, and `GetFileName` handles
+  the ellipsis correctly. Nothing on screen was ever wrong.
+- **There is no extension search to pollute.** `HasteItem.extensionLower` is assigned in
+  the constructor and **never read by anything** — it is dead state, costing a `GetExtension`
+  plus a `ToLowerInvariant` allocation per indexed item. The documented `.cs` idiom works
+  through ordinary subsequence matching on the path, because `GetBoundaries` emits every
+  `.` as a boundary character. Do not "restore" extension search; it never existed.
+
+What the bug actually cost was **scoring**: the exact-name, prefix-name and substring-name
+rungs all compare against `nameLower`, so a menu item could not be matched by typing its
+own name. Real, but narrow.
+
+The lesson for the rest of this document: it was written partly from reading, and a claim
+about impact is not the same as a claim about behaviour. Check which one you are relying on.
 
 4.3 Other known-but-unfixed items
 ---

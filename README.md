@@ -94,13 +94,16 @@ chip; backspace on an empty query clears it.
 Filter by type with `t:`, the same syntax Unity's own Project search uses. The chips under
 the search field are buttons — click one and it types the tag for you.
 
+Type it by hand and the filter applies **when you press space** after the type name, so
+`t:s` on the way to `t:script` does not lock you into `t:scene`.
+
 Prefix | Searches
 ---|---
 `t:prefab` | prefabs
 `t:script` | C# scripts
 `t:scene` | scenes
 `t:texture` | textures and sprites (`.png`, `.tga`, `.psd`, …)
-`t:audio` | audio clips (`.wav`, `.mp3`, `.ogg`, …) — also `t:audioclip`
+`t:audio` | audio clips (`.wav`, `.mp3`, `.ogg`, …) — also `t:audioclip`, `t:sound`
 `t:anim` | animation clips — also `t:animation`
 `t:animator` | animator controllers
 `t:material` | materials

@@ -211,11 +211,12 @@ namespace Haste {
         case "?":
         case "setting":
         case "settings": kinds = HasteKind.Command; return true;
-        case "a":
+        // No single-letter aliases for "asset" or "scene". "a" is equally a start for
+        // anim, animator, audio and asset; "s" for scene, script, shader, sound and
+        // sprite. Picking a winner would be arbitrary, and the loser would be unreachable.
         case "asset":    kinds = HasteKind.Asset; return true;
         case "p":
         case "prefab":   kinds = HasteKind.Prefab; return true;
-        case "s":
         case "scene":    kinds = HasteKind.Scene; return true;
         case "cs":
         case "script":   kinds = HasteKind.Script; return true;
@@ -283,15 +284,27 @@ namespace Haste {
         if (word.Length == 1 && (word[0] == 't' || word[0] == 'T')) {
           var rest = query.Substring(colon + 1);
           var end = rest.IndexOf(' ');
-          var name = end < 0 ? rest : rest.Substring(0, end);
 
-          if (TryParseToken(name, out kinds)) {
-            token = Label(kinds);
-            return end < 0 ? "" : rest.Substring(end + 1).TrimStart();
+          // The name must be terminated by a space before it counts.
+          //
+          // Committing as soon as the text parses looks right and is not: type "t:script"
+          // and it would lock to SCENE at "t:s", because "s" is a valid alias. The same
+          // trap swallows "t:animator" at "t:anim" and "t:audioclip" at "t:audio". Any
+          // alias that is a prefix of a longer one -- and there are several -- makes the
+          // longer one unreachable.
+          //
+          // Requiring the space costs nothing in practice: the chips insert one, and
+          // typing a query after the tag produces one anyway.
+          if (end < 0) {
+            kinds = HasteKind.Any;
+            return query;
           }
 
-          // A half-typed name is not a scope yet, so "t:pre" stays a plain query and
-          // commits only once it reads as a type.
+          if (TryParseToken(rest.Substring(0, end), out kinds)) {
+            token = Label(kinds);
+            return rest.Substring(end + 1).TrimStart();
+          }
+
           kinds = HasteKind.Any;
           return query;
         }

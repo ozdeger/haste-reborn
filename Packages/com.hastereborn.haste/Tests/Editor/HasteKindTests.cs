@@ -68,7 +68,9 @@ namespace Haste {
       Assert.That(HasteKinds.SplitScope("t:texture ", out kinds, out token), Is.EqualTo(""));
       Assert.That(kinds, Is.EqualTo(HasteKind.Texture));
 
-      Assert.That(HasteKinds.SplitScope("t:audio", out kinds, out token), Is.EqualTo(""));
+      // With the trailing space, which is the delimiter -- see the test below for why the
+      // name alone is deliberately not enough.
+      Assert.That(HasteKinds.SplitScope("t:audio ", out kinds, out token), Is.EqualTo(""));
       Assert.That(kinds, Is.EqualTo(HasteKind.Audio));
 
       // Aliases, because "audioclip" is Unity's name and "audio" is what people type.
@@ -136,6 +138,50 @@ namespace Haste {
       // Whitespace after the token is eaten, so "h: main camera" scopes and keeps 2 terms.
       Assert.That(HasteKinds.SplitScope("h:  main camera", out kinds, out token), Is.EqualTo("main camera"));
       Assert.That(kinds, Is.EqualTo(HasteKind.Hierarchy));
+    }
+
+    [Test]
+    public void SplitScope_DoesNotCommitWhileTheTypeNameIsStillBeingTyped() {
+      HasteKind kinds; string token;
+
+      // The reported bug: "t:s" locked to SCENE on the way to "t:script", because "s" was
+      // a valid alias and the scope committed the moment the text parsed.
+      foreach (var partial in new[] { "t:s", "t:sc", "t:scr", "t:scrip", "t:script" }) {
+        Assert.That(HasteKinds.SplitScope(partial, out kinds, out token), Is.EqualTo(partial), partial);
+        Assert.That(kinds, Is.EqualTo(HasteKind.Any), partial + " committed too early");
+      }
+
+      // It commits on the space, which is what the chips insert and what typing a query
+      // after the tag produces anyway.
+      Assert.That(HasteKinds.SplitScope("t:script ", out kinds, out token), Is.EqualTo(""));
+      Assert.That(kinds, Is.EqualTo(HasteKind.Script));
+
+      // The same trap on every alias that is a prefix of a longer one.
+      foreach (var pair in new[] {
+        new[] { "t:anim", "t:animator " },
+        new[] { "t:audio", "t:audioclip " },
+        new[] { "t:mat", "t:material " },
+      }) {
+        HasteKinds.SplitScope(pair[0], out kinds, out token);
+        Assert.That(kinds, Is.EqualTo(HasteKind.Any), pair[0] + " must stay reachable");
+      }
+
+      Assert.That(HasteKinds.SplitScope("t:animator ", out kinds, out token), Is.EqualTo(""));
+      Assert.That(kinds, Is.EqualTo(HasteKind.Animator));
+      Assert.That(HasteKinds.SplitScope("t:anim ", out kinds, out token), Is.EqualTo(""));
+      Assert.That(kinds, Is.EqualTo(HasteKind.Animation));
+    }
+
+    [Test]
+    public void SplitScope_HasNoAmbiguousSingleLetterTypeNames() {
+      HasteKind kinds; string token;
+
+      // "a" begins anim, animator, audio AND asset; "s" begins scene, script, shader,
+      // sound and sprite. Any winner would be arbitrary and the losers unreachable.
+      foreach (var letter in new[] { "a", "s" }) {
+        HasteKinds.SplitScope("t:" + letter + " x", out kinds, out token);
+        Assert.That(kinds, Is.EqualTo(HasteKind.Any), "t:" + letter + " should not resolve");
+      }
     }
 
     [Test]

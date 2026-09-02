@@ -107,10 +107,17 @@
     margin-left: 6px;
 }
 
-/* Wraps the field so the placeholder can sit on top of it. */
+/* Wraps the field so the placeholder can sit on top of it.
+ *
+ * The height is FIXED, and that is load-bearing. Without it the slot measured whatever
+ * Unity's TextField reported, which is not the same for an empty field as for one with
+ * text in it -- so the whole query line jumped the moment you typed the first character.
+ * The header is 48px tall now regardless, set by the mark, so there is room to spend on
+ * making this deterministic. */
 .haste-query-slot {
     flex-grow: 1;
     justify-content: center;
+    height: 30px;
 }
 
 .haste-query {
@@ -119,12 +126,20 @@
 }
 
 /* Unity's TextField has no placeholder, so this is a label laid over the field. It
- * ignores picking so clicks still land on the input underneath. */
+ * ignores picking so clicks still land on the input underneath.
+ *
+ * Stretched top to bottom and centred, rather than left to fall wherever an absolutely
+ * positioned element with no vertical anchor lands. It has to sit on exactly the same
+ * baseline as the real input, which centres itself in the same box -- otherwise the text
+ * appears to hop as the placeholder gives way to it. */
 .haste-placeholder {
     position: absolute;
     left: 2px;
+    top: 0;
+    bottom: 0;
     font-size: 19px;
     color: #5c5c5c;
+    -unity-text-align: middle-left;
 }
 
 .haste-query > .unity-text-field__input,

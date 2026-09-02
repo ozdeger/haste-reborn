@@ -139,6 +139,8 @@ changelog for those releases is in the repository root.
   GameObject's path changes when it is renamed, reparented or its scene closes.
 
 ### Fixed
+- The query line no longer moves when you type the first character. Its height
+  came from the text field, and Unity measures an empty one differently.
 - The actions pane scrolls with the arrow keys at all — it was scrolling rows
   that had no size yet, which does nothing.
 

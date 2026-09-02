@@ -398,10 +398,55 @@ namespace Haste {
     }
 
     List<HasteItemAction> ActionRows(IHasteResult result) {
-      if (actionTrail.Count == 0) {
-        return HasteItemActions.For(result);
+      var rows = actionTrail.Count == 0
+        ? HasteItemActions.For(result)
+        : HasteItemActions.ForMenu(actionTrail[actionTrail.Count - 1], result);
+
+      // Only at the top level -- a submenu is Unity's, and putting a Haste row inside one
+      // would misrepresent where it came from -- and only for what can be favourited.
+      if (ActionsAtRoot && HasteFavorites.CanFavorite(result.Item)) {
+        rows.Insert(0, FavoriteAction(result));
       }
-      return HasteItemActions.ForMenu(actionTrail[actionTrail.Count - 1], result);
+      return rows;
+    }
+
+    // Built here rather than in HasteItemActions because its label depends on the current
+    // state and running it has to redraw both the row and this pane.
+    HasteItemAction FavoriteAction(IHasteResult result) {
+      var favorite = HasteFavorites.instance.Contains(result.Item);
+
+      return new HasteItemAction {
+        Label = favorite ? "Unfavorite" : "Favorite",
+        Keys = (Application.platform == RuntimePlatform.OSXEditor ? "\u2325" : "Alt ") + "\u21b5",
+        ClosesWindow = false,
+        Confirmation = favorite ? "Removed from favorites" : "Favorited",
+        Run = () => ToggleFavorite(highlighted),
+      };
+    }
+
+    void ToggleFavorite(int index) {
+      if (index < 0 || index >= results.Length) {
+        return;
+      }
+
+      // Hierarchy rows cannot be favourited -- see HasteFavorites.CanFavorite -- so the
+      // key does nothing on them rather than appearing to work.
+      if (!HasteFavorites.instance.Toggle(results[index].Item)
+          && !HasteFavorites.instance.Contains(results[index].Item)
+          && !HasteFavorites.CanFavorite(results[index].Item)) {
+        return;
+      }
+
+      listView.RefreshItem(index);
+
+      // The pane's own row is labelled for the state it just left, so rebuild it. This
+      // also re-reads the context menu, which is cheap and keeps one code path.
+      if (actionsMode) {
+        var keep = actionIndex;
+        actions = ActionRows(results[highlighted]);
+        actionIndex = Mathf.Clamp(keep, 0, Mathf.Max(0, actions.Count - 1));
+        RebuildActions();
+      }
     }
 
     void SelectForActions(IHasteResult result) {
@@ -639,6 +684,15 @@ namespace Haste {
       name.name = "name";
       row.Add(name);
 
+      // Beside the name rather than at the row's right edge: it says something about the
+      // item, not about the row's state, and at the far edge it read as another status
+      // dot next to the multi-select one.
+      var star = new VisualElement();
+      star.AddToClassList("haste-star");
+      star.name = "star";
+      star.style.backgroundImage = new StyleBackground(HasteIcons.Favorite);
+      row.Add(star);
+
       var spacer = new VisualElement();
       spacer.AddToClassList("haste-spacer");
       row.Add(spacer);
@@ -765,6 +819,9 @@ namespace Haste {
       }
 
       row.EnableInClassList("haste-row--highlighted", index == highlighted);
+
+      row.Q("star").style.display =
+        HasteFavorites.instance.Contains(item) ? DisplayStyle.Flex : DisplayStyle.None;
 
       var obj = result.Object;
       row.Q("dot").style.display =
@@ -1076,7 +1133,7 @@ namespace Haste {
 
     void OnKeyDown(KeyDownEvent evt) {
       var intent = HasteKeyMap.Resolve(
-        evt.keyCode, evt.actionKey, evt.shiftKey,
+        evt.keyCode, evt.actionKey, evt.shiftKey, evt.altKey,
         actionsMode, scopeKinds != HasteKind.Any, string.IsNullOrEmpty(query),
         ActionsAtRoot);
 
@@ -1104,8 +1161,12 @@ namespace Haste {
         case HasteKeyIntent.RunAction:         RunAction(actionIndex); break;
         case HasteKeyIntent.EnterSubmenu:      EnterSubmenu(); break;
         case HasteKeyIntent.LeaveSubmenu:      LeaveSubmenu(); break;
+        case HasteKeyIntent.ToggleFavorite:    ToggleFavorite(highlighted); break;
       }
 
+      // StopPropagation alone is enough, and PreventDefault is obsolete in Unity 6.
+      // Every binding here is a key the text field would not have typed anyway -- which
+      // is the reason the favourite chord is Alt+Enter rather than a letter.
       evt.StopPropagation();
     }
 

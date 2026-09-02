@@ -18,6 +18,7 @@ namespace Haste {
     MovePageDown,
     ShowActions,        // Right arrow, or Cmd/Ctrl+K
     ClearScope,
+    ToggleFavorite,     // Alt+Enter, from anywhere in the palette
 
     HideActions,        // Escape, or the left arrow at the top level of the pane
     ActionUp,
@@ -39,8 +40,22 @@ namespace Haste {
     // submenu of it. It decides what the left arrow means, and it is passed in rather than
     // inferred because a context menu nests arbitrarily deep.
     public static HasteKeyIntent Resolve(
-      KeyCode key, bool actionKey, bool shift,
+      KeyCode key, bool actionKey, bool shift, bool alt,
       bool actionsMode, bool hasScope, bool queryIsEmpty, bool actionsAtRoot) {
+
+      // Before the actions-pane block on purpose: favouriting the highlighted row means
+      // the same thing whether or not its actions are showing, and a chord that works
+      // everywhere but one place is worse than one that works nowhere.
+      //
+      // A modified Enter rather than a letter: any letter chord is a character the text
+      // field would otherwise be typing, and one that silently stops working the moment
+      // something else claims it. Enter is already not a character.
+      //
+      // Checked before every other Enter binding, so Alt wins over Reveal, Open and
+      // RunAction rather than racing them.
+      if (alt && (key == KeyCode.Return || key == KeyCode.KeypadEnter)) {
+        return HasteKeyIntent.ToggleFavorite;
+      }
 
       // The actions pane owns the keyboard entirely while it is open.
       if (actionsMode) {

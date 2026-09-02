@@ -18,6 +18,7 @@ namespace Haste {
     // an interactive editor, and guiHandler is the first point where it is safe to read.
     static bool showWeights;
     static bool showMenuWeights;
+    static bool showFavorites;
 
     // Built once per domain: reading it walks every loaded assembly looking for
     // [MenuItem], which is ~120 ms, and OnGUI runs on every repaint. A new menu root
@@ -250,6 +251,60 @@ namespace Haste {
           "1 leaves a type where the match quality puts it. 0 sinks it to the bottom; to " +
           "remove a type from results entirely, turn its source off above instead.\n\n" +
           "These are yours, not the project's \u2014 they stay on this machine.",
+          MessageType.Info);
+
+        EditorGUILayout.Space();
+        EditorGUILayout.Space();
+
+        EditorGUILayout.LabelField("Favorites", EditorStyles.boldLabel);
+        EditorGUILayout.Space();
+
+        var favorites = HasteFavorites.instance.ToArray();
+
+        showFavorites = EditorGUILayout.Foldout(showFavorites,
+          favorites.Length == 0 ? "Favorites" : "Favorites (" + favorites.Length + ")");
+
+        if (showFavorites) {
+          if (favorites.Length == 0) {
+            EditorGUILayout.LabelField(
+              "Nothing yet. Press Alt+Enter on a row in Haste, or right-click an asset " +
+              "and choose Haste > Add to Favorites.", WrappedLabel);
+          } else {
+            // Collected rather than removed inside the loop: mutating the list being
+            // drawn throws out of the middle of a layout group.
+            string remove = null;
+
+            foreach (var key in favorites) {
+              EditorGUILayout.BeginHorizontal();
+              EditorGUILayout.LabelField(new GUIContent(
+                HasteFavorites.PathOf(key),
+                HasteFavorites.SourceOf(key) + "  \u2014  " + HasteFavorites.PathOf(key)));
+              if (GUILayout.Button("\u00d7", GUILayout.Width(22))) {
+                remove = key;
+              }
+              EditorGUILayout.EndHorizontal();
+            }
+
+            if (remove != null) {
+              HasteFavorites.instance.RemoveKey(remove);
+            }
+
+            EditorGUILayout.Space();
+            if (GUILayout.Button("Clear Favorites", GUILayout.Width(128))) {
+              HasteFavorites.instance.Clear();
+            }
+          }
+        }
+
+        EditorGUILayout.Space();
+        EditorGUILayout.HelpBox(
+          "A favorite scores " + HasteFavorites.Multiplier + "\u00d7 its usual score, on " +
+          "top of every other weight, and its row shows a star.\n\n" +
+          "Scene objects cannot be favorited. A favorite is remembered by path, and a " +
+          "GameObject's path changes when it is renamed, reparented or its scene is " +
+          "closed \u2014 a favorite that silently stops matching is worse than not " +
+          "offering one.\n\n" +
+          "These live in this project's UserSettings folder: yours, and not committed.",
           MessageType.Info);
 
         EditorGUILayout.Space();

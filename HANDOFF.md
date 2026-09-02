@@ -631,6 +631,11 @@ implemented: the `[Shortcut]` binding and the double-tap-Shift gesture.
 
 From the palette rewrite, in the order worth checking:
 
+- **The favourite chord.** `Alt+Enter` is claimed on the root in `TrickleDown` and
+  resolved before every other Enter binding, so it beats Reveal, Open and RunAction rather
+  than racing them. It is a modified Enter rather than a letter because any letter chord
+  is a character the text field would otherwise type. `PreventDefault` is NOT used --
+  obsolete in Unity 6, and `StopPropagation` alone is enough for a non-character key.
 - **Whether anything useful went missing from the actions pane.** `HasteMenuTree` drops
   `Assets` entries that stay enabled with an empty selection, on the grounds that they
   cannot be acting on the selection. Measured on 6000.3.17f1: 17 non-`Create` entries hit,

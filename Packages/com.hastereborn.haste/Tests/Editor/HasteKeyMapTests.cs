@@ -15,12 +15,12 @@ namespace Haste {
 
     static HasteKeyIntent Results(KeyCode key, bool actionKey = false, bool shift = false,
                                   bool hasScope = false, bool queryIsEmpty = false) {
-      return HasteKeyMap.Resolve(key, actionKey, shift, false, hasScope, queryIsEmpty, true);
+      return HasteKeyMap.Resolve(key, actionKey, shift, false, false, hasScope, queryIsEmpty, true);
     }
 
     static HasteKeyIntent Actions(KeyCode key, bool actionKey = false, bool shift = false,
                                   bool atRoot = true) {
-      return HasteKeyMap.Resolve(key, actionKey, shift, true, false, false, atRoot);
+      return HasteKeyMap.Resolve(key, actionKey, shift, false, true, false, false, atRoot);
     }
 
     [Test]

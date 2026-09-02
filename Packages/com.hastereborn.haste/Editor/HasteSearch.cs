@@ -117,7 +117,7 @@ namespace Haste {
         // Deliberately applied here rather than inside Score: the scoring ladder is a
         // measure of the match and stays independent of taste, which is also what keeps
         // its golden tables meaningful.
-        var score = HasteScoring.Score(m, terms) * HasteWeights.For(m);
+        var score = HasteScoring.Score(m, terms) * HasteWeights.For(m) * HasteFavorites.For(m);
 
         // A zero score means the item matched only as characters scattered through word
         // interiors: no boundary character shared with the query, no substring run, and

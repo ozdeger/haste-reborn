@@ -128,6 +128,16 @@ changelog for those releases is in the repository root.
   installed read-only. Pre-2.0 recency data is discarded rather than migrated: it
   identified items by an unstable hash that cannot be resolved back to an object.
 
+### Added
+- **Favorites.** Press `Alt+Enter` on a row to favorite or unfavorite it, or
+  right-click an asset and choose `Haste > Add to Favorites`. A favorite scores
+  2× on top of every other weight, and its row shows the editor's star beside the
+  name. The list is under Preferences > Haste, where entries can be removed.
+  Favorites live in this project's `UserSettings` folder — yours, not committed.
+
+  Scene objects cannot be favorited: a favorite is remembered by path, and a
+  GameObject's path changes when it is renamed, reparented or its scene closes.
+
 ### Changed
 - The palette window is square. The design's 12px radius cannot round a Unity
   popup — an editor window has no per-pixel transparency, so the radius carved

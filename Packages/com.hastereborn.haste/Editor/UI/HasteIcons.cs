@@ -41,6 +41,14 @@ namespace Haste {
       { HasteKind.Font,      "Font Icon" },
     };
 
+    // The star on a favourited row. Not in the table above because it is not a kind --
+    // any row can carry it -- but resolved and tested exactly the same way.
+    public const string FavoriteName = "Favorite_colored";
+
+    public static Texture2D Favorite {
+      get { return Resolve(FavoriteName); }
+    }
+
     public static IEnumerable<KeyValuePair<HasteKind, string>> Names {
       get { return names; }
     }
@@ -54,10 +62,10 @@ namespace Haste {
     // Texture2D would go stale when the user switches editor skin.
     public static Texture2D For(HasteKind kind) {
       var name = NameFor(kind);
-      if (name == null) {
-        return null;
-      }
+      return name == null ? null : Resolve(name);
+    }
 
+    static Texture2D Resolve(string name) {
       var content = EditorGUIUtility.IconContent(name);
       return content == null ? null : content.image as Texture2D;
     }

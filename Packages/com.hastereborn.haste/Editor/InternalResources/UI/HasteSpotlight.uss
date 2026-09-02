@@ -412,6 +412,19 @@
 
 /* Multi-selection marker. The design has no multi-select state, so this is the smallest
  * treatment consistent with it: the same dot the old palette used, in the accent. */
+/* The favourite marker, immediately after the name. The editor's own Favorite_colored
+ * icon, so it reads as the same idea as the Project window's favourites rather than as a
+ * second status dot. Sized and positioned like .haste-tag's background image. */
+.haste-star {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    margin-left: 6px;
+    background-size: 12px 12px;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
 .haste-dot {
     width: 6px;
     height: 6px;

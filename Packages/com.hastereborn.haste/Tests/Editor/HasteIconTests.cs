@@ -22,6 +22,14 @@ namespace Haste {
     }
 
     [Test]
+    public void TheFavouriteStarResolves() {
+      Assert.That(HasteIcons.Favorite, Is.Not.Null,
+        "no built-in icon named \"" + HasteIcons.FavoriteName + "\"");
+      Assert.That(HasteIcons.FavoriteName, Does.Not.StartWith("d_"),
+        "IconContent picks the dark variant itself");
+    }
+
+    [Test]
     public void TheKindsWithNoAssetIconAllHaveOne() {
       // Menu items and layouts are not assets and have no object, so this table is the
       // only thing standing between them and a text badge.

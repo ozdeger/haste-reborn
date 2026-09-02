@@ -51,6 +51,10 @@ namespace Haste {
     // nothing and its backtracker pops an empty stack.
     protected readonly string[] terms;
 
+    public string[] Terms {
+      get { return terms; }
+    }
+
     protected AbstractHasteResult(HasteItem item, float score, string[] terms) {
       this.terms = terms ?? new string[0];
 

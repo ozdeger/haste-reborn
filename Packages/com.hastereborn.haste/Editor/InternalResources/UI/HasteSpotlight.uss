@@ -1,0 +1,319 @@
+/* Haste palette styling.
+ *
+ * Values are taken verbatim from the "Unity Spotlight" design (artboard 1a) rather than
+ * re-derived, so a change there is a one-for-one edit here.
+ *
+ * Two things in that design cannot be expressed in USS and are deliberately absent:
+ *   - the outer drop shadow (0 24px 60px rgba(0,0,0,.55)). USS has no box-shadow; it
+ *     would need a nine-sliced background image, and a popup window has no surface
+ *     outside itself to cast onto anyway.
+ *   - the 0.18s slide between the results and actions panes, which belongs to the actions
+ *     pane -- out of scope for this pass.
+ */
+
+.haste-root {
+    flex-grow: 1;
+    background-color: #232323;
+    border-width: 1px;
+    border-color: #0d0d0d;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* ---------------------------------------------------------------- header */
+
+.haste-header {
+    flex-direction: row;
+    align-items: center;
+    padding-top: 14px;
+    padding-right: 16px;
+    padding-bottom: 12px;
+    padding-left: 16px;
+}
+
+.haste-badge {
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    border-radius: 6px;
+    background-color: #343434;
+    border-width: 1px;
+    border-color: #3f3f3f;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    -unity-font-style: bold;
+    color: #8f8f8f;
+    margin-right: 12px;
+}
+
+/* The committed scope chip, e.g. "prefab x". */
+.haste-scope {
+    flex-shrink: 0;
+    flex-direction: row;
+    align-items: center;
+    padding-top: 4px;
+    padding-right: 9px;
+    padding-bottom: 4px;
+    padding-left: 9px;
+    border-radius: 6px;
+    background-color: rgba(201, 118, 44, 0.33);
+    border-width: 1px;
+    border-color: #c9762c;
+    font-size: 12px;
+    color: #f5e0c8;
+    margin-right: 12px;
+}
+
+.haste-scope-clear {
+    color: #d8a877;
+    margin-left: 6px;
+}
+
+.haste-query {
+    flex-grow: 1;
+    margin: 0;
+}
+
+.haste-query > .unity-text-field__input,
+.haste-query .unity-base-text-field__input {
+    background-color: rgba(0, 0, 0, 0);
+    background-image: none;
+    border-width: 0;
+    padding: 0;
+    margin: 0;
+    font-size: 19px;
+    color: #f2f2f2;
+    -unity-text-align: middle-left;
+}
+
+/* Prefix hint chips, shown only before a scope is committed. */
+.haste-hints {
+    flex-direction: row;
+    padding-right: 16px;
+    padding-bottom: 10px;
+    padding-left: 16px;
+}
+
+.haste-hint {
+    padding-top: 3px;
+    padding-right: 8px;
+    padding-bottom: 3px;
+    padding-left: 8px;
+    margin-right: 6px;
+    border-radius: 5px;
+    background-color: rgba(201, 118, 44, 0.2);
+    border-width: 1px;
+    border-color: rgba(201, 118, 44, 0.5);
+    font-size: 10px;
+    color: #f0d0ac;
+}
+
+.haste-divider {
+    height: 1px;
+    background-color: #141414;
+    flex-shrink: 0;
+}
+
+/* ------------------------------------------------------------------ list */
+
+.haste-body {
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.haste-list {
+    flex-grow: 1;
+    padding-top: 8px;
+    padding-right: 8px;
+    padding-left: 8px;
+    background-color: #232323;
+}
+
+.haste-list .unity-collection-view__item,
+.haste-list .unity-list-view__item {
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+}
+
+/* Unity paints its own selection colour on the ListView item; the row inside carries the
+ * design's highlight instead, so this has to be cleared or both show at once. */
+.haste-list .unity-collection-view__item--selected,
+.haste-list .unity-list-view__item--selected {
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.haste-row {
+    flex-direction: row;
+    align-items: center;
+    height: 32px;
+    padding-right: 10px;
+    padding-left: 10px;
+    border-radius: 7px;
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.haste-row:hover {
+    background-color: #2c2c2c;
+}
+
+.haste-row--highlighted,
+.haste-row--highlighted:hover {
+    background-color: #343434;
+}
+
+.haste-tag {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    border-radius: 4px;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    -unity-font-style: bold;
+    color: #8a8a8a;
+    background-color: #2f2f2f;
+    border-width: 1px;
+    border-color: #3a3a3a;
+    margin-right: 11px;
+}
+
+.haste-row--highlighted .haste-tag {
+    color: #a8a8a8;
+    background-color: #3f3f3f;
+    border-color: #4a4a4a;
+}
+
+.haste-name {
+    flex-shrink: 1;
+    font-size: 13px;
+    color: #eaeaea;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    -unity-text-align: middle-left;
+}
+
+.haste-name--disabled { color: #7a7a7a; }
+.haste-name--prefab   { color: #7fb2e5; }
+.haste-name--broken   { color: #d98a86; }
+
+.haste-spacer { flex-grow: 1; }
+
+.haste-path {
+    flex-shrink: 0;
+    max-width: 330px;
+    font-size: 11px;
+    color: #6b6b6b;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    -unity-text-align: middle-right;
+    padding-left: 10px;
+}
+
+/* Multi-selection marker. The design has no multi-select state, so this is the smallest
+ * treatment consistent with it: the same dot the old palette used, in the accent. */
+.haste-dot {
+    width: 6px;
+    height: 6px;
+    flex-shrink: 0;
+    border-radius: 3px;
+    background-color: #c9762c;
+    margin-left: 9px;
+}
+
+/* --------------------------------------------------------- empty / intro */
+
+.haste-message {
+    flex-grow: 1;
+    align-items: center;
+    justify-content: center;
+}
+
+.haste-message-box {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: #3d3d3d;
+    margin-bottom: 10px;
+}
+
+.haste-message-title {
+    font-size: 13px;
+    color: #7a7a7a;
+    margin-bottom: 10px;
+}
+
+.haste-message-hint {
+    font-size: 11px;
+    color: #4f4f4f;
+}
+
+/* ---------------------------------------------------------------- footer */
+
+.haste-footer {
+    flex-direction: row;
+    align-items: center;
+    padding-top: 5px;
+    padding-right: 12px;
+    padding-bottom: 5px;
+    padding-left: 12px;
+    background-color: #1e1e1e;
+    flex-shrink: 0;
+}
+
+.haste-footer-icon {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    background-color: #2f2f2f;
+    border-width: 1px;
+    border-color: #3a3a3a;
+    margin-right: 9px;
+    flex-shrink: 0;
+}
+
+.haste-footer-icon--indexing { border-color: #c9762c; }
+
+.haste-status {
+    font-size: 11px;
+    color: #6b6b6b;
+    flex-shrink: 1;
+    overflow: hidden;
+}
+
+.haste-action-label {
+    font-size: 11px;
+    color: #c8c8c8;
+    margin-right: 6px;
+}
+
+.haste-key {
+    min-width: 18px;
+    padding-top: 2px;
+    padding-right: 5px;
+    padding-bottom: 2px;
+    padding-left: 5px;
+    border-radius: 4px;
+    background-color: #2e2e2e;
+    border-width: 1px;
+    border-color: #3b3b3b;
+    font-size: 10px;
+    color: #9c9c9c;
+    -unity-text-align: middle-center;
+}
+
+.haste-count {
+    flex-shrink: 0;
+    padding-top: 2px;
+    padding-right: 7px;
+    padding-bottom: 2px;
+    padding-left: 7px;
+    margin-right: 9px;
+    border-radius: 5px;
+    background-color: rgba(201, 118, 44, 0.33);
+    border-width: 1px;
+    border-color: #c9762c;
+    font-size: 10px;
+    color: #f5e0c8;
+}

@@ -143,6 +143,39 @@ namespace Haste {
     }
 
     [Test]
+    public void PaletteStylesheetShipsAndDeclaresWhatTheWindowUses() {
+      // The palette is styled entirely from USS, so a missing or renamed selector is a
+      // silently unstyled window rather than an error. Neither the sheet loading nor the
+      // class names can be checked by opening the window headlessly -- UI Toolkit needs an
+      // interactive editor -- so they are checked as packaging instead.
+      var sheet = HasteResources.Load<UnityEngine.UIElements.StyleSheet>("UI/HasteSpotlight.uss");
+      Assert.That(sheet, Is.Not.Null, "the palette stylesheet is not in the package");
+
+      var path = HasteResources.Root + "UI/HasteSpotlight.uss";
+      var text = File.ReadAllText(path);
+
+      foreach (var required in new[] {
+        ".haste-root", ".haste-header", ".haste-badge", ".haste-scope", ".haste-query",
+        ".haste-hints", ".haste-hint", ".haste-divider", ".haste-body", ".haste-list",
+        ".haste-row", ".haste-row--highlighted", ".haste-tag", ".haste-name",
+        ".haste-name--prefab", ".haste-name--broken", ".haste-name--disabled",
+        ".haste-spacer", ".haste-path", ".haste-dot", ".haste-message",
+        ".haste-message-box", ".haste-message-title", ".haste-message-hint",
+        ".haste-footer", ".haste-footer-icon", ".haste-footer-icon--indexing",
+        ".haste-status", ".haste-action-label", ".haste-key", ".haste-count",
+      }) {
+        Assert.That(text, Does.Contain(required),
+          "HasteSpotlightWindow adds \"" + required + "\" but the stylesheet does not declare it");
+      }
+    }
+
+    [Test]
+    public void PaletteHasNoWindowOpenByDefault() {
+      Assert.That(HasteSpotlightWindow.IsOpen, Is.False);
+      Assert.That(HasteSpotlightWindow.WindowWidth, Is.EqualTo(708), "the design's width");
+    }
+
+    [Test]
     public void PreferencesAreRegisteredAsASettingsProvider() {
       // [PreferenceItem] is deprecated. The replacement lands in the same place in the UI
       // and is additionally searchable, which [PreferenceItem] pages never were.

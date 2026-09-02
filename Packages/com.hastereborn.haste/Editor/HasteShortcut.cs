@@ -49,7 +49,7 @@ namespace Haste {
       if (!HasteSettings.Enabled) {
         return;
       }
-      HasteWindow.Open();
+      HasteSpotlightWindow.Open();
     }
 
     [MenuItem("Window/Haste", true)]

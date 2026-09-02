@@ -324,9 +324,20 @@ namespace Haste {
       if (EditorGUIUtility.editingTextField) {
         return "a text field is being edited";
       }
-      if (EditorGUIUtility.textFieldHasSelection) {
-        return "a text field has a selection";
-      }
+
+      // EditorGUIUtility.textFieldHasSelection is deliberately NOT checked, though
+      // activation-design.md lists it.
+      //
+      // It is sticky: it reports that some field somewhere still holds a selection, which
+      // stays true long after focus has moved on -- including after using Haste's own
+      // query field. Measured in a real editor, it latched on and suppressed every
+      // subsequent gesture for the rest of the session, which read as "shift-shift stopped
+      // working again".
+      //
+      // Nothing is lost by dropping it. The case it was meant to cover -- Shift extending
+      // a selection with the arrow keys -- is Shift plus another key, which the "any other
+      // key resets" rule already handles. editingTextField is the signal that actually
+      // means "the user is typing right now".
       // A drag in progress: the Shift is snapping something, not asking for a palette.
       if (GUIUtility.hotControl != 0) {
         return "a drag is in progress (hotControl=" + GUIUtility.hotControl + ")";

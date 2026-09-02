@@ -98,9 +98,17 @@ Shift is the most overloaded key in the editor: shift-click range-selects in the
 shift-drag snaps in the SceneView, and Shift+letter is every capital letter.
 
 Suppress the gesture entirely while a text field is being edited, using public API —
-`EditorGUIUtility.editingTextField`, `EditorGUIUtility.textFieldHasSelection`,
+`EditorGUIUtility.editingTextField`, ~~`EditorGUIUtility.textFieldHasSelection`~~,
 `GUIUtility.keyboardControl`, `GUIUtility.hotControl` are all public, static and
-non-obsolete in both editors. This removes the largest false-positive class outright:
+non-obsolete in both editors.
+
+**Do not use `textFieldHasSelection`.** It reads as an obvious companion to
+`editingTextField` and it is not: it is *sticky*, reporting that some field somewhere still
+holds a selection long after focus has moved on — including after using Haste's own query
+field. Measured in a real editor it latched on and suppressed every subsequent gesture for
+the session, which presents as the feature simply breaking. Nothing is lost by dropping it:
+the case it covers, Shift extending a selection with the arrow keys, is Shift plus another
+key, which "reset on any other KeyDown" already handles. This removes the largest false-positive class outright:
 Hierarchy renames, Inspector fields, search boxes, Haste's own query field, and IME input
 where bare Shift is a mode toggle. Ctrl/Cmd+Shift+K still works everywhere.
 

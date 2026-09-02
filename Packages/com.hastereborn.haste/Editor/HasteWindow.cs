@@ -140,7 +140,7 @@ namespace Haste {
     void InitializeInstance() {
       LockReload();
 
-      this.title = "Haste";
+      this.titleContent = new GUIContent("Haste");
       this.position = GetPosition();
 
       // Disable the resize handle on the window

@@ -464,6 +464,14 @@ Part 5 — Current state and what is next
   by damping rather than filtering, and the golden tables were re-baselined as a
   deliberate diff.
 - **The trailing-ellipsis fix (4.2)**, and a correction to what that bug actually cost.
+- **The obsolete-API burn-down, complete.** 32 warnings to 0. Beyond the prefab work below:
+  scene and selection tracking moved off per-frame polling of `EditorApplication.currentScene`
+  and `Selection.activeInstanceID` onto `EditorSceneManager`'s events and
+  `Selection.selectionChanged` (3.3's warning applies — `activeEntityId` does **not** exist
+  in 6000.0, so `Selection.objects` is the portable answer); `projectWindowChanged` and
+  `hierarchyWindowChanged` became `projectChanged`/`hierarchyChanged`; `EditorWindow.title`
+  became `titleContent`; and `[PreferenceItem]` became `[SettingsProvider]`, which also
+  makes the preferences page searchable.
 - **The prefab-API migration** off the obsolete `PrefabType`, which cleared 14 of the 25
   obsolete warnings. Measured mapping, because the obvious replacement is the wrong one:
   `GetPrefabAssetType` answers `Regular` for a prefab *instance* as well as for the asset,
@@ -482,30 +490,17 @@ Part 5 — Current state and what is next
 5.2 Not done
 ---
 
-The remaining phases, in order: finishing the obsolete-API burn-down (**11 warnings left**,
-down from 32 — the menu work cleared 7 and the prefab migration 14); event-driven
-incremental indexing with stable identity keys; the rest of the search-core rewrite; the UI
-Toolkit palette; and settings consolidation.
+**The obsolete-API burn-down is finished: 0 warnings, down from 32.** The remaining
+phases, in order: event-driven incremental indexing with stable identity keys; the rest of
+the search-core rewrite; the UI Toolkit palette; and settings consolidation.
 
-The 11 remaining warnings are two separate jobs plus two one-liners:
-
-- **Editor-state tracking** (9): `Haste.cs` polls `EditorApplication.currentScene` (×3) and
-  `Selection.activeInstanceID` (×2) from its update loop and subscribes to
-  `projectWindowChanged`/`hierarchyWindowChanged`; `HasteHierarchyResult.Action` sets
-  `Selection.instanceIDs` and pings `Selection.activeInstanceID`. The two event names are
-  pure renames (`projectChanged`, `hierarchyChanged`). The rest is not: per 3.3,
-  `activeEntityId`/`entityIds` **do not exist in 6000.0**, so the replacement is
-  `Selection.objects` plus `Selection.selectionChanged`, which is clean on both — and that
-  turns two polled comparisons in `Update` into an event subscription. `currentScene` wants
-  `EditorSceneManager` and multi-scene awareness, which is a behavioural change, not a
-  substitution.
-- **`[PreferenceItem]` → `[SettingsProvider]`** (1): a rewrite of the preferences page, and
-  the natural moment to do the settings consolidation that is already on this list.
-- **`EditorWindow.title` → `titleContent`** (1): a genuine one-liner.
-
-3.2's `HierarchyProperty` note is worth reading before the hierarchy work: it is public in
-Unity 6 and gives name, depth, instanceID and `colorCode` with no managed object loads,
-which is what `HasteHierarchySource` and `ClassifyPrefab` are doing the slow way.
+3.2's `HierarchyProperty` note is worth reading before the incremental-indexing work: it is
+public in Unity 6 and gives name, depth, instanceID and `colorCode` with no managed object
+loads, which is what `HasteHierarchySource` and `ClassifyPrefab` currently do the slow way
+— re-crawling `Resources.FindObjectsOfTypeAll<GameObject>()` and asking `PrefabUtility` per
+object. Pair it with `ObjectChangeEvents.changesPublished` and the traps in 3.3 about
+`CreateGameObjectHierarchy` coalescing and
+`ChangeGameObjectOrComponentProperties` being the only rename signal.
 
 The UI decision is settled — **UI Toolkit**, added alongside the working IMGUI window and
 made default only once its own tests pass. See `Documentation~/activation-design.md` for the
@@ -536,6 +531,18 @@ double-tap-Shift design, which is designed but not implemented.
   built-in roots have been yielded, so the ~500 common menu items are searchable in about
   a millisecond and the scan is paid once, in the background, after them. If it ever needs
   to be cheaper, the honest fix is a cache keyed on assembly MVIDs, not a name filter.
+
+5.2.2 Unverified by the burn-down
+---
+
+- **The preferences page has not been looked at since it moved to `[SettingsProvider]`.**
+  Its body is unchanged and still draws its own `HasteScrollView`, which now sits inside
+  the Settings window's own scrolling content area. Everything stays reachable either way,
+  but a nested scrollbar is the kind of thing only a human sees. Open
+  Preferences > Haste.
+- **Scene-change handling changed shape, not just API.** Additively opening or closing a
+  scene now rebuilds the hierarchy index; polling the "current scene" could not notice
+  that. Worth exercising with a multi-scene setup.
 
 5.3 Open product decisions
 ---

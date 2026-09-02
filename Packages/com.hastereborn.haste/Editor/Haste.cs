@@ -1,5 +1,7 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -39,7 +41,6 @@ namespace Haste {
 
     static string currentScene;
     static bool isCompiling = false;
-    static int activeInstanceID;
     // static object prefKey;
 
     static double layoutInterval = 30.0;
@@ -71,7 +72,7 @@ namespace Haste {
     static Haste() {
       // prefKey = HasteReflection.Instantiate(HasteReflection.EditorAssembly, "UnityEditor.PrefKey", "Window/Haste", DEFAULT_SHORTCUT);
 
-      currentScene = EditorApplication.currentScene;
+      currentScene = ActiveScenePath;
       isCompiling = EditorApplication.isCompiling;
 
       Scheduler = new HasteScheduler();
@@ -96,8 +97,26 @@ namespace Haste {
 
       HasteSettings.ChangedBool += BoolSettingChanged;
       HasteSettings.ChangedString += StringSettingChanged;
-      EditorApplication.projectWindowChanged += ProjectWindowChanged;
-      EditorApplication.hierarchyWindowChanged += HierarchyWindowChanged;
+      EditorApplication.projectChanged += ProjectWindowChanged;
+      EditorApplication.hierarchyChanged += HierarchyWindowChanged;
+
+      // Scene changes used to be found by polling the obsolete
+      // EditorApplication.currentScene on every editor update. They arrive as events now.
+      //
+      // Two different things matter here and conflating them loses one: which scene is
+      // ACTIVE -- what SceneChanged reports, and all `currentScene` could ever mean -- and
+      // which scenes are LOADED, which is what the hierarchy index actually depends on. A
+      // scene opened additively adds objects without changing the active scene at all.
+      EditorSceneManager.activeSceneChangedInEditMode += ActiveSceneChanged;
+      EditorSceneManager.sceneOpened += SceneOpened;
+      EditorSceneManager.sceneClosed += SceneClosed;
+      EditorSceneManager.newSceneCreated += NewSceneCreated;
+
+      // Likewise: this replaces comparing Selection.activeInstanceID against a cached copy
+      // on every update. Per HANDOFF 3.3 the obsolete property's own suggested
+      // replacement, activeEntityId, does not exist in 6000.0 -- Selection.objects and
+      // Selection.selectionChanged are clean on both editors.
+      Selection.selectionChanged += OnSelectionChanged;
 
       SceneChanged += HandleSceneChanged;
       EditorApplication.update += Update;
@@ -143,6 +162,39 @@ namespace Haste {
         case HasteSetting.Version:
           Rebuild();
           break;
+      }
+    }
+
+    static string ActiveScenePath {
+      get { return SceneManager.GetActiveScene().path; }
+    }
+
+    static void ActiveSceneChanged(Scene previous, Scene current) {
+      SyncActiveScene();
+    }
+
+    static void SceneOpened(Scene scene, OpenSceneMode mode) {
+      SyncActiveScene();
+    }
+
+    static void SceneClosed(Scene scene) {
+      SyncActiveScene();
+    }
+
+    static void NewSceneCreated(Scene scene, NewSceneSetup setup, NewSceneMode mode) {
+      SyncActiveScene();
+    }
+
+    static void SyncActiveScene() {
+      var previousScene = currentScene;
+      currentScene = ActiveScenePath;
+
+      if (currentScene != previousScene) {
+        OnSceneChanged(currentScene, previousScene);
+      } else {
+        // Same active scene, different set of loaded objects: an additive open or a close.
+        // The hierarchy index still has to be rebuilt.
+        Watchers.RestartSource(HasteHierarchySource.NAME);
       }
     }
 
@@ -218,17 +270,6 @@ namespace Haste {
         if (!isCompiling) {
           OnScriptsCompiled();
         }
-      }
-
-      if (currentScene != EditorApplication.currentScene) {
-        string previousScene = currentScene;
-        currentScene = EditorApplication.currentScene;
-        OnSceneChanged(currentScene, previousScene);
-      }
-
-      if (activeInstanceID != Selection.activeInstanceID) {
-        activeInstanceID = Selection.activeInstanceID;
-        OnSelectionChanged();
       }
 
       if (!IsApplicationBusy) {

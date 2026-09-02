@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEditor;
 using System;
+using System.Collections.Generic;
 
 namespace Haste {
 
@@ -8,7 +9,27 @@ namespace Haste {
 
     static Vector2 scrollPosition = Vector2.zero;
 
-    [PreferenceItem("Haste")]
+    // Where Haste appears in Unity Preferences. SettingsProvider keys user overrides and
+    // the settings search index by this path, so renaming it moves the page.
+    public const string SettingsPath = "Preferences/Haste";
+
+    // Replaces [PreferenceItem("Haste")], deprecated in favour of [SettingsProvider].
+    //
+    // Same place in the UI -- SettingsScope.User is the Preferences window -- but the
+    // page is now searchable, which [PreferenceItem] pages never were. The keywords are
+    // what the settings search box matches on.
+    [SettingsProvider]
+    public static SettingsProvider CreateSettingsProvider() {
+      return new SettingsProvider(SettingsPath, SettingsScope.User) {
+        label = "Haste",
+        guiHandler = searchContext => PreferencesGUI(),
+        keywords = new HashSet<string>(new[] {
+          "haste", "search", "fuzzy", "palette", "index", "sources",
+          "hierarchy", "project", "menu item", "layout", "ignore", "shortcut",
+        }),
+      };
+    }
+
     public static void PreferencesGUI() {
       using (var scrollView = new HasteScrollView(scrollPosition)) {
         scrollPosition = scrollView.ScrollPosition;

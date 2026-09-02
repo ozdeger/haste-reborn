@@ -164,8 +164,20 @@ namespace Haste {
 
     public override void Action() {
       EditorApplication.ExecuteMenuItem("Window/Hierarchy");
-      Selection.instanceIDs = new int[]{Object.GetInstanceID()};
-      EditorGUIUtility.PingObject(Selection.activeInstanceID);
+
+      // Results outlive the objects they point at -- the scene can change between the
+      // search and the Enter. This used to call Object.GetInstanceID() unguarded.
+      var target = Object;
+      if (target == null) {
+        return;
+      }
+
+      // Selection.instanceIDs and activeInstanceID are obsolete, and their suggested
+      // replacements (entityIds, activeEntityId) do not exist in 6000.0 -- see HANDOFF
+      // 3.3. Selection.objects is clean on both editors and PingObject takes the object
+      // directly, so nothing has to round-trip through an id at all.
+      Selection.objects = new UnityEngine.Object[] { target };
+      EditorGUIUtility.PingObject(target);
     }
   }
 }

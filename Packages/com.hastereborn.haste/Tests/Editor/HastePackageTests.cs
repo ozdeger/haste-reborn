@@ -143,6 +143,41 @@ namespace Haste {
     }
 
     [Test]
+    public void PreferencesAreRegisteredAsASettingsProvider() {
+      // [PreferenceItem] is deprecated. The replacement lands in the same place in the UI
+      // and is additionally searchable, which [PreferenceItem] pages never were.
+      var provider = HastePreferences.CreateSettingsProvider();
+      Assert.That(provider, Is.Not.Null);
+      Assert.That(provider.settingsPath, Is.EqualTo(HastePreferences.SettingsPath));
+      Assert.That(provider.scope, Is.EqualTo(SettingsScope.User));
+      Assert.That(provider.keywords, Is.Not.Empty, "the page would not be findable by search");
+
+      // And the deprecated attribute is not hanging around on some other method.
+      foreach (var method in typeof(HastePreferences).GetMethods(
+                 System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic |
+                 System.Reflection.BindingFlags.Static)) {
+        foreach (var attr in method.GetCustomAttributes(false)) {
+          Assert.That(attr.GetType().Name, Is.Not.EqualTo("PreferenceItemAttribute"),
+            "HastePreferences." + method.Name + " still uses the deprecated [PreferenceItem].");
+        }
+      }
+    }
+
+    [Test]
+    public void EditorStateIsEventDrivenRatherThanPolled() {
+      // Haste.Update runs on every editor tick. It used to compare cached copies of
+      // Selection.activeInstanceID and EditorApplication.currentScene against live values
+      // there -- two obsolete calls per frame, to raise events that the editor already
+      // offers as events. Both are now subscriptions.
+      var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static |
+                  System.Reflection.BindingFlags.DeclaredOnly;
+
+      Assert.That(typeof(Haste).GetField("activeInstanceID", flags), Is.Null,
+        "Haste is polling the selection again. Selection.selectionChanged is the event, " +
+        "and Selection.activeInstanceID's own suggested replacement does not exist in 6000.0.");
+    }
+
+    [Test]
     public void RecencyStore_LivesOutsideThePackage() {
       // Writing into the package's own folder fails once Haste is installed read-only.
       var store = HasteRecommendations.instance;

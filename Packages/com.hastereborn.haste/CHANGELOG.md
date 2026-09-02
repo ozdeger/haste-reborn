@@ -18,6 +18,14 @@ changelog for those releases is in the repository root.
   fuzzy-match highlighting, so behaviour changes are visible rather than silent.
 
 ### Changed
+- Haste's preferences page is now searchable. It moved from the deprecated
+  `[PreferenceItem]` to Unity's settings system, so it stays in the same place in
+  Preferences but also turns up when you type "haste", "fuzzy" or "index" into the
+  settings search box.
+- Haste no longer polls the editor. It used to compare the current scene and the current
+  selection against cached copies on every editor update, several times a second, forever;
+  it now subscribes to the corresponding editor events. Opening a scene additively also
+  rebuilds the hierarchy index now, which polling the "current scene" could never notice.
 - Prefab handling moved onto Unity's current prefab API. Prefab **variants** are now
   handled like any other prefab — they are kept out of the hierarchy results the way plain
   prefabs always were, and `Instantiate Prefab` works on them. Variants did not exist when
@@ -61,6 +69,8 @@ changelog for those releases is in the repository root.
   identified items by an unstable hash that cannot be resolved back to an object.
 
 ### Fixed
+- Selecting a hierarchy result no longer throws if the object was destroyed between the
+  search and pressing Enter.
 - Haste no longer leaks a script-compilation lock. It holds one while the palette is open
   so the window cannot be destroyed mid-use, but released it only on one of several ways
   the window can close — and took a second lock if you reopened the palette while one was

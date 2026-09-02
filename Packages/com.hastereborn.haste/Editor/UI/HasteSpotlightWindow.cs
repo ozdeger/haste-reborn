@@ -769,8 +769,13 @@ namespace Haste {
     }
 
     void RestoreRecommendations() {
-      var recommendations = HasteRecommendations.instance.Get();
-      SetResults(recommendations ?? new IHasteResult[0]);
+      // Scoped too. A search filters at the index, but the recency list is handed over
+      // whole -- so without this, picking a type chip left every unrelated recent on
+      // screen and the scope looked like it had done nothing.
+      //
+      // Only filtered, not reweighted: recents are ordered by what you actually picked,
+      // and that is a stronger signal about intent than a per-kind preference.
+      SetResults(HasteKinds.Filter(HasteRecommendations.instance.Get(), scopeKinds));
     }
 
     void SetResults(IHasteResult[] next) {
@@ -795,8 +800,9 @@ namespace Haste {
       }
 
       if (string.IsNullOrEmpty(query.Trim())) {
-        messageTitle.text = "Type to search";
-        messageHint.text = HasteShortcutLabel();
+        var scoped = scopeKinds != HasteKind.Any;
+        messageTitle.text = scoped ? "Nothing recent in " + scopeToken : "Type to search";
+        messageHint.text = scoped ? "Type to search anyway" : HasteShortcutLabel();
       } else {
         messageTitle.text = scopeKinds == HasteKind.Any
           ? "No matches"

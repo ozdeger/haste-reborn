@@ -68,6 +68,8 @@ changelog for those releases is in the repository root.
   `t:shader`, `t:font`, `t:script`, `t:scene`. `h:` scopes to the open scenes, `>` to menu
   commands, `#` to components. The prefix turns into a chip; backspace on an empty query
   clears it.
+- **Type filters apply to the recent list too.** Picking a type with an empty query used
+  to leave every unrelated recent on screen, so the filter looked like it had done nothing.
 - **The chips under the search field are buttons now.** Clicking one types its tag, in
   front of whatever you have already typed — so type "popup", click `t:prefab`, and you
   have narrowed rather than started over.

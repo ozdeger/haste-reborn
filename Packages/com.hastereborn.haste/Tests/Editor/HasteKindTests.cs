@@ -211,6 +211,38 @@ namespace Haste {
       Assert.That(HasteKinds.Matches(HasteKind.Command | HasteKind.Tool, Menu("Tools/X/Y")), Is.True);
     }
 
+    [Test]
+    public void Filter_NarrowsAnAlreadyBuiltResultSet() {
+      // The recency list is handed over whole rather than searched, so a scope has to be
+      // applied to it afterwards. Without this, choosing a type chip left every unrelated
+      // recent on screen and the scope appeared to do nothing.
+      var results = new IHasteResult[] {
+        new HasteItem("Assets/S/Player.cs", 0, HasteProjectSource.NAME).GetResult(1f, new string[0]),
+        new HasteItem("Assets/P/Popup.prefab", 0, HasteProjectSource.NAME).GetResult(1f, new string[0]),
+        new HasteItem("Main Camera", 0, HasteHierarchySource.NAME).GetResult(1f, new string[0]),
+        new HasteItem("File/Build Profiles", 0, HasteMenuItemSource.NAME).GetResult(1f, new string[0]),
+      };
+
+      Assert.That(HasteKinds.Filter(results, HasteKind.Script).Select(r => r.Item.path).ToArray(),
+        Is.EqualTo(new[] { "Assets/S/Player.cs" }));
+      Assert.That(HasteKinds.Filter(results, HasteKind.Hierarchy).Select(r => r.Item.path).ToArray(),
+        Is.EqualTo(new[] { "Main Camera" }));
+
+      // A token naming several kinds keeps all of them.
+      Assert.That(HasteKinds.Filter(results, HasteKind.Prefab | HasteKind.Command).Length, Is.EqualTo(2));
+
+      // Any is a pass-through, and returns the same array rather than copying it.
+      Assert.That(HasteKinds.Filter(results, HasteKind.Any), Is.SameAs(results));
+
+      // Order is preserved: recents are ranked by what was actually picked.
+      Assert.That(HasteKinds.Filter(results, HasteKind.Script | HasteKind.Prefab)
+        .Select(r => r.Item.path).ToArray(),
+        Is.EqualTo(new[] { "Assets/S/Player.cs", "Assets/P/Popup.prefab" }));
+
+      Assert.That(HasteKinds.Filter(null, HasteKind.Script), Is.Empty);
+      Assert.That(HasteKinds.Filter(results, HasteKind.Font), Is.Empty);
+    }
+
     // ----------------------------------------------------------- item actions
 
     static System.Collections.Generic.List<HasteItemAction> ActionsFor(string path, string source) {

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Haste {
@@ -352,6 +353,27 @@ namespace Haste {
       HasteKind.Tool,
       HasteKind.Layout,
     };
+
+    // Narrows an already-built result set to a scope.
+    //
+    // Search filters at the index, but the recency list is not a search -- it is handed
+    // over whole -- so it needs filtering after the fact or a scope has no effect on it.
+    public static IHasteResult[] Filter(IHasteResult[] results, HasteKind kinds) {
+      if (results == null) {
+        return new IHasteResult[0];
+      }
+      if (kinds == HasteKind.Any) {
+        return results;
+      }
+
+      var kept = new List<IHasteResult>(results.Length);
+      for (int i = 0; i < results.Length; i++) {
+        if (results[i] != null && Matches(kinds, results[i].Item)) {
+          kept.Add(results[i]);
+        }
+      }
+      return kept.ToArray();
+    }
 
     public static bool Matches(HasteKind kinds, HasteItem item) {
       return kinds == HasteKind.Any || (kinds & Classify(item)) != 0;

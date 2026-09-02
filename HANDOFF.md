@@ -263,6 +263,12 @@ Cecil also reads method bodies, which is how several of the findings below were 
   native walker Unity's own Hierarchy uses; gives name, depth, instanceID and `colorCode`
   with zero managed object loads, and `colorCode` is `{0 Normal, 1 Prefab, 2 BrokenPrefab}`.
 - **`ObjectChangeEvents.changesPublished`** — precise incremental hierarchy deltas.
+- **A prefab ASSET reports `activeInHierarchy == false`.** Not because it is disabled —
+  because it is not in a scene at all. Combined with `AssetDatabase.LoadMainAssetAtPath`
+  returning a prefab's **root GameObject**, any code that decides "is this a hierarchy
+  object?" by testing `obj as GameObject` will treat every prefab in the Project as an
+  inactive scene object. In the palette that greyed out every prefab row. Decide from the
+  item's SOURCE instead; `HasteKinds.UsesHierarchyTint` is that check.
 - **Human double-tap timings, measured** (154 Shift transitions, one session, macOS
   6000.3.17f1): tap hold median 82 ms, p90 **117 ms**; deliberate holds 1300–1600 ms; gap
   between taps median 93 ms. Useful because both constants in `activation-design.md` were

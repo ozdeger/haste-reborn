@@ -87,6 +87,26 @@ namespace Haste {
     }
 
     [Test]
+    public void APrefabAssetInTheProjectIsNotTintedLikeAnInactiveObject() {
+      // A prefab ASSET reports activeInHierarchy == false, because it is not in a scene at
+      // all -- not because it is disabled. AssetDatabase.LoadMainAssetAtPath returns its
+      // root GameObject, so a row that decides tinting from "is this a GameObject?" greys
+      // out every prefab in the Project results. Deciding from the SOURCE does not.
+      Assert.That(asset.activeInHierarchy, Is.False, "the trap this test exists for");
+
+      var projectItem = new HasteItem(PrefabPath, 0, HasteProjectSource.NAME);
+      Assert.That(HasteKinds.UsesHierarchyTint(projectItem), Is.False);
+
+      var hierarchyItem = new HasteItem("Main Camera", 0, HasteHierarchySource.NAME);
+      Assert.That(HasteKinds.UsesHierarchyTint(hierarchyItem), Is.True);
+
+      // Menu items and layouts have no object to tint from either.
+      Assert.That(HasteKinds.UsesHierarchyTint(
+        new HasteItem("File/Build Profiles", 0, HasteMenuItemSource.NAME)), Is.False);
+      Assert.That(HasteKinds.UsesHierarchyTint(null), Is.False);
+    }
+
+    [Test]
     public void HierarchySource_SkipsPrefabAssetsButKeepsInstances() {
       // Resources.FindObjectsOfTypeAll returns prefab assets as well as scene objects, and
       // the Project source already indexes those.

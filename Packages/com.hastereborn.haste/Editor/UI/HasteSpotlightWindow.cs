@@ -630,7 +630,10 @@ namespace Haste {
       nameLabel.EnableInClassList("haste-name--broken", false);
       nameLabel.EnableInClassList("haste-name--disabled", false);
 
-      var go = result.Object as GameObject;
+      // Gated on the SOURCE, not on "the object happens to be a GameObject" --
+      // LoadMainAssetAtPath returns one for a .prefab, and a prefab asset's
+      // activeInHierarchy is false, which greyed out every prefab in the results.
+      var go = HasteKinds.UsesHierarchyTint(item) ? result.Object as GameObject : null;
       if (go != null) {
         switch (HasteHierarchyResult.ClassifyPrefab(go)) {
           case HasteHierarchyResult.PrefabDisplay.Prefab:

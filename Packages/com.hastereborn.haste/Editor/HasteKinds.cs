@@ -187,6 +187,18 @@ namespace Haste {
       return query;
     }
 
+    // Whether a row gets the Hierarchy window's colour coding -- prefab blue,
+    // broken-prefab red, dimmed when inactive.
+    //
+    // Only hierarchy rows do, and the check is on the SOURCE rather than on "is the
+    // object a GameObject", which is the trap: AssetDatabase.LoadMainAssetAtPath returns
+    // a GameObject for a .prefab, and a prefab ASSET's activeInHierarchy is false because
+    // it is not in a scene at all. Tinting on that dimmed every prefab in the Project
+    // results as though it were disabled.
+    public static bool UsesHierarchyTint(HasteItem item) {
+      return item != null && item.source == HasteHierarchySource.NAME;
+    }
+
     public static bool Matches(HasteKind kinds, HasteItem item) {
       return kinds == HasteKind.Any || (kinds & Classify(item)) != 0;
     }

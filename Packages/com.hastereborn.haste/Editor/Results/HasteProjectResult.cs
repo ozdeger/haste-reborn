@@ -26,7 +26,7 @@ namespace Haste {
       get { return Object.name; }
     }
 
-    public HasteProjectResult(HasteItem item, float score, string queryLower) : base(item, score, queryLower) {}
+    public HasteProjectResult(HasteItem item, float score, string[] terms) : base(item, score, terms) {}
 
     public override void Draw(bool isHighlighted) {
       var icon = AssetDatabase.GetCachedIcon(Item.path);

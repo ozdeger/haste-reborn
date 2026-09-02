@@ -106,8 +106,8 @@ namespace Haste {
       var a = new HasteItem(HastePerf.GetRandomPath(), 0, HasteHierarchySource.NAME);
       var b = new HasteItem(HastePerf.GetRandomPath(), 0, HasteHierarchySource.NAME);
 
-      var aR = new HasteResult(a, HasteScoring.Score(a, query, queryLen), query);
-      var bR = new HasteResult(b, HasteScoring.Score(b, query, queryLen), query);
+      var aR = new HasteResult(a, HasteScoring.Score(a, query, queryLen), new []{query});
+      var bR = new HasteResult(b, HasteScoring.Score(b, query, queryLen), new []{query});
 
       Benchmark("HasteResult#CompareTo", 10, () => {
         aR.CompareTo(bR);
@@ -140,7 +140,7 @@ namespace Haste {
       var query = "abc";
       var queryLen = query.Length;
       Benchmark("HasteResult", 10000, () => {
-        new HasteResult(item, HasteScoring.Score(item, query, queryLen), query);
+        new HasteResult(item, HasteScoring.Score(item, query, queryLen), new []{query});
       });
     }
 

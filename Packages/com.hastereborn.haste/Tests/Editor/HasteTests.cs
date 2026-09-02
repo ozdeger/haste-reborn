@@ -17,11 +17,11 @@ namespace Haste {
 
       var aItem = new HasteItem("GameObject/Create Empty", 0, "");
       var aScore = HasteScoring.Score(aItem, queryLower, queryLen);
-      var a = new HasteResult(aItem, aScore, queryLower);
+      var a = new HasteResult(aItem, aScore, HasteStringUtils.SplitQueryTerms(queryLower));
 
       var bItem = new HasteItem("Component/Effects/Halo", 0, "");
       var bScore = HasteScoring.Score(bItem, queryLower, queryLen);
-      var b = new HasteResult(bItem, bScore, queryLower);
+      var b = new HasteResult(bItem, bScore, HasteStringUtils.SplitQueryTerms(queryLower));
 
       Assert.That(a.CompareTo(b), Is.EqualTo(-1));
     }
@@ -33,11 +33,11 @@ namespace Haste {
 
       var aItem = new HasteItem("Unity Test Tools/Platform Runner/Run on platform", 0, "");
       var aScore = HasteScoring.Score(aItem, queryLower, queryLen);
-      var a = new HasteResult(aItem, aScore, queryLower);
+      var a = new HasteResult(aItem, aScore, HasteStringUtils.SplitQueryTerms(queryLower));
 
       var bItem = new HasteItem("Assets/UnityTestTools/Common/Editor/icons/rerun-darktheme.png", 0, "");
       var bScore = HasteScoring.Score(bItem, queryLower, queryLen);
-      var b = new HasteResult(bItem, bScore, queryLower);
+      var b = new HasteResult(bItem, bScore, HasteStringUtils.SplitQueryTerms(queryLower));
 
       Assert.That(a.CompareTo(b), Is.EqualTo(-1));
 
@@ -46,11 +46,11 @@ namespace Haste {
 
       var cItem = new HasteItem("Component/Add...", 0, "");
       var cScore = HasteScoring.Score(cItem, queryLower, queryLen);
-      var c = new HasteResult(cItem, cScore, queryLower);
+      var c = new HasteResult(cItem, cScore, HasteStringUtils.SplitQueryTerms(queryLower));
 
       var dItem = new HasteItem("Component/Layout/Canvas", 0, "");
       var dScore = HasteScoring.Score(dItem, queryLower, queryLen);
-      var d = new HasteResult(dItem, dScore, queryLower);
+      var d = new HasteResult(dItem, dScore, HasteStringUtils.SplitQueryTerms(queryLower));
 
       Assert.That(c.CompareTo(d), Is.EqualTo(-1));
 
@@ -59,11 +59,11 @@ namespace Haste {
 
       var eItem = new HasteItem("GameObject/Create Empty Child", 0, "");
       var eScore = HasteScoring.Score(eItem, queryLower, queryLen);
-      var e = new HasteResult(eItem, eScore, queryLower);
+      var e = new HasteResult(eItem, eScore, HasteStringUtils.SplitQueryTerms(queryLower));
 
       var fItem = new HasteItem("Component/Physics/Cloth Renderer", 0, "");
       var fScore = HasteScoring.Score(fItem, queryLower, queryLen);
-      var f = new HasteResult(fItem, fScore, queryLower);
+      var f = new HasteResult(fItem, fScore, HasteStringUtils.SplitQueryTerms(queryLower));
 
       Assert.That(e.CompareTo(f), Is.EqualTo(-1));
 
@@ -72,11 +72,11 @@ namespace Haste {
 
       var gItem = new HasteItem("Assets/Create/Lens Flare", 0, "");
       var gScore = HasteScoring.Score(gItem, queryLower, queryLen);
-      var g = new HasteResult(gItem, gScore, queryLower);
+      var g = new HasteResult(gItem, gScore, HasteStringUtils.SplitQueryTerms(queryLower));
 
       var hItem = new HasteItem("GameObject/Align With View", 0, "");
       var hScore = HasteScoring.Score(hItem, queryLower, queryLen);
-      var h = new HasteResult(hItem, hScore, queryLower);
+      var h = new HasteResult(hItem, hScore, HasteStringUtils.SplitQueryTerms(queryLower));
 
       Assert.That(g.CompareTo(h), Is.EqualTo(-1));
     }

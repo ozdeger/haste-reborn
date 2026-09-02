@@ -47,7 +47,7 @@ namespace Haste {
       }
     }
 
-    public HasteHierarchyResult(HasteItem item, float score, string queryLower) : base(item, score, queryLower) {}
+    public HasteHierarchyResult(HasteItem item, float score, string[] terms) : base(item, score, terms) {}
 
     // How a hierarchy row is coloured. The names match Unity's own vocabulary for the
     // same three states -- HierarchyProperty.colorCode is {0 Normal, 1 Prefab,

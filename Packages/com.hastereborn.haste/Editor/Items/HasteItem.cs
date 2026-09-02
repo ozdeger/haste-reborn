@@ -46,18 +46,18 @@ namespace Haste {
       this.userScore = 0.0f;
     }
 
-    public IHasteResult GetResult(float score, string queryLower) {
+    public IHasteResult GetResult(float score, string[] terms) {
       switch (source) {
         case HasteHierarchySource.NAME:
-          return new HasteHierarchyResult(this, score, queryLower);
+          return new HasteHierarchyResult(this, score, terms);
         case HasteProjectSource.NAME:
-          return new HasteProjectResult(this, score, queryLower);
+          return new HasteProjectResult(this, score, terms);
         case HasteMenuItemSource.NAME:
-          return new HasteMenuItemResult(this, score, queryLower);
+          return new HasteMenuItemResult(this, score, terms);
         case HasteLayoutSource.NAME:
-          return new HasteMenuItemResult(this, score, queryLower);
+          return new HasteMenuItemResult(this, score, terms);
         default:
-          return new HasteResult(this, score, queryLower);
+          return new HasteResult(this, score, terms);
       }
     }
 

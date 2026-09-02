@@ -11,6 +11,36 @@ namespace Haste {
 
   public static class HasteStringUtils {
 
+    static readonly string[] noTerms = new string[0];
+    static readonly char[] termSeparators = new []{' ', '\t'};
+
+    // Splits a query into the terms that must ALL match, lowercased.
+    //
+    // Haste used to treat the whole query as a single subsequence, which meant a space had
+    // to occur literally in the path. Paths almost never contain one, so typing a space
+    // silently emptied the result list: "popup crimescene" found nothing at all, not even
+    // "Popup_CrimeScene_Character_Banner_Sale.png".
+    public static string[] SplitQueryTerms(string query) {
+      if (string.IsNullOrEmpty(query)) {
+        return noTerms;
+      }
+
+      var terms = query.ToLowerInvariant().Split(termSeparators, StringSplitOptions.RemoveEmptyEntries);
+      return terms.Length == 0 ? noTerms : terms;
+    }
+
+    // True when every term appears in `str` as a subsequence. Terms are matched
+    // independently, so they may overlap -- "ab" and "bc" both match "abc".
+    public static bool ContainsAllSubsequences(string str, string[] terms) {
+      var strLen = str.Length;
+      for (int i = 0; i < terms.Length; i++) {
+        if (!ContainsSubsequence(str, terms[i], strLen, terms[i].Length)) {
+          return false;
+        }
+      }
+      return true;
+    }
+
     public static int LongestCommonSubsequenceLength(string first, string second) {
       string longer = first.Length > second.Length ? first : second;
       string shorter = first.Length > second.Length ? second : first;
@@ -164,6 +194,31 @@ namespace Haste {
         return false;
       }
       return true;
+    }
+
+    // Highlight positions for a multi-term query: the union of each term's own weighted
+    // subsequence, sorted, with duplicates removed because BoldLabel splices markup at
+    // each index in order and would otherwise wrap a shared character twice.
+    public static int[] GetWeightedSubsequence(string path, string[] terms, int[] boundaryIndices) {
+      if (terms.Length == 0) {
+        return new int[0];
+      }
+
+      if (terms.Length == 1) {
+        return GetWeightedSubsequence(path, terms[0], boundaryIndices);
+      }
+
+      var merged = new HashSet<int>();
+      for (int i = 0; i < terms.Length; i++) {
+        foreach (var index in GetWeightedSubsequence(path, terms[i], boundaryIndices)) {
+          merged.Add(index);
+        }
+      }
+
+      var indices = new int[merged.Count];
+      merged.CopyTo(indices);
+      Array.Sort(indices);
+      return indices;
     }
 
     public static string GetFileName(string path) {

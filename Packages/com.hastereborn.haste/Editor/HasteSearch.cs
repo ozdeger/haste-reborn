@@ -20,20 +20,38 @@ namespace Haste {
     }
 
     // Perform fast subsequence filtering
-    IEnumerator Filter(string queryLower, int queryLen, IPromise<HasteItem[]> promise) {
-      if (queryLen == 0) {
+    IEnumerator Filter(string[] terms, IPromise<HasteItem[]> promise) {
+      if (terms.Length == 0) {
         promise.Resolve(emptyMatches);
         yield break;
       }
 
-      // Lookup bucket by first char
-      HashSet<HasteItem> bucket;
-      if (!index.TryGetValue(queryLower[0], out bucket)) {
-        promise.Resolve(emptyMatches);
-        yield break;
-      }
+      // Every term has to match, so the first-character bucket of ANY term is already a
+      // correct superset of the candidates. Take the smallest of them -- for
+      // "popup crimescene" that is whichever of 'p' and 'c' occurs in fewer paths -- which
+      // makes a second term a filter that costs nothing rather than one that costs more.
+      HashSet<HasteItem> bucket = null;
+      int queryBits = 0;
+      int longestTerm = 0;
 
-      int queryBits = HasteStringUtils.LetterBitsetFromString(queryLower);
+      for (var t = 0; t < terms.Length; t++) {
+        var term = terms[t];
+        queryBits |= HasteStringUtils.LetterBitsetFromString(term);
+        if (term.Length > longestTerm) {
+          longestTerm = term.Length;
+        }
+
+        HashSet<HasteItem> candidate;
+        if (!index.TryGetValue(term[0], out candidate)) {
+          // This term's first character occurs in no indexed path at all.
+          promise.Resolve(emptyMatches);
+          yield break;
+        }
+
+        if (bucket == null || candidate.Count < bucket.Count) {
+          bucket = candidate;
+        }
+      }
 
       // We need to copy the hashset in case the indexer adds an item while we iterate
       var bucketArr = new HasteItem[bucket.Count];
@@ -46,7 +64,9 @@ namespace Haste {
       for (var i = 0; i < bucketArr.Length; i++) {
         m = bucketArr[i];
 
-        if (m.pathLower.Length < queryLen) {
+        // Terms are matched independently and may overlap, so the path only has to be at
+        // least as long as the longest single term, not as long as all of them together.
+        if (m.pathLower.Length < longestTerm) {
           continue;
         }
 
@@ -55,7 +75,7 @@ namespace Haste {
           continue;
         }
 
-        var subsequence = HasteStringUtils.ContainsSubsequence(m.pathLower, queryLower, m.pathLower.Length, queryLen);
+        var subsequence = HasteStringUtils.ContainsAllSubsequences(m.pathLower, terms);
         if (!subsequence) {
           continue;
         }
@@ -71,7 +91,7 @@ namespace Haste {
       promise.Resolve(matches.ToArray());
     }
 
-    IEnumerator Map(HasteItem[] matches, string queryLower, int queryLen, IPromise<IHasteResult[]> promise) {
+    IEnumerator Map(HasteItem[] matches, string[] terms, IPromise<IHasteResult[]> promise) {
       double startTime = EditorApplication.timeSinceStartup;
 
       var results = new List<IHasteResult>(matches.Length);
@@ -79,7 +99,7 @@ namespace Haste {
       for (var i = 0; i < matches.Length; i++) {
         m = matches[i];
 
-        var score = HasteScoring.Score(m, queryLower, queryLen);
+        var score = HasteScoring.Score(m, terms);
 
         // A zero score means the item matched only as characters scattered through word
         // interiors: no boundary character shared with the query, no substring run, and
@@ -87,7 +107,7 @@ namespace Haste {
         // reachable (see HasteIndex), and they carry no signal at all -- so drop them
         // here rather than pad the tail of every short query with them.
         if (score > 0.0f) {
-          results.Add(m.GetResult(score, queryLower));
+          results.Add(m.GetResult(score, terms));
         }
 
         if (EditorApplication.timeSinceStartup - startTime >= Haste.MAX_ITER_TIME) {
@@ -143,13 +163,13 @@ namespace Haste {
     }
 
     public IEnumerator Search(string query, int count, IPromise<IHasteResult[]> searchResult) {
-      int queryLen = query.Length;
-      string queryLower = query.ToLowerInvariant();
+      // Whitespace separates terms that must all match; see HasteStringUtils.SplitQueryTerms.
+      string[] terms = HasteStringUtils.SplitQueryTerms(query);
 
       // Grab a filtered subset from the index
       var filterResult = new Promise<HasteItem[]>();
       // using (new HasteStopwatch("Filter")) {
-      yield return Haste.Scheduler.Start(Filter(queryLower, queryLen, filterResult)); // Wait on filter
+      yield return Haste.Scheduler.Start(Filter(terms, filterResult)); // Wait on filter
       // }
 
       if (filterResult.Reason != null) {
@@ -163,7 +183,7 @@ namespace Haste {
       // Convert items to results with scores
       var mapResult = new Promise<IHasteResult[]>();
       // using (new HasteStopwatch("Map")) {
-      yield return Haste.Scheduler.Start(Map(filterResult.Value, queryLower, queryLen, mapResult)); // Wait on map
+      yield return Haste.Scheduler.Start(Map(filterResult.Value, terms, mapResult)); // Wait on map
       // }
 
       if (mapResult.Reason != null) {

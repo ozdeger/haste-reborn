@@ -214,6 +214,89 @@ namespace Haste {
       Assert.That(Search("ce", 1)[0].Item.path, Is.EqualTo("GameObject/Create Empty"));
     }
 
+    // ------------------------------------------------------- multi-term queries
+
+    [Test]
+    [Category("Ranking")]
+    public void Search_WhitespaceSeparatesTermsThatMustAllMatch() {
+      // Before this, the whole query was one subsequence, so the space had to occur
+      // literally in the path. Paths almost never contain one, so typing a space silently
+      // emptied the list -- "main camera" could not find "MainCamera.mat".
+      AssertRanking("main camera",
+        "60.8333|Main Camera",
+        // Unreachable before: "maincamera" has no space, so the one-subsequence matcher
+        // could never get past the space in the query.
+        "54.1667|Assets/Materials/MainCamera.mat",
+        "54.1667|Assets/Prefabs/Main Camera.prefab");
+    }
+
+    [Test]
+    [Category("Ranking")]
+    public void Search_TermOrderDoesNotMatter() {
+      // Each term is matched independently, so reversing them finds the same items. Only
+      // the ordering within a term is a subsequence constraint.
+      var forward = Search("main camera").Select(r => r.Item.path).OrderBy(p => p).ToArray();
+      var reverse = Search("camera main").Select(r => r.Item.path).OrderBy(p => p).ToArray();
+      Assert.That(reverse, Is.EqualTo(forward));
+    }
+
+    [Test]
+    [Category("Ranking")]
+    public void Search_EveryTermMustMatch() {
+      // Adding a term can only narrow the result set, never widen it.
+      var one = Search("player").Select(r => r.Item.path).ToArray();
+      var two = Search("player controller").Select(r => r.Item.path).ToArray();
+      Assert.That(two, Is.SubsetOf(one));
+      Assert.That(two, Contains.Item("Assets/Scripts/PlayerController.cs"));
+      Assert.That(two, Has.No.Member("Player/Model/Mesh"));
+
+      // A term that matches nothing empties the result, however good the others are.
+      Assert.That(Search("main camera zzz"), Is.Empty);
+    }
+
+    [Test]
+    [Category("Primitives")]
+    public void SplitQueryTerms() {
+      Assert.That(HasteStringUtils.SplitQueryTerms("main camera"), Is.EqualTo(new[] { "main", "camera" }));
+      Assert.That(HasteStringUtils.SplitQueryTerms("  main   camera  "), Is.EqualTo(new[] { "main", "camera" }));
+      Assert.That(HasteStringUtils.SplitQueryTerms("MC"), Is.EqualTo(new[] { "mc" }));
+      Assert.That(HasteStringUtils.SplitQueryTerms(""), Is.Empty);
+      Assert.That(HasteStringUtils.SplitQueryTerms("   "), Is.Empty);
+      Assert.That(HasteStringUtils.SplitQueryTerms(null), Is.Empty);
+    }
+
+    [Test]
+    [Category("Scoring")]
+    public void Score_OneTermIsIdenticalToTheSingleTermLadder() {
+      // The multi-term score is the mean of the per-term scores, so a single term has to
+      // come out bit-identical -- that is what keeps every golden table above meaningful.
+      var mesh = new HasteItem("Component/Physics/Mesh Collider", 0, "");
+      Assert.That(HasteScoring.Score(mesh, new[] { "mc" }),
+        Is.EqualTo(HasteScoring.Score(mesh, "mc", 2)).Within(0.0001f));
+      Assert.That(HasteScoring.Score(mesh, new string[0]), Is.EqualTo(0.0f));
+
+      // And two terms average, rather than sum, so scores stay in the familiar range.
+      var camera = new HasteItem("Assets/Materials/MainCamera.mat", 0, "");
+      var expected = (HasteScoring.Score(camera, "main", 4) + HasteScoring.Score(camera, "camera", 6)) / 2.0f;
+      Assert.That(HasteScoring.Score(camera, new[] { "main", "camera" }), Is.EqualTo(expected).Within(0.0001f));
+    }
+
+    [Test]
+    [Category("Highlighting")]
+    public void Highlight_MergesEveryTermsMatches() {
+      // Each term contributes its own weighted subsequence; the union is sorted and
+      // deduplicated, because BoldLabel splices markup in order and would otherwise wrap
+      // a shared character twice.
+      var item = new HasteItem("Assets/Prefabs/Main Camera.prefab", 0, "");
+      var boundaries = HasteStringUtils.GetBoundaryIndices(item.path);
+      var indices = HasteStringUtils.GetWeightedSubsequence(item.pathLower, new[] { "main", "camera" }, boundaries);
+
+      Assert.That(indices, Is.Ordered, "BoldLabel requires ascending indices");
+      Assert.That(indices, Is.Unique);
+      Assert.That(HasteStringUtils.BoldLabel(item.path, indices, "[", "]"),
+        Is.EqualTo("Assets/Prefabs/[M][a][i][n] [C][a][m][e][r][a].prefab"));
+    }
+
     // ------------------------------------------------- recall: interior matches
 
     [Test]
@@ -407,17 +490,17 @@ namespace Haste {
       // Equal scores fall back to shorter path, then to natural ordering.
       var shortItem = new HasteItem("Component/Physics/Mesh Collider", 0, "");
       var longItem = new HasteItem("Component/Physics/Cloth Renderer Extra", 0, "");
-      var a = new HasteResult(shortItem, 50.0f, "mc");
-      var b = new HasteResult(longItem, 50.0f, "mc");
+      var a = new HasteResult(shortItem, 50.0f, new[]{"mc"});
+      var b = new HasteResult(longItem, 50.0f, new[]{"mc"});
       Assert.That(a.CompareTo(b), Is.EqualTo(-1));
       Assert.That(b.CompareTo(a), Is.EqualTo(1));
 
-      var higher = new HasteResult(longItem, 60.0f, "mc");
+      var higher = new HasteResult(longItem, 60.0f, new[]{"mc"});
       Assert.That(higher.CompareTo(a), Is.EqualTo(-1));
 
       // Equal score and equal length falls through to natural ordering of the path.
-      var aaa = new HasteResult(new HasteItem("Component/Physics/AAA", 0, ""), 50.0f, "");
-      var bbb = new HasteResult(new HasteItem("Component/Physics/BBB", 0, ""), 50.0f, "");
+      var aaa = new HasteResult(new HasteItem("Component/Physics/AAA", 0, ""), 50.0f, new string[0]);
+      var bbb = new HasteResult(new HasteItem("Component/Physics/BBB", 0, ""), 50.0f, new string[0]);
       Assert.That(aaa.CompareTo(bbb), Is.EqualTo(-1));
     }
 

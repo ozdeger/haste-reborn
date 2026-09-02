@@ -39,16 +39,20 @@ namespace Haste {
       get {
         if (indices == null) {
           int[] boundaryIndices = HasteStringUtils.GetBoundaryIndices(Item.path);
-          indices = HasteStringUtils.GetWeightedSubsequence(Item.pathLower, queryLower, boundaryIndices);
+          indices = HasteStringUtils.GetWeightedSubsequence(Item.pathLower, terms, boundaryIndices);
         }
         return indices;
       }
     }
 
-    private readonly string queryLower;
+    // The query, split into the terms that all had to match. Kept rather than the raw
+    // string because highlighting has to be computed per term and merged -- passing a
+    // whole "popup crimescene" to GetWeightedSubsequence throws, since the space matches
+    // nothing and its backtracker pops an empty stack.
+    protected readonly string[] terms;
 
-    protected AbstractHasteResult(HasteItem item, float score, string queryLower) {
-      this.queryLower = queryLower;
+    protected AbstractHasteResult(HasteItem item, float score, string[] terms) {
+      this.terms = terms ?? new string[0];
 
       Score = score;
       Item = item;

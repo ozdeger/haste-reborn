@@ -18,6 +18,11 @@ changelog for those releases is in the repository root.
   fuzzy-match highlighting, so behaviour changes are visible rather than silent.
 
 ### Changed
+- **Spaces in a query now separate terms instead of killing the search.** Every term has
+  to match, in any order, so "main camera" finds `MainCamera.mat` and "popup crimescene"
+  finds `Popup_CrimeScene_Character_Banner_Sale.png`. Previously the whole query was one
+  subsequence, so the space had to occur literally in the path — and paths rarely contain
+  one, which meant typing a space usually emptied the result list outright.
 - Haste's preferences page is now searchable. It moved from the deprecated
   `[PreferenceItem]` to Unity's settings system, so it stays in the same place in
   Preferences but also turns up when you type "haste", "fuzzy" or "index" into the

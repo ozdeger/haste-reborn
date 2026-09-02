@@ -9,7 +9,7 @@ namespace Haste {
 
   public class HasteMenuItemResult : AbstractHasteResult {
 
-    public HasteMenuItemResult(HasteItem item, float score, string queryLower) : base(item, score, queryLower) {}
+    public HasteMenuItemResult(HasteItem item, float score, string[] terms) : base(item, score, terms) {}
 
     public override void Action() {
       HasteActions.MenuItemFallbackDelegate menuItemFallback;

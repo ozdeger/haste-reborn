@@ -15,6 +15,24 @@ namespace Haste {
     // acronym matches that are the reason to use Haste.
     public const float INTERIOR_START_DAMPING = 0.5f;
 
+    // Score against a multi-term query: the mean of each term's own score.
+    //
+    // The mean rather than the sum so that scores stay in the range the single-term
+    // ladder produces, and so a one-term query is bit-identical to calling Score directly
+    // -- which is what keeps the golden tables meaningful across this change. Ordering is
+    // unaffected either way: every item in one search is divided by the same term count.
+    public static float Score(HasteItem item, string[] terms) {
+      if (terms.Length == 0) {
+        return 0.0f;
+      }
+
+      float total = 0.0f;
+      for (int i = 0; i < terms.Length; i++) {
+        total += Score(item, terms[i], terms[i].Length);
+      }
+      return total / terms.Length;
+    }
+
     public static float Score(HasteItem item, string queryLower, int queryLen) {
       var userScore = 1.0f + (item.userScore / 10.0f);
 

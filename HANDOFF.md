@@ -379,11 +379,12 @@ polluting extension search". Neither was true:
 - **The display name was always correct.** `AbstractHasteResult.Draw` renders
   `HasteStringUtils.GetFileName(Item.path)`, not `Item.name`, and `GetFileName` handles
   the ellipsis correctly. Nothing on screen was ever wrong.
-- **There is no extension search to pollute.** `HasteItem.extensionLower` is assigned in
-  the constructor and **never read by anything** — it is dead state, costing a `GetExtension`
-  plus a `ToLowerInvariant` allocation per indexed item. The documented `.cs` idiom works
-  through ordinary subsequence matching on the path, because `GetBoundaries` emits every
-  `.` as a boundary character. Do not "restore" extension search; it never existed.
+- **There is no extension search to pollute.** `HasteItem.extensionLower` was assigned in
+  the constructor and **never read by anything** — dead state costing a `GetExtension` plus
+  a `ToLowerInvariant` allocation per indexed item. It has since been deleted. The
+  documented `.cs` idiom works through ordinary subsequence matching on the path, because
+  `GetBoundaries` emits every `.` as a boundary character. Do not "restore" extension
+  search; it never existed.
 
 What the bug actually cost was **scoring**: the exact-name, prefix-name and substring-name
 rungs all compare against `nameLower`, so a menu item could not be matched by typing its

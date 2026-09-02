@@ -81,6 +81,10 @@ changelog for those releases is in the repository root.
   every scheduler tick. Unity 5's older Mono tolerated it.
 
 ### Removed
+- An unread extension field on every indexed item, which cost a string scan and an
+  allocation per item during indexing and misleadingly implied that searching by extension
+  worked differently from any other search. It does not: `.cs` matches the same way
+  everything else does.
 - The two hardcoded menu-path tables (Unity 4.6 and Unity 5, 479 string literals) and the
   version check that chose between them.
 - 33 of the 44 entries in the menu-item action table: hand-written stand-ins for built-in

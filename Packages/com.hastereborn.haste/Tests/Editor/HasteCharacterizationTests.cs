@@ -639,7 +639,10 @@ namespace Haste {
       Assert.That(item.name, Is.EqualTo("MainCamera"));
       Assert.That(item.nameLower, Is.EqualTo("maincamera"));
       Assert.That(item.boundariesLower, Is.EqualTo("ammc.m"));
-      Assert.That(item.extensionLower, Is.EqualTo("mat"));
+      // No extension is derived: the field that used to hold one was never read. Searching
+      // by extension works through the "." boundary character, not through a stored value.
+      Assert.That(typeof(HasteItem).GetField("extensionLower"), Is.Null,
+        "the unread extension field is back; see the note in HasteItem.cs");
       Assert.That(item.id, Is.EqualTo(7));
       Assert.That(item.source, Is.EqualTo("Project"));
       Assert.That(item.userScore, Is.EqualTo(0.0f));

@@ -21,7 +21,12 @@ namespace Haste {
     public string boundariesLower;
     public int bitset;
 
-    public string extensionLower;
+    // There is deliberately no extension field. One existed, assigned from GetExtension in
+    // this constructor, and nothing ever read it -- it cost a scan and a string allocation
+    // on every indexed item, and it left the impression that searching ".cs" worked by
+    // matching an extension. It does not: GetBoundaries emits every "." as a boundary
+    // character, so ".cs" matches through ordinary subsequence matching on the path like
+    // any other query.
 
     public float userScore;
 
@@ -37,8 +42,6 @@ namespace Haste {
 
       this.boundariesLower = HasteStringUtils.GetBoundaries(path);
       this.bitset = HasteStringUtils.LetterBitsetFromString(pathLower);
-
-      this.extensionLower = HasteStringUtils.GetExtension(path).ToLowerInvariant();
 
       this.userScore = 0.0f;
     }

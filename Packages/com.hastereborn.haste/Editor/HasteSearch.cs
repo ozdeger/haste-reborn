@@ -74,11 +74,21 @@ namespace Haste {
     IEnumerator Map(HasteItem[] matches, string queryLower, int queryLen, IPromise<IHasteResult[]> promise) {
       double startTime = EditorApplication.timeSinceStartup;
 
-      IHasteResult[] results = new IHasteResult[matches.Length];
+      var results = new List<IHasteResult>(matches.Length);
       HasteItem m;
       for (var i = 0; i < matches.Length; i++) {
         m = matches[i];
-        results[i] = m.GetResult(HasteScoring.Score(m, queryLower, queryLen), queryLower);
+
+        var score = HasteScoring.Score(m, queryLower, queryLen);
+
+        // A zero score means the item matched only as characters scattered through word
+        // interiors: no boundary character shared with the query, no substring run, and
+        // the query begins neither its name nor its path. Widening the index made those
+        // reachable (see HasteIndex), and they carry no signal at all -- so drop them
+        // here rather than pad the tail of every short query with them.
+        if (score > 0.0f) {
+          results.Add(m.GetResult(score, queryLower));
+        }
 
         if (EditorApplication.timeSinceStartup - startTime >= Haste.MAX_ITER_TIME) {
           startTime = EditorApplication.timeSinceStartup;
@@ -86,7 +96,7 @@ namespace Haste {
         }
       }
 
-      promise.Resolve(results);
+      promise.Resolve(results.ToArray());
     }
 
     void Swap(IHasteResult[] A, int i, int j) {

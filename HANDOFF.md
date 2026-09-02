@@ -38,6 +38,8 @@ The feature people care about is that you do not type names, you type acronyms.
 - `gce` finds `GameObject/Create Empty`
 - `pc` finds `Assets/Scripts/PlayerController.cs`
 - `.cs` finds every C# script (searching by extension is a supported idiom)
+- `ollider` finds `Mesh Collider` — interior substrings work too, ranked beneath the
+  acronym matches (see 4.1)
 
 This works because Haste indexes each item's **word boundaries**. For
 `Component/Physics 2D/Polygon Collider 2D` the boundary string is `cp2dpc2d`: the first
@@ -116,7 +118,7 @@ neither indexing nor searching can stall the editor.
 |---|---|
 | `Haste.cs` | Static entry point, singletons, the update pump, source registration |
 | `HasteScheduler.cs` | Stoppable coroutine scheduler. `HasteSchedulerNode` can be cancelled mid-flight, which is how a keystroke cancels the previous search |
-| `HasteIndex.cs` | `Dictionary<char, HashSet<HasteItem>>` bucketed by boundary character |
+| `HasteIndex.cs` | `Dictionary<char, HashSet<HasteItem>>` bucketed by **path character**, plus an authoritative item set. Bucketing by *boundary* character is what caused 4.1 |
 | `HasteSearch.cs` | Filter → Map → Sort, each stage yielding when it exceeds the frame budget |
 | `HasteScoring.cs` | **The ranking algorithm.** 60 lines and the highest-value code in the repo |
 | `HasteStringUtils.cs` | Boundary extraction, subsequence matching, weighted-subsequence highlight indices, path helpers |
@@ -149,9 +151,13 @@ boundaryUtilization  = boundaryMatchCount / boundaries.Length
 
 score  = 40 * boundaryQueryRatio
 score += 40 * boundaryUtilization
+
+if query[0] does not begin a word in the item:
+  score *= INTERIOR_START_DAMPING   # 0.5 -- see 4.1
 ```
 
-Then a single early-returning ladder adds exactly one bonus:
+Then a single early-returning ladder adds exactly one bonus. The ladder is **never**
+damped, only the boundary terms above it are:
 
 | Condition | Bonus |
 |---|---|
@@ -159,10 +165,16 @@ Then a single early-returning ladder adds exactly one bonus:
 | `pathLower == query` | +50 |
 | query ≥ 3 chars and `nameLower` starts with query | +40 |
 | query ≥ 3 chars and `pathLower` starts with query | +30 |
+| query ≥ 3 chars and `nameLower` contains query | +25 |
 | first character of `nameLower` matches | +20 |
+| query ≥ 3 chars and `pathLower` contains query | +15 |
 | first character of `pathLower` matches | +10 |
 
-The result is multiplied by `1 + userScore/10`.
+The result is multiplied by `1 + userScore/10`. A result scoring exactly 0 is discarded by
+`HasteSearch.Map` rather than shown.
+
+Every comparison in the ladder is `Ordinal`, per the rule in 6.3 — the two prefix rungs
+used `InvariantCulture` until the recall fix.
 
 Both boundary terms matter. `boundaryQueryRatio` rewards consuming your whole query;
 `boundaryUtilization` rewards consuming the whole item. That second term is why
@@ -174,6 +186,10 @@ Ties break by score, then **shorter path first**, then `EditorUtility.NaturalCom
 
 2.4 Search performance design
 ---
+
+`Filter` looks up **exactly one bucket**, keyed by the query's first character, and never
+consults another. That single fact is why the index's choice of key is a correctness
+concern and not just a performance one — see 4.1.
 
 Filtering is a three-stage funnel, cheapest first:
 
@@ -286,19 +302,56 @@ Part 4 — Behaviours that look like bugs
 These are real, currently-shipping behaviours, pinned by tests so a rewrite cannot change
 them silently. Two of them arguably *should* change; that is a product decision.
 
-4.1 The first query character must begin a word
+4.1 ~~The first query character must begin a word~~ — FIXED
 ---
 
-The index buckets only by boundary characters, so an item is never even scored unless the
-query's **first** character starts a word somewhere in it.
+**This was the single biggest recall limitation and it is now fixed.** The section is kept
+because the shape of the fix is the useful part.
 
-- `ollider` and `ysics` return **nothing**, despite `Collider` and `Physics` being indexed.
-- `amera` **does** match the camera assets, because `a` begins `Assets`.
-- `mc` returns 5 results out of a 20-item corpus even though 14 score non-zero.
+The index bucketed only by boundary characters, and `HasteSearch.Filter` looks up exactly
+one bucket keyed by the query's first character — so an item was never even scored unless
+the query's **first** character started a word somewhere in it. `ollider` and `ysics`
+returned **nothing**, despite `Collider` and `Physics` being indexed.
 
-This is the single biggest recall limitation. The proposed fix is to drop the
-boundary-first *filter* while keeping "first char is a boundary" as a scoring **boost**,
-which preserves the acronym feel while losing no results.
+`HasteIndex` now buckets by the **distinct characters of the path**. That turns the bucket
+from a wrong *subset* into a correct *superset*: a subsequence match requires every query
+character to appear in the path, so it certainly requires the first one to. The
+acceleration is kept; only its key changed.
+
+"First character begins a word" survives in `HasteScoring` as a weight rather than a
+filter — `INTERIOR_START_DAMPING` (0.5) halves the acronym component, and only that
+component, for items the query does not start a word in. The ladder bonus is never damped,
+because a literal substring is a deliberate, high-confidence signal: without that split, a
+weak boundary-first match elsewhere outranks the thing the user actually typed.
+
+Two supporting changes were needed to make the wider index useful rather than noisy:
+
+- Two **substring rungs** were added to the ladder (`+25` name, `+15` path, both for
+  queries of 3+ characters). Without them the newly reachable matches had no signal to
+  rank on — the entire base score is boundary-derived, so `ollider` would have returned
+  the right items all tied on zero, ordered by path length.
+- `HasteSearch.Map` **drops results scoring exactly 0**. A zero score means the item
+  matched only as characters scattered through word interiors, with no boundary character
+  in common, no substring, and no first-character match. Those are pure noise and would
+  otherwise pad the tail of every short query.
+
+The property that makes the re-baseline reviewable: **every result that ranked before the
+fix kept its exact score and its exact position.** An item could only rank at all if the
+query's first character began one of its words, and those are precisely the items the
+damping leaves untouched. The diff is additive.
+
+Measured cost (macOS, 6000.3.17f1, synthetic Unity-shaped corpus, whole-search wall time —
+the scheduler spreads this across frames at 16 ms each, so it is not a stall):
+
+| Corpus | Index refs | Typical query | Worst query (`mc`) | Previously-empty (`ollider`) |
+|---|---|---|---|---|
+| 5,000 | 49k → 92k (1.86x) | ~1.0x, 1.4–5.4 ms | 0.95 → 2.34 ms (2.5x) | 0 → 100 results in 1.8 ms |
+| 50,000 | 493k → 918k (1.86x) | ~1.0–1.1x, 11–77 ms | 16.5 → 40.8 ms (2.5x) | 0 → 100 results in 17 ms |
+
+The 1.86x index memory is the real price. Search cost is unchanged for most queries
+because the boundary bucket for a common first character was already most of the index.
+(The 77 ms for `pc` at 50,000 items is **pre-existing** — it was 69.5 ms before this
+change — and is worth attacking in the search-core rewrite.)
 
 4.2 Menu paths ending in `...` get a corrupted name
 ---
@@ -310,14 +363,22 @@ of menu rows have a wrong display name and a bogus extension polluting extension
 4.3 Other known-but-unfixed items
 ---
 
-- `HasteIndex.Remove` decrements `Count` unconditionally, even for an item that was never
-  present.
+- ~~`HasteIndex.Remove` decrements `Count` unconditionally, even for an item that was never
+  present.~~ **Fixed** alongside 4.1: the index now keeps an authoritative item set, so
+  `Count` is exact, removing something never added is a no-op, and adding twice counts once.
 - `Haste.Update`'s frame budget captures `start` once outside the loop while accumulating
   elapsed time each iteration, producing a triangular sum — so the 16 ms budget is
   exhausted early.
 - `EditorApplication.LockReloadAssemblies` is called in `Open()` but unlocked only in a
   `new`-shadowed `Close()`, so any close path that misses the shadow leaks a reload lock.
 - `HasteStyles.WaitUntilReady()` busy-spins on `EditorStyles` forever in batch mode.
+
+A fourth item, found while widening the index, is **fixed**: `HasteScoring`'s
+first-character rungs indexed into `nameLower[0]` unguarded, and
+`GetFileNameWithoutExtension` returns `""` for a path that is nothing but an extension — so
+a GameObject named `.x` threw `IndexOutOfRangeException` out of the scorer. This one is a
+good illustration of 6.4's first rule: it compiled cleanly and no test reached it until one
+was written for it.
 
 ---
 
@@ -342,6 +403,9 @@ Part 5 — Current state and what is next
 - **Shortcut moved off Ctrl/Cmd+K** onto `[Shortcut]`, because Unity 6 owns that chord.
 - **Three runtime crashes fixed** that all compiled cleanly: the `\_` regex, the font
   pre-cache, and the resource-folder scan.
+- **The recall fix (4.1)** — interior matches are reachable, acronym ranking is preserved
+  by damping rather than filtering, and the golden tables were re-baselined as a
+  deliberate diff. 70 tests, all passing.
 
 5.2 Not done
 ---
@@ -358,7 +422,13 @@ double-tap-Shift design, which is designed but not implemented.
 5.3 Open product decisions
 ---
 
-1. Whether the recall fix (4.1) drops boundary-first entirely or keeps it as a boost.
+1. ~~Whether the recall fix (4.1) drops boundary-first entirely or keeps it as a boost.~~
+   **Decided: kept as a boost**, implemented as `INTERIOR_START_DAMPING` applied to the
+   acronym term only. Two follow-on calls were made in the same change and are the ones
+   worth revisiting: the damping constant itself (0.5, unmeasured against real usage), and
+   dropping zero-scored results outright. A weak tail survives — `amera` still returns
+   `GameObject/Create Empty` at 9 on one shared boundary character. Tightening that needs
+   a real corpus and real users, not more derivation.
 2. Whether to index only mutable packages, all packages, or none.
 3. Whether the movable-window mode survives, given the centring bug that motivated it is
    being fixed.
@@ -385,12 +455,22 @@ EditMode tests — note `-runTests` must **not** be combined with `-quit`:
 "C:\Program Files\Unity\Hub\Editor\6000.0.80f1\Editor\Unity.exe" -batchmode -nographics -projectPath <proj> -runTests -testPlatform EditMode -testResults <xml> -logFile <log>
 ```
 
+On macOS the editor binary is inside the app bundle; the arguments are identical. A full
+run from a cold `Library/` takes about two minutes:
+
+```bash
+/Applications/Unity/Hub/Editor/6000.3.17f1/Unity.app/Contents/MacOS/Unity -batchmode -nographics -projectPath <proj> -runTests -testPlatform EditMode -testResults <xml> -logFile <log>
+```
+
 Gate on the results XML showing `failed="0"` **and** `total > 0`, not on the exit code
 alone: a run-level failure can still exit 0. Exit 2 means test failures.
 
 Work against a **copy** of the project, not the repo, so a failed run cannot leave the
 working tree upgraded or locked. Each editor version needs its own copy, because `Library/`
-is version-specific.
+is version-specific. This matters more than it sounds: `ProjectSettings/ProjectVersion.txt`
+still reads `5.1.1f1`, so any run pointed at the repo silently upgrades it and dirties the
+tree. `rsync -a --exclude .git --exclude Library --exclude 'Image Assets'` gives a ~25 MB
+copy that runs fine.
 
 6.2 What headless verification cannot tell you
 ---
@@ -412,8 +492,22 @@ that confirmation needs a human.
 6.3 macOS
 ---
 
-macOS is a hard requirement and there is no Mac on the development machine, so mac
-behaviour is **review-only**. Consequences:
+**This section's premise has changed.** It was written on a Windows machine with no Mac
+available, which is why so much of the activation design is deferred rather than decided.
+Development now happens on macOS with **6000.3.17f1** installed, and the suite has been run
+there: 70 tests green, 0 compile errors, 32 obsolete-API warnings.
+
+What that does *not* change: **6000.0.80f1 is not installed on the Mac**, so the
+dual-editor verification the rest of this document assumes is currently single-editor.
+`package.json` still declares `"unity": "6000.0"`. Treat 6000.0 as unverified until someone
+installs it or the floor is raised deliberately.
+
+What it does change: the two things marked "genuinely unknown on macOS" below, and the
+matching pair in `activation-design.md`, are now answerable by experiment. Stop deferring
+them.
+
+The rules themselves all still stand, because they are about writing portable code, not
+about which machine compiles it:
 
 - Branch on `Application.platform` at **runtime**, never `#if UNITY_EDITOR_OSX` — a
   Windows-built editor assembly bakes in the compiling editor's symbol.
@@ -424,9 +518,11 @@ behaviour is **review-only**. Consequences:
 - Make every path and prefix comparison **`Ordinal`**. The development machine runs
   `tr-TR`, where `"I".ToLower()` is dotless `ı` and culture-sensitive prefix matching
   genuinely diverges from ordinal.
-- Two things are genuinely unknown on macOS: whether a borderless popup takes keyboard
-  focus without an activating click, and whether a bare Shift press is delivered as a
-  KeyDown at all (macOS reports modifier changes as `flagsChanged`).
+- Two things were listed as genuinely unknown on macOS: whether a borderless popup takes
+  keyboard focus without an activating click, and whether a bare Shift press is delivered
+  as a KeyDown at all (macOS reports modifier changes as `flagsChanged`). Both are now
+  **testable rather than unknown** — but neither has been tested yet, and neither can be
+  settled headlessly (see 6.2). Open the editor.
 
 6.4 Ground rules that earned their place
 ---

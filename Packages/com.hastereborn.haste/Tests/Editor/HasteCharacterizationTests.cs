@@ -15,6 +15,14 @@ namespace Haste {
   //
   // Cases marked "BUG" record behaviour that is wrong but real. Fixing one of those is a
   // deliberate act that should update the expectation in the same commit.
+  //
+  // RE-BASELINED by the recall fix (HasteIndex now buckets by path character rather than
+  // by word boundary). The shape of that diff is worth knowing: every result that ranked
+  // before the fix kept its exact score and its exact position, because an item could
+  // only rank at all if the query's first character began one of its words -- precisely
+  // the items INTERIOR_START_DAMPING leaves untouched. What changed is additive:
+  // interior matches now appear beneath the acronym matches, and queries of three
+  // characters or more pick up the new substring rungs.
   [TestFixture]
   internal class HasteCharacterizationTests {
 
@@ -81,7 +89,17 @@ namespace Haste {
         "80|Component/Physics/Mesh Collider",
         "73.3333|Assets/Materials/MainCamera.mat",
         "73.3333|Assets/Prefabs/Main Camera.prefab",
-        "51.4286|Assets/Scripts/Player/PlayerMovement.cs");
+        "51.4286|Assets/Scripts/Player/PlayerMovement.cs",
+        // Everything below here was unreachable before the recall fix: no word in any of
+        // these items starts with 'm', so the boundary-keyed index never offered them to
+        // the scorer at all. They are damped to half their acronym score and sit beneath
+        // every genuine "mc" match.
+        "16.6667|Component/Effects/Halo",
+        "16.6667|Component/Layout/Canvas",
+        "15|GameObject/Create Empty",
+        "15|Component/Physics/Cloth Renderer",
+        "14|GameObject/Create Empty Child",
+        "12.5|Component/Physics 2D/Polygon Collider 2D");
     }
 
     [Test]
@@ -127,17 +145,24 @@ namespace Haste {
         "70|Component/Physics 2D/Polygon Collider 2D",
         "60|Component/Physics/Mesh Collider",
         "60|Component/Physics/Cloth Renderer",
-        "53.3333|Assets/Prefabs/Main Camera.prefab");
+        "53.3333|Assets/Prefabs/Main Camera.prefab",
+        // Newly reachable interior matches, damped.
+        "16.6667|Component/Effects/Halo",
+        "16.6667|Component/Layout/Canvas",
+        "14|GameObject/Create Empty Child");
     }
 
     [Test]
     [Category("Ranking")]
     public void Ranking_ByExtension_dotCs() {
       // Searching ".cs" to filter by asset type is a documented feature.
+      // Each of these gained a flat +15 from the new path-substring rung: ".cs" occurs
+      // literally in the path, a far stronger signal than boundary overlap alone, and it
+      // previously scored nothing. Relative order is unchanged.
       AssertRanking(".cs",
-        "40|Assets/Scripts/PlayerController.cs",
-        "38.0952|Assets/Haste/Editor/HasteWindow.cs",
-        "38.0952|Assets/Scripts/Player/PlayerMovement.cs");
+        "55|Assets/Scripts/PlayerController.cs",
+        "53.0952|Assets/Haste/Editor/HasteWindow.cs",
+        "53.0952|Assets/Scripts/Player/PlayerMovement.cs");
     }
 
     [Test]
@@ -146,7 +171,9 @@ namespace Haste {
       AssertRanking("gce",
         "80|GameObject/Create Empty",
         "74|GameObject/Create Empty Child",
-        "31.3333|GameObject/Align With View");
+        "31.3333|GameObject/Align With View",
+        // Newly reachable: no word in "Polygon Collider 2D" starts with 'g'.
+        "9.1667|Component/Physics 2D/Polygon Collider 2D");
     }
 
     [Test]
@@ -178,6 +205,8 @@ namespace Haste {
     [Test]
     [Category("Ranking")]
     public void Ranking_RespectsCountLimit() {
+      // A 15th item matches "ce" as a scattered subsequence but scores 0, and zero-score
+      // results are dropped rather than padding the tail. See HasteSearch.Map.
       Assert.That(Search("ce").Length, Is.EqualTo(14));
       Assert.That(Search("ce", 3).Length, Is.EqualTo(3));
       Assert.That(Search("ce", 1).Length, Is.EqualTo(1));
@@ -185,33 +214,117 @@ namespace Haste {
       Assert.That(Search("ce", 1)[0].Item.path, Is.EqualTo("GameObject/Create Empty"));
     }
 
-    // ------------------------------------------- the boundary-bucket filter
+    // ------------------------------------------------- recall: interior matches
 
     [Test]
     [Category("Ranking")]
-    public void Index_OnlyMatchesWhenFirstQueryCharIsAWordBoundary() {
-      // The index is bucketed by word-boundary characters only, so an item is not even
-      // considered unless the query's FIRST character is one of that item's boundary
-      // characters. "GameObject/Create Empty" scores 30 for "mc" when scored directly,
-      // but never reaches the scorer, because its boundaries are "goce" -- no 'm'.
-      var item = new HasteItem("GameObject/Create Empty", 0, "");
-      Assert.That(item.boundariesLower, Is.EqualTo("goce"));
-      Assert.That(HasteScoring.Score(item, "mc", 2), Is.EqualTo(30.0f).Within(0.001f));
-      Assert.That(Search("mc").Any(r => r.Item.path == "GameObject/Create Empty"), Is.False);
+    public void Index_FindsInteriorMatchesThatUsedToBeUnreachable() {
+      // THE RECALL FIX. The index used to bucket by word-boundary character, so an item
+      // was never even offered to the scorer unless the query's FIRST character began one
+      // of its words. "Collider" and "Physics" were both indexed, yet both of these
+      // queries returned nothing at all -- the single biggest recall limitation the tool
+      // had. They now return the obvious answers.
+      AssertRanking("ollider",
+        "30.3571|Component/Physics 2D/Polygon Collider 2D",
+        "25|Component/Physics/Mesh Collider");
+    }
 
-      // The consequence users feel: typing an interior substring finds nothing at all
-      // when its first character never begins a word anywhere in the corpus.
-      // "Collider" and "Physics" are both present, but 'o' and 'y' start no word.
-      Assert.That(Search("ollider"), Is.Empty);
-      Assert.That(Search("ysics"), Is.Empty);
+    [Test]
+    [Category("Ranking")]
+    public void Index_FindsInteriorMatchesThatUsedToBeUnreachable_ysics() {
+      // The other half of the pair above, in its own test so a failure in one still
+      // reports the other.
+      AssertRanking("ysics",
+        "24|Component/Physics/Mesh Collider",
+        "24|Component/Physics/Cloth Renderer",
+        "21.5|Component/Physics 2D/Polygon Collider 2D");
+    }
 
-      // It is only the FIRST character that must be a boundary; the rest may be
-      // interior. "amera" matches the two camera assets because 'a' begins "Assets".
-      Assert.That(Search("amera").Select(r => r.Item.path).ToArray(), Is.EqualTo(new[] {
+    [Test]
+    [Category("Ranking")]
+    public void Ranking_AcronymMatchesStillOutrankInteriorMatches() {
+      // The point of damping rather than dropping the boundary signal: widening the index
+      // must not cost the acronym behaviour that is the reason to use Haste. For "mc",
+      // every item whose words actually start with 'm' and 'c' still ranks above every
+      // item that merely contains those letters mid-word.
+      var results = Search("mc");
+      var boundaryFirst = results
+        .TakeWhile(r => r.Item.boundariesLower.IndexOf('m') != -1)
+        .Select(r => r.Item.path).ToArray();
+
+      Assert.That(boundaryFirst, Is.EqualTo(new[] {
+        "Main Camera",
+        "Component/Physics/Mesh Collider",
         "Assets/Materials/MainCamera.mat",
         "Assets/Prefabs/Main Camera.prefab",
-      }));
-      Assert.That(Search("ain").Length, Is.EqualTo(6));
+        "Assets/Scripts/Player/PlayerMovement.cs",
+      }), "an interior match broke into the acronym block");
+
+      // And none of the interior matches that follow scores anywhere near them.
+      var interior = results.Skip(boundaryFirst.Length).ToArray();
+      Assert.That(interior, Is.Not.Empty);
+      Assert.That(interior.Max(r => r.Score), Is.LessThan(results[boundaryFirst.Length - 1].Score));
+    }
+
+    [Test]
+    [Category("Scoring")]
+    public void Score_InteriorStartIsDampedNotDropped() {
+      // "GameObject/Create Empty" has boundaries "goce" -- no 'm' -- so before the fix it
+      // was unreachable for "mc" no matter how it scored. It is now scored, at exactly
+      // INTERIOR_START_DAMPING of the acronym score it would otherwise have earned.
+      var item = new HasteItem("GameObject/Create Empty", 0, "");
+      Assert.That(item.boundariesLower, Is.EqualTo("goce"));
+      Assert.That(HasteScoring.Score(item, "mc", 2), Is.EqualTo(30.0f * HasteScoring.INTERIOR_START_DAMPING).Within(0.001f));
+      Assert.That(Search("mc").Any(r => r.Item.path == "GameObject/Create Empty"), Is.True);
+    }
+
+    [Test]
+    [Category("Scoring")]
+    public void Score_DampingAppliesToTheAcronymTermOnlyNotTheLadder() {
+      // A literal substring is a deliberate, high-confidence signal and must survive
+      // undamped, or a weak boundary-first match elsewhere outranks the thing the user
+      // typed. "Mesh Collider" shares no boundary character at all with "ollider", so its
+      // whole score is the ladder's substring rung, unhalved.
+      var mesh = new HasteItem("Component/Physics/Mesh Collider", 0, "");
+      Assert.That(HasteStringUtils.LongestCommonSubsequenceLength("ollider", mesh.boundariesLower), Is.EqualTo(0));
+      Assert.That(HasteScoring.Score(mesh, "ollider", 7), Is.EqualTo(25.0f).Within(0.001f));
+    }
+
+    [Test]
+    [Category("Ranking")]
+    public void Ranking_ZeroScoringSubsequenceNoiseIsDropped() {
+      // "GameObject/Align With View" contains a 'c' then an 'e' (in "obje-c-t"), so it is
+      // a real subsequence match for "ce" and the widened index does reach it. It shares
+      // no boundary character with the query, contains no substring, and begins with
+      // neither -- it scores exactly 0, and carries no signal. HasteSearch.Map drops it.
+      var noise = new HasteItem("GameObject/Align With View", 0, "");
+      Assert.That(HasteStringUtils.ContainsSubsequence(noise.pathLower, "ce", noise.pathLower.Length, 2), Is.True);
+      Assert.That(HasteScoring.Score(noise, "ce", 2), Is.EqualTo(0.0f).Within(0.001f));
+      Assert.That(Search("ce").Any(r => r.Item.path == "GameObject/Align With View"), Is.False);
+    }
+
+    [Test]
+    [Category("Ranking")]
+    public void Ranking_InteriorFirstCharacterStillNeedsTheRestToMatch() {
+      // Widening the bucket widens candidates, not truth: the subsequence walk still has
+      // the final say, so a query whose characters are not all present in order matches
+      // nothing.
+      Assert.That(Search("z"), Is.Empty);
+      Assert.That(Search("qqq"), Is.Empty);
+
+      // It is no longer only the FIRST character that may be interior; all of them may.
+      // This query used to return exactly the two camera assets, and only because 'a'
+      // happens to begin "Assets".
+      AssertRanking("amera",
+        "54.3333|Assets/Materials/MainCamera.mat",
+        "54.3333|Assets/Prefabs/Main Camera.prefab",
+        // "Main Camera" is the recall fix in miniature: 'a' begins no word in it, so
+        // this -- the one object actually named that -- did not appear at all before.
+        "39|Main Camera",
+        // A weak tail remains. These share only the boundary 'e' and score accordingly;
+        // they are ranked far below, which is the job INTERIOR_START_DAMPING does.
+        "9|GameObject/Create Empty",
+        "8|GameObject/Create Empty Child");
     }
 
     // ----------------------------------------------------------------- scoring
@@ -251,11 +364,25 @@ namespace Haste {
 
       var controller = new HasteItem("Assets/Scripts/PlayerController.cs", 0, "");
       Assert.That(HasteScoring.Score(controller, "pc", 2), Is.EqualTo(73.3333f).Within(0.001f));
-      Assert.That(HasteScoring.Score(controller, ".cs", 3), Is.EqualTo(40.0f).Within(0.001f));
+      // 40 from the boundary terms, plus the new +15 path-substring rung.
+      Assert.That(HasteScoring.Score(controller, ".cs", 3), Is.EqualTo(55.0f).Within(0.001f));
 
       // No shared characters at all still yields zero, not a negative or a throw.
       var light = new HasteItem("Directional Light", 0, "");
       Assert.That(HasteScoring.Score(light, "mc", 2), Is.EqualTo(0.0f).Within(0.001f));
+    }
+
+    [Test]
+    [Category("Scoring")]
+    public void Score_ItemWithAnEmptyNameDoesNotThrow() {
+      // A path that is nothing but an extension yields an empty name from
+      // GetFileNameWithoutExtension, and the first-character rungs used to index into it
+      // unguarded. A GameObject named ".x" in the hierarchy is enough to reach this.
+      var item = new HasteItem(".x", 0, "");
+      Assert.That(item.nameLower, Is.EqualTo(""));
+      Assert.That(item.boundariesLower, Is.EqualTo("x"));
+      Assert.That(() => HasteScoring.Score(item, "x", 1), Throws.Nothing);
+      Assert.That(HasteScoring.Score(item, "x", 1), Is.EqualTo(80.0f).Within(0.001f));
     }
 
     [Test]
@@ -436,25 +563,38 @@ namespace Haste {
 
     [Test]
     [Category("Index")]
-    public void Index_CountsItemsAndBoundaryReferencesSeparately() {
+    public void Index_CountsItemsAndCharacterReferencesSeparately() {
       var index = new HasteIndex();
       Assert.That(index.Count, Is.EqualTo(0));
       Assert.That(index.Size, Is.EqualTo(0));
 
-      // "Main Camera" has two boundary characters, so it occupies two buckets.
+      // "main camera" has 8 distinct characters (m a i n space c e r), so it occupies
+      // eight buckets. It used to occupy two, one per boundary character.
       var item = new HasteItem("Main Camera", 0, "");
       index.Add(item);
       Assert.That(index.Count, Is.EqualTo(1));
-      Assert.That(index.Size, Is.EqualTo(2));
+      Assert.That(index.Size, Is.EqualTo(8));
 
       index.Remove(item);
       Assert.That(index.Count, Is.EqualTo(0));
       Assert.That(index.Size, Is.EqualTo(0));
+
+      // Removing something that was never indexed is a no-op. It used to decrement
+      // Count anyway, so a watcher's spurious Deleted event drove the count negative.
+      index.Remove(new HasteItem("Never Added", 0, ""));
+      Assert.That(index.Count, Is.EqualTo(0));
+      Assert.That(index.Size, Is.EqualTo(0));
+
+      // Adding the same item twice counts it once.
+      index.Add(item);
+      index.Add(new HasteItem("Main Camera", 0, ""));
+      Assert.That(index.Count, Is.EqualTo(1));
+      Assert.That(index.Size, Is.EqualTo(8));
     }
 
     [Test]
     [Category("Index")]
-    public void Index_BucketsAreKeyedByBoundaryCharacter() {
+    public void Index_BucketsAreKeyedByPathCharacter() {
       var index = new HasteIndex();
       index.Add(new HasteItem("Main Camera", 0, ""));
 
@@ -463,8 +603,13 @@ namespace Haste {
       Assert.That(bucket.Count, Is.EqualTo(1));
       Assert.That(index.TryGetValue('c', out bucket), Is.True);
       Assert.That(bucket.Count, Is.EqualTo(1));
-      // 'a' appears in the path but is not a word boundary, so it has no bucket.
-      Assert.That(index.TryGetValue('a', out bucket), Is.False);
+      // 'a' appears in the path without beginning a word. It used to have no bucket at
+      // all, which is exactly what made interior matches unreachable; it now has one.
+      Assert.That(index.TryGetValue('a', out bucket), Is.True);
+      Assert.That(bucket.Count, Is.EqualTo(1));
+
+      // A character that does not occur in the path still has no bucket.
+      Assert.That(index.TryGetValue('z', out bucket), Is.False);
     }
 
     [Test]

@@ -18,6 +18,21 @@ changelog for those releases is in the repository root.
   fuzzy-match highlighting, so behaviour changes are visible rather than silent.
 
 ### Changed
+- **Search now finds interior matches.** A result used to be considered only if the first
+  character you typed began a word in it, so `ollider` found nothing at all even though
+  `Mesh Collider` was indexed, and `amera` could not find `Main Camera`. Both work now, as
+  does every other query that starts mid-word.
+  - Acronyms still win. `mc` still puts `Main Camera` first, and every result that ranked
+    before this change kept its exact score and position; interior matches are damped and
+    appear beneath them.
+  - Typing a literal substring of three or more characters now scores for itself directly.
+    Without that the newly-reachable results had nothing to rank on and came back in
+    effectively arbitrary order.
+  - A result that matches only as scattered characters, with no other signal at all, is no
+    longer shown rather than padding the end of the list.
+  - The index holds about 1.9x as many references as a result. Search speed is unchanged
+    for most queries; the worst case measured on a synthetic 50,000-item project was 2.5x,
+    still inside the editor's per-frame budget.
 - **The default shortcut is now `Ctrl/Cmd+Shift+K`**, and it is registered with Unity's
   shortcut system so it can be rebound in Edit > Shortcuts instead of by editing source.
   Haste previously shipped `[MenuItem("Window/Haste %k")]`, but Unity 6 binds the same
@@ -36,6 +51,13 @@ changelog for those releases is in the repository root.
   identified items by an unstable hash that cannot be resolved back to an object.
 
 ### Fixed
+- Scoring no longer throws on an item whose name is empty. A path that is nothing but an
+  extension — a GameObject named ".x", say — produced an empty name, and the scorer
+  indexed into it unguarded.
+- Removing an item that was never indexed no longer corrupts the index's item count, and
+  adding the same item twice no longer counts it twice.
+- Prefix and path comparisons in scoring use ordinal comparison. Culture-sensitive
+  comparison genuinely diverges in Turkish locales, where lowercasing "I" does not give "i".
 - Menu-item search no longer dies at startup. The shortcut-stripping regular expression
   contained `\_`, which is not a legal escape sequence; modern .NET throws while
   constructing it, so the whole menu source failed with a `TypeInitializationException` on

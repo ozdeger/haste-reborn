@@ -26,13 +26,62 @@ namespace Haste {
 
     // What the flash confirmation says for an action that stays open.
     public string Confirmation;
+
+    // Set when this row opens a submenu rather than doing anything. Run is null on these
+    // -- RunAction checks this first, because a submenu is not something that can be run.
+    public HasteMenuNode Submenu;
   }
 
   // What the actions pane offers for a given result.
   //
-  // Deliberately NOT here: Rename. It needs an inline editing affordance in the pane
-  // rather than a one-shot action, and half of one is worse than none.
+  // For project assets and scene objects this is the editor's OWN context menu, read live
+  // -- see ForMenu and HasteMenuTree. The hand-written list below is what is left: menu
+  // items and window layouts are not objects, nothing right-clicks them, and they have no
+  // context menu to show.
   public static class HasteItemActions {
+
+    // One level of an item's real context menu, as pane rows.
+    public static List<HasteItemAction> ForMenu(HasteMenuNode node, IHasteResult result) {
+      var actions = new List<HasteItemAction>();
+      if (node == null || result == null) {
+        return actions;
+      }
+
+      foreach (var child in HasteMenuTree.EnabledChildren(node)) {
+        if (child.IsSubmenu) {
+          actions.Add(new HasteItemAction {
+            Label = child.Label,
+            Keys = "\u203a",
+            ClosesWindow = false,
+            Submenu = child,
+          });
+          continue;
+        }
+
+        var path = child.Path;
+        actions.Add(new HasteItemAction {
+          Label = child.Label,
+
+          // The design draws destructive actions red. Matching on the label is crude, but
+          // a menu item carries no "this deletes things" flag and the alternative is not
+          // marking them at all.
+          Destructive = child.Label == "Delete",
+          Keys = "",
+          Run = () => {
+            // The selection has to be set again here, not just when the pane opened: the
+            // palette restores the previous selection as it closes, and this runs after
+            // that. A menu item acts on whatever is selected when it runs.
+            var obj = result.Object;
+            if (obj != null) {
+              Selection.objects = new UnityEngine.Object[] { obj };
+            }
+            EditorApplication.ExecuteMenuItem(path);
+          },
+        });
+      }
+
+      return actions;
+    }
 
     // The short form, for the footer hint where there is no room for the long one.
     public static string RevealLabelFor(HasteItem item) {

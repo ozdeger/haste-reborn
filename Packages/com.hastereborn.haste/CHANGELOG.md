@@ -129,6 +129,18 @@ changelog for those releases is in the repository root.
   identified items by an unstable hash that cannot be resolved back to an object.
 
 ### Changed
+- The actions pane (right arrow) now shows the item's **real context menu** — the
+  editor's own `Assets` menu for a project asset, `GameObject` for a scene object,
+  including whatever your packages have added to them, and filtered to what is
+  actually available for that item. Submenus nest: right arrow (or Enter) goes in,
+  left arrow comes back out, Escape closes the pane. Menu items and layouts keep
+  the built-in actions, since nothing right-clicks them.
+
+  This replaces the hand-written list for assets. `Copy Path`, `Delete`, `Open`
+  and `Reveal in Finder` are all in Unity's menu already; **`Copy GUID` and
+  `Duplicate` are not, and are gone** — say the word and they can come back as
+  extra rows.
+- The `>` filter chip is now `t:menu`, and `h:` moved to the front of the row.
 - Menu items and window layouts now show an editor icon instead of a text badge,
   so every row reads the same way. Any row whose icon cannot be resolved falls
   back to its type icon rather than to text.

@@ -19,10 +19,12 @@ namespace Haste {
     ShowActions,        // Right arrow, or Cmd/Ctrl+K
     ClearScope,
 
-    HideActions,        // Left arrow or Escape, while the actions pane is open
+    HideActions,        // Escape, or the left arrow at the top level of the pane
     ActionUp,
     ActionDown,
     RunAction,
+    EnterSubmenu,       // Right arrow on a row that opens a submenu
+    LeaveSubmenu,       // Left arrow anywhere below the top level
   }
 
   // The palette's keyboard map, as a pure function.
@@ -33,16 +35,30 @@ namespace Haste {
   // exactly how the right arrow shipped doing nothing.
   public static class HasteKeyMap {
 
+    // actionsAtRoot: whether the pane is showing the item's top-level menu rather than a
+    // submenu of it. It decides what the left arrow means, and it is passed in rather than
+    // inferred because a context menu nests arbitrarily deep.
     public static HasteKeyIntent Resolve(
       KeyCode key, bool actionKey, bool shift,
-      bool actionsMode, bool hasScope, bool queryIsEmpty) {
+      bool actionsMode, bool hasScope, bool queryIsEmpty, bool actionsAtRoot) {
 
       // The actions pane owns the keyboard entirely while it is open.
       if (actionsMode) {
         switch (key) {
           case KeyCode.UpArrow:     return HasteKeyIntent.ActionUp;
           case KeyCode.DownArrow:   return HasteKeyIntent.ActionDown;
+
+          // Right goes deeper, mirroring the way it opened the pane in the first place.
+          // Enter on a submenu row does the same -- RunAction resolves that -- because a
+          // submenu is not something that can be run.
+          case KeyCode.RightArrow:  return HasteKeyIntent.EnterSubmenu;
+
+          // Left retraces one level and only closes the pane once there is nothing left
+          // to retrace. Escape always closes the whole pane, which is what Unity's own
+          // menus do and what makes the two keys worth having separately.
           case KeyCode.LeftArrow:
+            return actionsAtRoot ? HasteKeyIntent.HideActions : HasteKeyIntent.LeaveSubmenu;
+
           case KeyCode.Escape:      return HasteKeyIntent.HideActions;
           case KeyCode.Return:
           case KeyCode.KeypadEnter: return HasteKeyIntent.RunAction;

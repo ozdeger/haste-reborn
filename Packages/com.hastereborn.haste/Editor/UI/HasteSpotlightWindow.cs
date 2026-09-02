@@ -38,7 +38,7 @@ namespace Haste {
     // The chips under the query field. Clicking one types its tag, so they are the
     // discoverable form of the scope syntax rather than a legend for it.
     static readonly string[] PrefixHints = {
-      "t:prefab", "t:script", "t:texture", "t:audio", "t:anim", "h:", ">",
+      "h:", "t:prefab", "t:script", "t:texture", "t:audio", "t:anim", "t:menu",
     };
 
     public static HasteSpotlightWindow Instance { get; private set; }
@@ -320,7 +320,7 @@ namespace Haste {
 
       var back = new Label("←");
       back.AddToClassList("haste-back");
-      back.RegisterCallback<MouseDownEvent>(evt => { HideActions(); evt.StopPropagation(); });
+      back.RegisterCallback<MouseDownEvent>(evt => { LeaveSubmenu(); evt.StopPropagation(); });
       header.Add(back);
 
       paneTitle = new Label();
@@ -346,19 +346,49 @@ namespace Haste {
 
     // ---------------------------------------------------------- actions pane
 
+    // Where in the item's context menu the pane currently is. Empty for the hand-written
+    // actions, which have no levels; otherwise [root, submenu, submenu...].
+    readonly List<HasteMenuNode> actionTrail = new List<HasteMenuNode>();
+
+    bool ActionsAtRoot {
+      get { return actionTrail.Count <= 1; }
+    }
+
     void ShowActions() {
       if (highlighted < 0 || highlighted >= results.Length) {
         return;
       }
 
-      actions = HasteItemActions.For(results[highlighted]);
+      var result = results[highlighted];
+      actionTrail.Clear();
+
+      var root = HasteMenuTree.RootFor(result.Item);
+      if (root != null) {
+        // The menu has to be read with the row selected. Menu.GetEnabled runs the
+        // [MenuItem] validate functions against the current selection, so without this
+        // every row-specific entry -- Open, Delete, Rename, Properties -- reads as
+        // disabled and would be filtered straight out. Right-clicking in the Project
+        // window selects the asset too, so this matches what is being imitated, and
+        // Dismiss puts the previous selection back.
+        SelectForActions(result);
+        actionTrail.Add(HasteMenuTree.BuildLive(root));
+      }
+
+      actions = ActionRows(result);
+
       if (actions.Count == 0) {
-        return;
+        // An empty pane is worse than the old hand-written list, so fall back to it
+        // rather than opening onto nothing.
+        actionTrail.Clear();
+        actions = HasteItemActions.For(result);
+        if (actions.Count == 0) {
+          return;
+        }
       }
 
       actionsMode = true;
       actionIndex = 0;
-      paneTitle.text = HasteStringUtils.GetFileName(results[highlighted].Item.path);
+      SyncPaneTitle();
       flashLabel.style.display = DisplayStyle.None;
 
       RebuildActions();
@@ -366,11 +396,75 @@ namespace Haste {
       SyncStatus();
     }
 
+    List<HasteItemAction> ActionRows(IHasteResult result) {
+      if (actionTrail.Count == 0) {
+        return HasteItemActions.For(result);
+      }
+      return HasteItemActions.ForMenu(actionTrail[actionTrail.Count - 1], result);
+    }
+
+    void SelectForActions(IHasteResult result) {
+      var obj = result.Object;
+      if (obj != null) {
+        Selection.objects = new UnityEngine.Object[] { obj };
+      }
+    }
+
+    // The item's name, then the submenus walked into. Without the trail there is nothing
+    // on screen saying which "Create" you are inside of.
+    void SyncPaneTitle() {
+      if (highlighted < 0 || highlighted >= results.Length) {
+        return;
+      }
+
+      var title = HasteStringUtils.GetFileName(results[highlighted].Item.path);
+      for (int i = 1; i < actionTrail.Count; i++) {
+        title = title + " \u203a " + actionTrail[i].Label;
+      }
+      paneTitle.text = title;
+    }
+
+    void EnterSubmenu() {
+      if (actionIndex < 0 || actionIndex >= actions.Count) {
+        return;
+      }
+
+      var submenu = actions[actionIndex].Submenu;
+      if (submenu == null) {
+        return;
+      }
+
+      actionTrail.Add(submenu);
+      RefreshActionLevel();
+    }
+
+    void LeaveSubmenu() {
+      if (ActionsAtRoot) {
+        HideActions();
+        return;
+      }
+
+      actionTrail.RemoveAt(actionTrail.Count - 1);
+      RefreshActionLevel();
+    }
+
+    void RefreshActionLevel() {
+      if (highlighted < 0 || highlighted >= results.Length) {
+        return;
+      }
+
+      actions = ActionRows(results[highlighted]);
+      actionIndex = 0;
+      SyncPaneTitle();
+      RebuildActions();
+    }
+
     void HideActions() {
       if (!actionsMode) {
         return;
       }
       actionsMode = false;
+      actionTrail.Clear();
       track.RemoveFromClassList("haste-track--actions");
       flashLabel.style.display = DisplayStyle.None;
       SyncStatus();
@@ -424,6 +518,14 @@ namespace Haste {
       }
 
       var action = actions[index];
+
+      // A submenu row is not something that can be run; Enter on it descends, the same as
+      // the right arrow. Checked before ClosesWindow because Run is null on these.
+      if (action.Submenu != null) {
+        actionIndex = index;
+        EnterSubmenu();
+        return;
+      }
 
       // Clipboard actions run in place and confirm with the flash; anything that touches
       // the project is deferred past the close, because the palette dismisses on focus
@@ -966,7 +1068,8 @@ namespace Haste {
     void OnKeyDown(KeyDownEvent evt) {
       var intent = HasteKeyMap.Resolve(
         evt.keyCode, evt.actionKey, evt.shiftKey,
-        actionsMode, scopeKinds != HasteKind.Any, string.IsNullOrEmpty(query));
+        actionsMode, scopeKinds != HasteKind.Any, string.IsNullOrEmpty(query),
+        ActionsAtRoot);
 
       if (intent == HasteKeyIntent.None) {
         return;
@@ -990,6 +1093,8 @@ namespace Haste {
         case HasteKeyIntent.ActionUp:          MoveAction(-1); break;
         case HasteKeyIntent.ActionDown:        MoveAction(1); break;
         case HasteKeyIntent.RunAction:         RunAction(actionIndex); break;
+        case HasteKeyIntent.EnterSubmenu:      EnterSubmenu(); break;
+        case HasteKeyIntent.LeaveSubmenu:      LeaveSubmenu(); break;
       }
 
       evt.StopPropagation();

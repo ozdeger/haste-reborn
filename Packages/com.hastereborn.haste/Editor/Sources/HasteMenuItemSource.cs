@@ -57,6 +57,17 @@ namespace Haste {
       }
     }
 
+    // Every menu path under one root, read from the live editor. Shared with
+    // HasteMenuTree so the internal-API fallback lives in exactly one place.
+    public static string[] ReadPaths(string root) {
+      try {
+        var paths = Reader(root);
+        return paths ?? new string[0];
+      } catch (Exception) {
+        return new string[0];
+      }
+    }
+
     public static bool IsBuiltinRoot(string root) {
       return MatchName(BuiltinRoots, root) != null;
     }

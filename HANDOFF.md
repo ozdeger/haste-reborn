@@ -631,6 +631,15 @@ implemented: the `[Shortcut]` binding and the double-tap-Shift gesture.
 
 From the palette rewrite, in the order worth checking:
 
+- **The nested actions pane.** Right arrow opens the item's real context menu
+  (`HasteMenuTree`), and right arrow again descends into a submenu. The tree, the
+  ordering, the submenu detection and the enabled-filtering are all covered by
+  `HasteMenuTreeTests` against the live editor, but *walking* it is window code: that
+  `EnterSubmenu` redraws the pane, that the breadcrumb reads correctly, and that a menu
+  item run from three levels down acts on the right object. Note the pane SELECTS the row
+  when it opens — `Menu.GetEnabled` runs validate functions against the selection, and
+  without it every row-specific entry filters out. Measured on 6000.3.17f1: 17 of 33
+  top-level `Assets` entries enabled with nothing selected, 28 with an asset selected.
 - **That focus never leaves the query field.** `OnQueryFocusOut` re-focuses on the next
   panel tick, because UI Toolkit's focus controller blurs on pointer-down and finishes
   after the click callback — a `Focus()` made during the click is undone. That is runtime

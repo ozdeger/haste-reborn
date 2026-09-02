@@ -15,11 +15,33 @@ namespace Haste {
 
     static HasteKeyIntent Results(KeyCode key, bool actionKey = false, bool shift = false,
                                   bool hasScope = false, bool queryIsEmpty = false) {
-      return HasteKeyMap.Resolve(key, actionKey, shift, false, hasScope, queryIsEmpty);
+      return HasteKeyMap.Resolve(key, actionKey, shift, false, hasScope, queryIsEmpty, true);
     }
 
-    static HasteKeyIntent Actions(KeyCode key, bool actionKey = false, bool shift = false) {
-      return HasteKeyMap.Resolve(key, actionKey, shift, true, false, false);
+    static HasteKeyIntent Actions(KeyCode key, bool actionKey = false, bool shift = false,
+                                  bool atRoot = true) {
+      return HasteKeyMap.Resolve(key, actionKey, shift, true, false, false, atRoot);
+    }
+
+    [Test]
+    public void TheActionsPaneNestsWithTheArrowKeys() {
+      // A context menu has submenus, so the pane has levels. Right goes deeper, mirroring
+      // the key that opened it.
+      Assert.That(Actions(KeyCode.RightArrow), Is.EqualTo(HasteKeyIntent.EnterSubmenu));
+      Assert.That(Actions(KeyCode.RightArrow, atRoot: false), Is.EqualTo(HasteKeyIntent.EnterSubmenu));
+
+      // Left retraces, and only closes the pane once there is nothing left to retrace.
+      Assert.That(Actions(KeyCode.LeftArrow, atRoot: false), Is.EqualTo(HasteKeyIntent.LeaveSubmenu));
+      Assert.That(Actions(KeyCode.LeftArrow), Is.EqualTo(HasteKeyIntent.HideActions));
+
+      // Escape closes the whole pane from any depth. That is the difference between the
+      // two keys and the reason both are bound.
+      Assert.That(Actions(KeyCode.Escape), Is.EqualTo(HasteKeyIntent.HideActions));
+      Assert.That(Actions(KeyCode.Escape, atRoot: false), Is.EqualTo(HasteKeyIntent.HideActions));
+
+      // Enter still resolves to RunAction at any depth -- the window turns it into a
+      // descend when the highlighted row is a submenu, because only it knows that.
+      Assert.That(Actions(KeyCode.Return, atRoot: false), Is.EqualTo(HasteKeyIntent.RunAction));
     }
 
     [Test]
@@ -80,8 +102,8 @@ namespace Haste {
       Assert.That(Actions(KeyCode.Escape), Is.EqualTo(HasteKeyIntent.HideActions));
       Assert.That(Results(KeyCode.Escape), Is.EqualTo(HasteKeyIntent.Dismiss));
 
-      // Nothing from the results list leaks through.
-      Assert.That(Actions(KeyCode.RightArrow), Is.EqualTo(HasteKeyIntent.None));
+      // Nothing from the results list leaks through. The right arrow is NOT in this
+      // list any more -- it descends into a submenu; see the nesting test.
       Assert.That(Actions(KeyCode.Home), Is.EqualTo(HasteKeyIntent.None));
       Assert.That(Actions(KeyCode.Backspace), Is.EqualTo(HasteKeyIntent.None));
     }

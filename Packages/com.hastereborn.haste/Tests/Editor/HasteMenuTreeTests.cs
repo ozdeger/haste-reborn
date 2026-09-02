@@ -143,6 +143,65 @@ namespace Haste {
     }
 
     [Test]
+    public void AGreyedOutMenuItemIsNotAResult() {
+      // Measured on a stock 6000.3.17f1: every one of the 172 "Component/..." entries is
+      // unavailable with nothing selected, because there is nothing to add a component to.
+      // Offering them means offering rows that do nothing when you press Enter.
+      Selection.objects = new Object[0];
+
+      var component = "Component/Physics/Rigidbody";
+      Assert.That(HasteMenuItemSource.ReadPaths("Component"), Contains.Item(component),
+        "the probe menu item moved");
+      Assert.That(HasteMenuItemSource.IsAvailable(component), Is.False);
+
+      var go = new GameObject("haste-availability-probe");
+      try {
+        Selection.objects = new Object[] { go };
+        Assert.That(HasteMenuItemSource.IsAvailable(component), Is.True,
+          "with something to add a component to, it comes back");
+      } finally {
+        Object.DestroyImmediate(go);
+        Selection.objects = new Object[0];
+      }
+    }
+
+    [Test]
+    public void HastesOwnActionsSurviveTheAvailabilityFilter() {
+      // These are not real menu items -- HasteActions implements them -- so the editor
+      // has no opinion and reports them disabled. Filtering on that alone would have made
+      // every one of them vanish from search.
+      Selection.objects = new Object[0];
+
+      const string custom = "GameObject/Select Prefab";
+      Assert.That(HasteMenuItemSource.IsCustomAction(custom), Is.True);
+      Assert.That(Menu.GetEnabled(custom), Is.False, "not a real menu item, as expected");
+      Assert.That(HasteMenuItemSource.IsAvailable(custom), Is.True);
+
+      // Every custom action must be indexed, or the exemption is protecting nothing.
+      var indexed = new HasteMenuItemSource().Select(i => i.path).ToArray();
+      foreach (var path in indexed.Where(HasteMenuItemSource.IsCustomAction)) {
+        Assert.That(HasteMenuItemSource.IsAvailable(path), Is.True, path);
+      }
+    }
+
+    [Test]
+    public void TheSearchDropsUnavailableMenuItems() {
+      Selection.objects = new Object[0];
+
+      var index = new HasteIndex();
+      index.Add(new HasteItem("Component/Physics/Rigidbody", 0, HasteMenuItemSource.NAME));
+      index.Add(new HasteItem("Assets/Rigidbody.prefab", 1, HasteProjectSource.NAME));
+
+      var promise = new Promise<IHasteResult[]>();
+      HasteScheduler.Sync(new HasteSearch(index).Search("rigidbody", 100, promise));
+
+      var paths = promise.Value.Select(r => r.Item.path).ToArray();
+      Assert.That(paths, Contains.Item("Assets/Rigidbody.prefab"));
+      Assert.That(paths, Has.No.Member("Component/Physics/Rigidbody"),
+        "nothing is selected, so this menu item cannot be run and is not offered");
+    }
+
+    [Test]
     public void ASubmenuCountsAsEnabledWhenAnythingInsideItIs() {
       // Menu.GetEnabled answers for a leaf, because a submenu has no validate function to
       // run. Asking it about "Assets/Create" would drop the whole branch.

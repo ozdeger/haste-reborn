@@ -911,7 +911,15 @@ namespace Haste {
       //
       // Only filtered, not reweighted: recents are ordered by what you actually picked,
       // and that is a stronger signal about intent than a per-kind preference.
-      SetResults(HasteKinds.Filter(HasteRecommendations.instance.Get(), scopeKinds));
+      // Unavailable menu items are dropped here for the same reason Map drops them: a
+      // menu command you used yesterday is still a dead row today if nothing is selected.
+      var recent = HasteKinds.Filter(HasteRecommendations.instance.Get(), scopeKinds);
+      SetResults(Array.FindAll(recent, IsUsable));
+    }
+
+    static bool IsUsable(IHasteResult result) {
+      return result.Item.source != HasteMenuItemSource.NAME
+          || HasteMenuItemSource.IsAvailable(result.Item.path);
     }
 
     void SetResults(IHasteResult[] next) {

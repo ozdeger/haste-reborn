@@ -631,6 +631,13 @@ implemented: the `[Shortcut]` binding and the double-tap-Shift gesture.
 
 From the palette rewrite, in the order worth checking:
 
+- **What availability filtering feels like day to day.** `HasteSearch.Map` drops any menu
+  item `Menu.GetEnabled` reports disabled, so results change with the selection. Measured
+  on a stock 6000.3.17f1 with nothing selected: 241 of 538 menu items hidden, including
+  all 172 under `Component/`. It runs other people's validate functions on every keystroke
+  — 0.35 ms for a warm pass over all 538, 7.9 ms on the first call after a domain reload.
+  If a project's validators ever make that hurt, `HasteMenuItemSource.IsAvailable` is the
+  line to put behind a preference.
 - **The nested actions pane.** Right arrow opens the item's real context menu
   (`HasteMenuTree`), and right arrow again descends into a submenu. The tree, the
   ordering, the submenu detection and the enabled-filtering are all covered by

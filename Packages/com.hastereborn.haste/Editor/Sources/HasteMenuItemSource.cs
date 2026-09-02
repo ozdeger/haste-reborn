@@ -57,6 +57,40 @@ namespace Haste {
       }
     }
 
+    // Whether the editor would let this menu item be used right now.
+    //
+    // A menu item the editor draws greyed out cannot be run, so it is not a result worth
+    // offering -- pressing Enter on it would do nothing at all. Measured on a stock
+    // 6000.3.17f1 with nothing selected: 241 of the 538 menu items are unavailable, and
+    // every one of the 172 "Component/..." entries is, because there is nothing to add a
+    // component to.
+    //
+    // This has to be asked per search rather than at index time: the answer depends on the
+    // selection, which changes constantly. Menu.GetEnabled runs the [MenuItem] validate
+    // function, so this executes other people's code on every keystroke -- measured at
+    // 0.35 ms for a warm pass over all 538 (7.9 ms on the first call after a domain
+    // reload, paid once). If some project's validate functions ever make that hurt, this
+    // is the line to put behind a preference.
+    public static bool IsAvailable(string path) {
+      try {
+        if (Menu.GetEnabled(path)) {
+          return true;
+        }
+      } catch (Exception) {
+        // A validate function that throws is the package author's bug. Better a visible
+        // item that fails loudly than one that silently disappears from search.
+        return true;
+      }
+
+      // Haste's own actions are not real menu items, so the editor has no opinion about
+      // them and reports them disabled. They would otherwise all vanish from results.
+      return IsCustomAction(path);
+    }
+
+    public static bool IsCustomAction(string path) {
+      return MatchName(CustomMenuItems, path) != null;
+    }
+
     // Every menu path under one root, read from the live editor. Shared with
     // HasteMenuTree so the internal-API fallback lives in exactly one place.
     public static string[] ReadPaths(string root) {

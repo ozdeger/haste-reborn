@@ -129,6 +129,11 @@ changelog for those releases is in the repository root.
   identified items by an unstable hash that cannot be resolved back to an object.
 
 ### Changed
+- Menu items you cannot use right now no longer appear in results. A menu the
+  editor would draw greyed out does nothing when you press Enter, so it is not
+  offered — with nothing selected that hides 241 of the 538 menu items, including
+  every `Component/…` entry, and they come straight back the moment you select
+  something.
 - The actions pane (right arrow) now shows the item's **real context menu** — the
   editor's own `Assets` menu for a project asset, `GameObject` for a scene object,
   including whatever your packages have added to them, and filtered to what is

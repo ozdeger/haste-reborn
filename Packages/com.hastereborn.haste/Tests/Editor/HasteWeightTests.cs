@@ -204,33 +204,41 @@ namespace Haste {
     public void WeightsChangeRankingWithoutChangingMatchQuality() {
       // Two items that score identically on match quality alone. The weight is the only
       // thing separating them, which is the whole point of keeping it out of HasteScoring.
+      // The path has to be a menu item the editor really has and really would enable:
+      // the search drops unavailable menu items before scoring them, so a made-up path
+      // here would leave nothing to rank. Both items share it so their match quality is
+      // identical and the weight is the only thing that can separate them.
+      const string path = "Assets/Refresh";
+
       var index = new HasteIndex();
-      var command = new HasteItem("Popup", 0, HasteMenuItemSource.NAME);
-      var prefab = new HasteItem("Popup", 1, HasteProjectSource.NAME);
+      var command = new HasteItem(path, 0, HasteMenuItemSource.NAME);
+      var prefab = new HasteItem(path, 1, HasteProjectSource.NAME);
       index.Add(command);
       index.Add(prefab);
 
-      var terms = new[] { "popup" };
+      Assert.That(HasteMenuItemSource.IsAvailable(path), Is.True, "the probe menu item moved");
+
+      var terms = new[] { "refresh" };
       Assert.That(HasteScoring.Score(command, terms),
         Is.EqualTo(HasteScoring.Score(prefab, terms)).Within(0.001f),
         "the two must be indistinguishable before weighting, or this proves nothing");
 
-      HasteMenuWeights.Set("Popup", 0.7f);
+      HasteMenuWeights.Set("Assets", 0.7f);
       HasteWeights.Set(HasteKind.Asset, 1.0f);
 
       var promise = new Promise<IHasteResult[]>();
-      HasteScheduler.Sync(new HasteSearch(index).Search("popup", 100, promise));
+      HasteScheduler.Sync(new HasteSearch(index).Search("refresh", 100, promise));
       var paths = promise.Value.Select(r => r.Item.source).ToArray();
 
       Assert.That(paths.Length, Is.EqualTo(2));
       Assert.That(paths[0], Is.EqualTo(HasteProjectSource.NAME), "the asset should outrank the command");
 
       // Invert the weights and the order follows.
-      HasteMenuWeights.Set("Popup", 1.0f);
+      HasteMenuWeights.Set("Assets", 1.0f);
       HasteWeights.Set(HasteKind.Asset, 0.5f);
 
       promise = new Promise<IHasteResult[]>();
-      HasteScheduler.Sync(new HasteSearch(index).Search("popup", 100, promise));
+      HasteScheduler.Sync(new HasteSearch(index).Search("refresh", 100, promise));
       Assert.That(promise.Value[0].Item.source, Is.EqualTo(HasteMenuItemSource.NAME));
     }
 

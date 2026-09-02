@@ -20,7 +20,7 @@ namespace Haste {
 
     static readonly Dictionary<HasteKind, string> names = new Dictionary<HasteKind, string> {
       // The kinds that actually reach this fallback.
-      { HasteKind.Menu,      "_Menu" },                      // the hamburger menu glyph
+      { HasteKind.Menu,      "GUISkin Icon" },
       { HasteKind.Component, "UnityEditor.InspectorWindow" }, // where components live
       { HasteKind.Layout,    "Layout" },
 

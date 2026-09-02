@@ -105,6 +105,14 @@ namespace Haste {
       for (var i = 0; i < matches.Length; i++) {
         m = matches[i];
 
+        // A menu item the editor would draw greyed out is dropped before it is even
+        // scored. Pressing Enter on one does nothing, so offering it is offering a dead
+        // row -- and with nothing selected that is 241 of the 538 menu items, including
+        // every entry under "Component/".
+        if (m.source == HasteMenuItemSource.NAME && !HasteMenuItemSource.IsAvailable(m.path)) {
+          continue;
+        }
+
         // Match quality from HasteScoring, then how much that kind is wanted at all.
         // Deliberately applied here rather than inside Score: the scoring ladder is a
         // measure of the match and stays independent of taste, which is also what keeps

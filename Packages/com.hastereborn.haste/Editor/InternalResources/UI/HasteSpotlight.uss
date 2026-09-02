@@ -506,6 +506,8 @@
     flex-shrink: 0;
 }
 
+/* Haste's badge, the way into its preferences, and the indexing light, all one element.
+ * Sized like .haste-tag's background image so the glyph does not fill the whole badge. */
 .haste-footer-icon {
     width: 18px;
     height: 18px;
@@ -515,6 +517,14 @@
     border-color: #3a3a3a;
     margin-right: 9px;
     flex-shrink: 0;
+    background-size: 12px 12px;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.haste-footer-icon:hover {
+    background-color: #3a3a3a;
+    border-color: #4a4a4a;
 }
 
 .haste-footer-icon--indexing { border-color: #c9762c; }

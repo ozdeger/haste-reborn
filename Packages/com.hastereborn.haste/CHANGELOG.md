@@ -143,6 +143,10 @@ changelog for those releases is in the repository root.
   that had no size yet, which does nothing.
 
 ### Changed
+- The badge at the left of the footer is now a settings button that opens Haste's
+  preferences. It still doubles as the indexing light.
+- The footer shows a `Favorite` / `Unfavorite` hint alongside the others, and
+  clicking it works. It hides itself for a row that cannot be favorited.
 - The actions pane scrolls, and its rows are built from the same measurements as
   the results list beside it — same height, padding, corner radius, hover and
   selection greys. A long context menu used to squash its rows to a third of

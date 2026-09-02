@@ -91,6 +91,8 @@ namespace Haste {
     Label flashLabel;
     Label revealLabel;
     VisualElement openHint;
+    VisualElement favoriteHint;
+    Label favoriteLabel;
     Label countLabel;
     VisualElement footerIcon;
 
@@ -661,8 +663,17 @@ namespace Haste {
       var footer = new VisualElement();
       footer.AddToClassList("haste-footer");
 
+      // Haste's own badge, and the way into its preferences. It doubles as the indexing
+      // indicator, which is why it is the one element in the footer that was always
+      // there: it is the palette's status light, and now it is clickable.
       footerIcon = new VisualElement();
       footerIcon.AddToClassList("haste-footer-icon");
+      footerIcon.style.backgroundImage = new StyleBackground(HasteIcons.Settings);
+      footerIcon.tooltip = "Haste preferences";
+      footerIcon.RegisterCallback<MouseDownEvent>(evt => {
+        OpenPreferences();
+        evt.StopPropagation();
+      });
       footer.Add(footerIcon);
 
       statusLabel = new Label();
@@ -694,6 +705,25 @@ namespace Haste {
       openHint.Add(openKey);
 
       footer.Add(openHint);
+
+      favoriteHint = new VisualElement();
+      favoriteHint.AddToClassList("haste-footer-hint");
+
+      favoriteLabel = new Label("Favorite");
+      favoriteLabel.AddToClassList("haste-action-label");
+      favoriteHint.Add(favoriteLabel);
+
+      var favoriteKey = new Label(
+        (Application.platform == RuntimePlatform.OSXEditor ? "\u2325" : "Alt ") + "\u21b5");
+      favoriteKey.AddToClassList("haste-key");
+      favoriteHint.Add(favoriteKey);
+
+      favoriteHint.RegisterCallback<MouseDownEvent>(evt => {
+        ToggleFavorite(highlighted);
+        evt.StopPropagation();
+      });
+
+      footer.Add(favoriteHint);
 
       var separator = new VisualElement();
       separator.AddToClassList("haste-footer-separator");
@@ -1098,6 +1128,23 @@ namespace Haste {
       revealLabel.text = current == null ? "Reveal" : HasteItemActions.RevealLabelFor(current.Item);
       openHint.style.display =
         current != null && current.CanOpen ? DisplayStyle.Flex : DisplayStyle.None;
+
+      // Hidden rather than greyed for a row that cannot be favourited -- a scene object --
+      // because a disabled hint still reads as an offer.
+      var favouritable = current != null && HasteFavorites.CanFavorite(current.Item);
+      favoriteHint.style.display = favouritable ? DisplayStyle.Flex : DisplayStyle.None;
+      if (favouritable) {
+        favoriteLabel.text =
+          HasteFavorites.instance.Contains(current.Item) ? "Unfavorite" : "Favorite";
+      }
+    }
+
+    // Deferred past the close for the same reason every other project-touching action is:
+    // the palette dismisses on focus loss, and opening a window from inside it would pull
+    // the palette out from under itself mid-layout.
+    void OpenPreferences() {
+      Haste.WindowAction += () => SettingsService.OpenUserPreferences(HastePreferences.SettingsPath);
+      Close();
     }
 
     // ------------------------------------------------------------ selection

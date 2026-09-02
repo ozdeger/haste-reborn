@@ -22,11 +22,18 @@ namespace Haste {
     }
 
     [Test]
-    public void TheFavouriteStarResolves() {
+    public void TheStandaloneIconsResolve() {
+      // Not in the kind table -- they are not kinds -- but resolved and checked the same
+      // way, because a wrong name here is a blank square rather than an error.
       Assert.That(HasteIcons.Favorite, Is.Not.Null,
         "no built-in icon named \"" + HasteIcons.FavoriteName + "\"");
-      Assert.That(HasteIcons.FavoriteName, Does.Not.StartWith("d_"),
-        "IconContent picks the dark variant itself");
+      Assert.That(HasteIcons.Settings, Is.Not.Null,
+        "no built-in icon named \"" + HasteIcons.SettingsName + "\"");
+
+      foreach (var name in new[] { HasteIcons.FavoriteName, HasteIcons.SettingsName }) {
+        Assert.That(name, Does.Not.StartWith("d_"),
+          "IconContent picks the dark variant itself");
+      }
     }
 
     [Test]

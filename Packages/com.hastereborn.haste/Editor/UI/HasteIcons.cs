@@ -49,6 +49,13 @@ namespace Haste {
       get { return Resolve(FavoriteName); }
     }
 
+    // The footer's settings button.
+    public const string SettingsName = "Settings Icon";
+
+    public static Texture2D Settings {
+      get { return Resolve(SettingsName); }
+    }
+
     public static IEnumerable<KeyValuePair<HasteKind, string>> Names {
       get { return names; }
     }

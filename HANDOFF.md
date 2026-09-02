@@ -74,8 +74,9 @@ There are **two independent selection concepts**, and conflating them breaks the
 
 - **Highlight** — the single row the keyboard is on. Drives Enter and drives "soft
   selection", where merely scrolling through results temporarily selects the object in the
-  editor so you can see it. Soft selection is switchable off in preferences, because it
-  expands Hierarchy and Project folders as it goes.
+  editor so you can see it. **Off by default**, and switchable on in preferences: it
+  expands Hierarchy and Project folders as it goes, and unlike the selection itself that
+  rearrangement is not undone on Escape.
 - **Multi-selection** — an explicit set built with `Cmd/Ctrl+Click` or `Cmd/Ctrl+Enter`,
   shown as a count and a row of icons in the window's top-right, with a dot marker on each
   chosen row. Enter with a non-empty set selects the whole set.

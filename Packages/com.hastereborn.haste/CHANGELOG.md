@@ -18,6 +18,11 @@ changelog for those releases is in the repository root.
   fuzzy-match highlighting, so behaviour changes are visible rather than silent.
 
 ### Changed
+- **"Enable Select" is now off by default.** Arrowing through results no longer selects
+  each one as you pass it. That preview was useful, but it expanded hierarchy and project
+  folders as it went — and unlike the selection, that rearrangement was not undone when you
+  pressed Escape, so just browsing left the editor changed. Turn it back on in
+  Preferences ▸ Haste; if you had already set it either way, your choice is kept.
 - **Enter reveals, Shift+Enter opens.** Enter still focuses and selects the thing, as it
   always did. Shift+Enter now opens it in whatever edits it — a script in your IDE, a scene
   in the editor, a prefab in Prefab Mode. On a GameObject that came from a prefab, it opens

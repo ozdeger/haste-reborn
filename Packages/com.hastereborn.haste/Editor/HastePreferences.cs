@@ -118,7 +118,7 @@ namespace Haste {
           HasteSettings.SelectEnabled = selectEnabled;
         }
         EditorGUILayout.Space();
-        EditorGUILayout.HelpBox("By default, Haste will temporarily select results as you scroll through them. Disabling this feature prevents the expansion of the hierarchy and project folders during search.", MessageType.Info);
+        EditorGUILayout.HelpBox("Temporarily selects each result as you scroll through it, so you can see it in the editor. Off by default, because selecting expands hierarchy and project folders as it goes.", MessageType.Info);
 
         EditorGUILayout.Space();
       }

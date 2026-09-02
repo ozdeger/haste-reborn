@@ -31,9 +31,15 @@ namespace Haste {
     public static event SettingChangedHandler<string> ChangedString;
     public static event SettingChangedHandler<float> ChangedFloat;
 
+    // Off by default. Soft selection expands Hierarchy and Project folders as you arrow
+    // through results, so simply browsing rearranges the windows behind the palette --
+    // and unlike the selection itself, that is not undone when you press Escape.
+    //
+    // Anyone who had already turned it on keeps it: EditorPrefs holds the key once it has
+    // been written, and this default only applies where it never was.
     public static bool SelectEnabled {
       get {
-        return HasteSettings.GetBool(HasteSetting.SelectEnabled, true);
+        return HasteSettings.GetBool(HasteSetting.SelectEnabled, false);
       }
       set {
         HasteSettings.SetBool(HasteSetting.SelectEnabled, value);

@@ -4,6 +4,19 @@ namespace Haste {
 
   // Recognises "tap Shift twice" from a raw event stream.
   //
+  // Driven by TRANSITIONS OF THE SHIFT MODIFIER BIT, not by KeyDown/KeyUp of a Shift key.
+  // That is not a preference, it is the only thing that works: measured on macOS
+  // 6000.3.17f1, pressing Shift alone produces no key event at all -- it is an NSEvent
+  // flagsChanged -- and surfaces only as the modifier bits on whatever event comes next:
+  //
+  //     [Haste] modifierKeysChanged
+  //     [Haste] repaint  key=None  mods=Shift  (was None)
+  //
+  // Reading the bit works on every platform, since a real Shift KeyDown carries the bit
+  // too. It costs one invariant: the bits cannot tell LeftShift from RightShift, so "both
+  // taps must be the same physical key" is enforced only when the events happen to carry a
+  // keycode, and waived when they do not.
+  //
   // Pure and clock-injected on purpose. Real keyboard input cannot be delivered under
   // -batchmode, so every invariant in Documentation~/activation-design.md would otherwise
   // be unverifiable -- and Shift is the most overloaded key in the editor, so a
@@ -33,7 +46,14 @@ namespace Haste {
     public double BreakerWindowSeconds = 10.0;
 
     Phase phase;
-    KeyCode tapKey;
+
+    // The last observed state of the Shift bit. Transitions of this are the gesture.
+    bool shiftHeld;
+
+    // KeyCode.None when the transition arrived on an event that carries no key -- which on
+    // macOS is every time.
+    KeyCode firstTapKey, secondTapKey;
+
     double firstDownAt, firstUpAt, secondDownAt;
 
     int firesInWindow;
@@ -43,7 +63,14 @@ namespace Haste {
 
     public void Reset() {
       phase = Phase.Idle;
-      tapKey = KeyCode.None;
+      firstTapKey = KeyCode.None;
+      secondTapKey = KeyCode.None;
+    }
+
+    // Same physical key, as far as can be told. Two known keycodes must match; an unknown
+    // one on either side is accepted, because macOS never reports which Shift it was.
+    static bool SameKey(KeyCode a, KeyCode b) {
+      return a == KeyCode.None || b == KeyCode.None || a == b;
     }
 
     public static bool IsShift(KeyCode key) {
@@ -63,7 +90,10 @@ namespace Haste {
     // being edited, play mode, indexing. It resets rather than merely ignoring, so a
     // gesture cannot span the boundary.
     public bool Feed(EventType type, KeyCode key, EventModifiers modifiers, double time, bool suppressed) {
+      var nowHeld = (modifiers & EventModifiers.Shift) != 0;
+
       if (suppressed || TrippedBreaker) {
+        shiftHeld = nowHeld;
         Reset();
         return false;
       }
@@ -76,63 +106,60 @@ namespace Haste {
         case EventType.ScrollWheel:
         case EventType.DragUpdated:
         case EventType.DragPerform:
+          shiftHeld = nowHeld;
           Reset();
           return false;
 
         case EventType.KeyDown:
-          return OnKeyDown(key, modifiers, time);
-
-        case EventType.KeyUp:
-          return OnKeyUp(key, time);
-      }
-
-      return false;
-    }
-
-    bool OnKeyDown(KeyCode key, EventModifiers modifiers, double time) {
-      // Any other key resets. This is why the detector has to be the PRE-consumption hook:
-      // a focused text field eats the letter between two Shifts but passes the Shifts
-      // through, so on a post-consumption hook this rule would be a no-op precisely while
-      // someone types CamelCase.
-      if (!IsShift(key) || !OnlyShift(modifiers)) {
-        Reset();
-        return false;
-      }
-
-      switch (phase) {
-        case Phase.Idle:
-          StartFirstTap(key, time);
-          return false;
-
-        case Phase.FirstDown:
-          // A second KeyDown with no KeyUp between is key repeat from holding Shift.
-          Reset();
-          return false;
-
-        case Phase.FirstUp:
-          // A different Shift key, or too slow, is not this gesture -- but it is a
-          // perfectly good start for the next one.
-          if (key != tapKey || time - firstUpAt > WindowSeconds) {
-            StartFirstTap(key, time);
+          // Any other key resets. This is why the detector has to be the PRE-consumption
+          // hook: a focused text field eats the letter between two Shift taps but passes
+          // the Shifts through, so on a post-consumption hook this rule would be a no-op
+          // exactly while someone types CamelCase.
+          if (!IsShift(key)) {
+            shiftHeld = nowHeld;
+            Reset();
             return false;
           }
-          phase = Phase.SecondDown;
-          secondDownAt = time;
-          return false;
+          break;
       }
 
-      Reset();
-      return false;
+      if (nowHeld == shiftHeld) {
+        return false;
+      }
+      shiftHeld = nowHeld;
+
+      return nowHeld
+        ? OnShiftDown(IsShift(key) ? key : KeyCode.None, modifiers, time)
+        : OnShiftUp(IsShift(key) ? key : KeyCode.None, time);
     }
 
-    bool OnKeyUp(KeyCode key, double time) {
-      if (!IsShift(key) || key != tapKey) {
+    bool OnShiftDown(KeyCode key, EventModifiers modifiers, double time) {
+      // Shift with anything else is someone starting a chord, not tapping.
+      if (!OnlyShift(modifiers)) {
         Reset();
         return false;
       }
 
+      if (phase == Phase.FirstUp) {
+        // Too slow, or the other Shift key, is not this gesture -- but it is a perfectly
+        // good start for the next one.
+        if (SameKey(firstTapKey, key) && time - firstUpAt <= WindowSeconds) {
+          phase = Phase.SecondDown;
+          secondTapKey = key;
+          secondDownAt = time;
+          return false;
+        }
+      }
+
+      StartFirstTap(key, time);
+      return false;
+    }
+
+    bool OnShiftUp(KeyCode key, double time) {
       if (phase == Phase.FirstDown) {
-        if (time - firstDownAt > MaxTapSeconds) {
+        // A press held longer than a tap was a hold: reaching for a capital, or
+        // shift-dragging in the Scene view.
+        if (!SameKey(firstTapKey, key) || time - firstDownAt > MaxTapSeconds) {
           Reset();
           return false;
         }
@@ -142,8 +169,11 @@ namespace Haste {
       }
 
       if (phase == Phase.SecondDown) {
+        var held = time - secondDownAt;
+        var matched = SameKey(secondTapKey, key);
         Reset();
-        if (time - secondDownAt > MaxTapSeconds) {
+
+        if (!matched || held > MaxTapSeconds) {
           return false;
         }
         return RecordFire(time);
@@ -155,7 +185,8 @@ namespace Haste {
 
     void StartFirstTap(KeyCode key, double time) {
       phase = Phase.FirstDown;
-      tapKey = key;
+      firstTapKey = key;
+      secondTapKey = KeyCode.None;
       firstDownAt = time;
     }
 

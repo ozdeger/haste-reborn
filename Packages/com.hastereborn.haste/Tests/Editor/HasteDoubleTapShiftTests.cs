@@ -61,12 +61,58 @@ namespace Haste {
 
     [Test]
     public void HoldingShiftToTypeCapitalsDoesNotFire() {
-      // Key repeat: repeated KeyDown with no KeyUp in between. This is what holding Shift
-      // to type a run of capitals looks like, and it must never be mistaken for two taps.
+      // Key repeat: repeated KeyDown with no release in between. Holding Shift for a run
+      // of capitals must never look like two taps.
+      //
+      // Driving on the modifier BIT makes this structural rather than a rule: the bit is
+      // already set, so a repeat is not a transition and nothing happens at all.
       Down(); Wait(0.03);
       Down(); Wait(0.03);
       Down(); Wait(0.03);
       Assert.That(Up(), Is.False);
+    }
+
+    // ------------------------------------------------------------ the macOS path
+
+    // What macOS actually delivers: no key event for the Shift at all, just the modifier
+    // bits on whatever event comes next. Measured on 6000.3.17f1 -- a bare Shift produced
+    // "repaint key=None mods=Shift (was None)" and nothing else.
+    bool Bits(EventModifiers mods, EventType type = EventType.Repaint) {
+      return gesture.Feed(type, KeyCode.None, mods, now, false);
+    }
+
+    [Test]
+    public void ItWorksFromModifierBitsAloneWithNoKeyEvents() {
+      Bits(EventModifiers.Shift); Wait(0.05);
+      Bits(EventModifiers.None);
+      Wait(0.10);
+      Bits(EventModifiers.Shift); Wait(0.05);
+      Assert.That(Bits(EventModifiers.None), Is.True);
+    }
+
+    [Test]
+    public void RepeatedEventsCarryingTheSameBitsAreNotTransitions() {
+      // Repaint floods. Only a CHANGE means anything, or the palette would open on idle.
+      // The repeats have to stay inside MaxTapSeconds, or this stops testing the flood
+      // and starts testing the hold limit -- which is what the first draft of this did.
+      Bits(EventModifiers.Shift);
+      for (var i = 0; i < 10; i++) { Wait(0.003); Bits(EventModifiers.Shift); }
+      Bits(EventModifiers.None);
+      Wait(0.05);
+      Bits(EventModifiers.Shift); Wait(0.03);
+      Assert.That(Bits(EventModifiers.None), Is.True,
+        "the flood should have been ignored, leaving one clean tap either side");
+    }
+
+    [Test]
+    public void PhysicalKeyIdentityIsEnforcedOnlyWhenItIsKnown() {
+      // The bits cannot tell LeftShift from RightShift, so the rule is waived when the
+      // events carry no keycode -- which on macOS is always. Enforcing it there would
+      // disable the gesture outright.
+      Bits(EventModifiers.Shift); Wait(0.05); Bits(EventModifiers.None);
+      Wait(0.10);
+      Bits(EventModifiers.Shift); Wait(0.05);
+      Assert.That(Bits(EventModifiers.None), Is.True);
     }
 
     [Test]
@@ -114,6 +160,18 @@ namespace Haste {
     }
 
     [Test]
+    public void TypingACapitalLetterDoesNotFire() {
+      // The realistic false positive, in the exact shape the editor delivers it: Shift
+      // goes down, a letter is typed while it is held, Shift comes up.
+      Bits(EventModifiers.Shift); Wait(0.02);
+      gesture.Feed(EventType.KeyDown, KeyCode.H, EventModifiers.Shift, now, false);
+      Wait(0.02);
+      gesture.Feed(EventType.KeyUp, KeyCode.H, EventModifiers.Shift, now, false);
+      Wait(0.02);
+      Assert.That(Bits(EventModifiers.None), Is.False);
+    }
+
+    [Test]
     public void AnotherModifierMeansItWasAChord() {
       // Cmd+Shift or Ctrl+Shift is someone starting a shortcut, not tapping.
       Down(mods: EventModifiers.Shift | EventModifiers.Command);
@@ -121,6 +179,17 @@ namespace Haste {
       Wait(0.10);
       Down(); Wait(0.05);
       Assert.That(Up(), Is.False);
+    }
+
+    [Test]
+    public void HoldingCommandThenShiftIsAChordToo() {
+      // The bits arrive one at a time, so this is the shape a real Cmd+Shift makes.
+      Bits(EventModifiers.Command); Wait(0.05);
+      Bits(EventModifiers.Command | EventModifiers.Shift); Wait(0.05);
+      Bits(EventModifiers.Command);
+      Wait(0.05);
+      Bits(EventModifiers.Command | EventModifiers.Shift); Wait(0.05);
+      Assert.That(Bits(EventModifiers.Command), Is.False);
     }
 
     [Test]

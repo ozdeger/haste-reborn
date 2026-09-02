@@ -23,6 +23,11 @@ namespace Haste {
     // passes the Shifts through -- so on the post-consumption hook
     // (EditorApplication.globalEventHandler) the "any other key resets" rule would be a
     // no-op exactly while someone types CamelCase.
+    //
+    // It is also the only hook that sees the gesture at all on macOS. Measured there on
+    // 6000.3.17f1: a bare Shift produces NO key event, and shows up purely as the modifier
+    // bits on the next event of any type -- a Repaint, one millisecond later. The gesture
+    // therefore reads modifier transitions rather than KeyDown/KeyUp.
     const string BeforeEventProcessedField = "beforeEventProcessed";
 
     static readonly HasteDoubleTapShiftGesture gesture = new HasteDoubleTapShiftGesture();
@@ -35,6 +40,7 @@ namespace Haste {
 
     // Diagnostics state. Only touched when the preference is on.
     static EventModifiers lastSeenModifiers;
+    static bool lastShiftBit;
     static int diagnosticLines;
     static bool modifierWatchHooked;
 
@@ -178,6 +184,20 @@ namespace Haste {
 
         if (HasteSettings.DoubleTapShiftDiagnostics) {
           LogEvent(type, key, modifiers);
+        }
+
+        // Repaint and Layout arrive constantly, and IsSuppressed touches half a dozen
+        // editor properties. Only pay for that when something could actually move the
+        // gesture along.
+        var shiftBit = (modifiers & EventModifiers.Shift) != 0;
+        var interesting = shiftBit != lastShiftBit ||
+          type == EventType.KeyDown || type == EventType.KeyUp ||
+          type == EventType.MouseDown || type == EventType.MouseUp ||
+          type == EventType.MouseDrag || type == EventType.ScrollWheel;
+        lastShiftBit = shiftBit;
+
+        if (!interesting) {
+          return;
         }
 
         gesture.WindowSeconds = HasteSettings.DoubleTapShiftWindowMs / 1000.0;

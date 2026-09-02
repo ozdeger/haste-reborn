@@ -263,6 +263,13 @@ Cecil also reads method bodies, which is how several of the findings below were 
   native walker Unity's own Hierarchy uses; gives name, depth, instanceID and `colorCode`
   with zero managed object loads, and `colorCode` is `{0 Normal, 1 Prefab, 2 BrokenPrefab}`.
 - **`ObjectChangeEvents.changesPublished`** — precise incremental hierarchy deltas.
+- **A bare modifier press reaches `beforeEventProcessed` only as modifier BITS, not as a
+  key event — at least on macOS.** Measured on 6000.3.17f1: tapping Shift produces no
+  `KeyDown`/`KeyUp` whatsoever. `EditorApplication.modifierKeysChanged` fires, and one
+  millisecond later a `Repaint` arrives carrying `mods=Shift (was None)`. So a
+  modifier-only gesture has to be built on transitions of the modifier bits observed across
+  *any* event type, which is what `HasteDoubleTapShiftGesture` does. The cost is that the
+  bits cannot distinguish `LeftShift` from `RightShift`.
 - **`Menu.GetMenuItems(path, includeSeparators, localized)`** — internal, returns
   `ScriptingMenuItem[]` (`path`, `isSeparator`, `priority`). **Now in use**; measured on
   6000.3.17f1/macOS it returns 529 clean paths across every root in **0.98 ms**, works
@@ -601,12 +608,6 @@ From the palette rewrite, in the order worth checking:
 - **Destructive actions.** Delete opens a confirmation dialog, and it must do so *after*
   the palette has closed — the window dismisses on focus loss, so a modal raised while it
   is open would pull the palette out from under the dialog. Worth confirming once.
-- **Double-tap Shift.** Every *rule* is pinned by `HasteDoubleTapShiftTests` against a pure
-  state machine, but whether the events arrive at all is exactly what cannot be tested —
-  and on macOS a bare Shift is an `NSEvent flagsChanged`, which nobody has confirmed Unity
-  forwards as `KeyDown`/`KeyUp`. If the gesture does nothing, turn on
-  Preferences > Haste > "Log key events" and read the console: that says whether the hook
-  sees the Shift at all, which is the fork between "wrong rules" and "no events".
 - **Typography.** The design sets paths, type badges and key chips in a monospace
   (`ui-monospace, Menlo`) and everything else in the system UI face. The stylesheet sets
   neither, so all of it renders in Unity's default editor font — the proportional text is

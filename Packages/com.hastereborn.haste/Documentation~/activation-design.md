@@ -106,11 +106,13 @@ where bare Shift is a mode toggle. Ctrl/Cmd+Shift+K still works everywhere.
 
 The remaining invariants, none of them user-configurable:
 
-- fire on the second KeyUp, not the second KeyDown
-- require a KeyUp between the two KeyDowns, which alone rejects key-repeat from holding
-  Shift to type capitals
+- fire on the second release, not the second press
+- ~~require a KeyUp between the two KeyDowns~~ — subsumed. Reading the modifier BIT makes
+  key repeat structurally invisible: holding Shift leaves the bit set, so a repeat is not a
+  transition at all
 - each tap held under ~120 ms; a longer press was a hold, not a tap
-- both taps must be the same physical Shift key
+- both taps must be the same physical Shift key — **best-effort only**, see below: modifier
+  bits cannot tell Left from Right
 - reject if `modifiers` contains anything but Shift, after masking off the incidental
   `FunctionKey`, `Numeric` and `CapsLock` bits
 - reset on any MouseDown/MouseDrag/MouseUp/ScrollWheel, and on `focusChanged`
@@ -179,13 +181,35 @@ but delivery of real keystrokes is not, and cannot be:
   `KeyCombination.k_KeyCodeToEventModifiers` mapping LeftShift/RightShift to
   `EventModifiers.Shift`, and on `Trigger.HandleKeyEvent` being gated on KeyDown/KeyUp.
   High confidence, not observation.
-- **macOS delivery is still unobserved.** A bare Shift there is an `NSEvent flagsChanged`,
-  and the only public alternative (`EditorApplication.modifierKeysChanged`) is
-  parameterless. Rather than gate the gesture off by platform, it ships enabled everywhere
-  and simply never fires if the events do not arrive — which is a harmless degradation,
-  since Tier 0 is untouched. Preferences > Haste has a **"Log key events"** toggle that
-  writes every key the hook sees to the console; that is the instrument for settling this
-  on a platform nobody has watched it on.
+- ~~**macOS delivery is still unobserved.**~~ **Settled by observation, and it changed the
+  design.** On 6000.3.17f1/macOS a bare Shift produces **no key event at all** — the
+  suspicion about `NSEvent flagsChanged` was right. What it does produce, captured from a
+  real editor:
+
+  ```
+  [Haste] modifierKeysChanged                            t=12153.246
+  [Haste] repaint  key=None  mods=Shift  (was None)      t=12153.247
+  ```
+
+  So the press is observable, just not as a keystroke: it surfaces as the **modifier bits
+  on whatever event arrives next**, one millisecond later. `HasteDoubleTapShiftGesture`
+  therefore recognises **transitions of the Shift bit** rather than KeyDown/KeyUp, which
+  works on every platform since a real Shift KeyDown carries the bit too.
+
+  Two consequences worth knowing:
+
+  - "Both taps must be the same physical Shift key" is now **best-effort**. Modifier bits
+    cannot distinguish Left from Right, so the rule is enforced when the events happen to
+    carry a keycode and waived when they do not — which on macOS is always. Enforcing it
+    there would disable the gesture outright.
+  - Key repeat stops being a rule and becomes structural: holding Shift leaves the bit
+    set, so a repeat is not a transition and nothing happens. The old "require a KeyUp
+    between the two KeyDowns" rule is subsumed.
+
+  `EditorApplication.modifierKeysChanged` fires too, and is subscribed for diagnostics
+  only. It is parameterless — it cannot say which modifier or which direction — so it
+  cannot drive the gesture. Its real use is that it appears to *provoke* the repaint that
+  carries the bits.
 
 Also: `UnityEngine.Event` carries no timestamp — only the internal `Event.GetDoubleClickTime()`
 exists — so the window is measured on the dispatch clock with

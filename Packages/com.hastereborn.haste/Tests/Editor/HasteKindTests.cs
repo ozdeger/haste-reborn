@@ -415,18 +415,51 @@ namespace Haste {
 
       // "assets" is not a subsequence of this part, so only "popup" highlights.
       //
-      // Note where the last "p" lands: on the "p" of ".prefab", not the one that ends
-      // "Popup". That is GetWeightedSubsequence preferring word boundaries, which is the
-      // behaviour that makes "mc" bold the M and C of "Mesh Collider" -- pinned by
-      // Highlight_PrefersWordBoundaries. It reads oddly on a short name shown by itself,
-      // which the new row design does far more than the old full-path label did.
+      // The last "p" used to land on the "p" of ".prefab" rather than the one that ends
+      // "Popup", because the word-boundary preference outranked continuing the run. An
+      // established run wins now, so the whole word bolds.
       Assert.That(HasteStringUtils.BoldLabel("Popup.prefab",
         HasteStringUtils.GetHighlightIndices("Popup.prefab", terms), "[", "]"),
-        Is.EqualTo("[P][o][p][u]p.[p]refab"));
+        Is.EqualTo("[P][o][p][u][p].prefab"));
 
       Assert.That(HasteStringUtils.GetHighlightIndices("Popup.prefab", new[] { "zzz" }), Is.Empty);
       Assert.That(HasteStringUtils.GetHighlightIndices("", terms), Is.Empty);
       Assert.That(HasteStringUtils.GetHighlightIndices("Popup.prefab", null), Is.Empty);
+    }
+
+    [Test]
+    public void Highlight_DoesNotAbandonARunForAWordBoundary() {
+      // Reported from a real project. The boundary preference took a capital further
+      // along instead of the character sitting right there, so a word that matches
+      // outright came out in pieces.
+      var terms = new[] { "infocollection" };
+
+      // Was "[I][n][f][o][C][o][l][l][e][c][t][i]on[O]verrideJso[n].cs" -- twelve
+      // characters, then a jump to the O of "Override" and the n of "Json".
+      Assert.That(HasteStringUtils.BoldLabel("InfoCollectionOverrideJson.cs",
+        HasteStringUtils.GetHighlightIndices("InfoCollectionOverrideJson.cs", terms), "[", "]"),
+        Is.EqualTo("[I][n][f][o][C][o][l][l][e][c][t][i][o][n]OverrideJson.cs"));
+
+      // And the one that made it obvious: six characters of the first segment, the rest
+      // of the word borrowed from the second.
+      const string dir = "Assets/InfoCollections/LiveCollections";
+      Assert.That(HasteStringUtils.BoldLabel(dir,
+        HasteStringUtils.GetHighlightIndices(dir, terms), "[", "]"),
+        Is.EqualTo("Assets/[I][n][f][o][C][o][l][l][e][c][t][i][o][n]s/LiveCollections"));
+    }
+
+    [Test]
+    public void Highlight_StillHopsWordBoundariesForAnAcronym() {
+      // The other half of the same rule, and the reason it is "an ESTABLISHED run" rather
+      // than "contiguity". Preferring adjacency outright would take the "b" beside the
+      // "A" and never reach "Bananas" -- which would break the feature Haste exists for.
+      Assert.That(HasteStringUtils.BoldLabel("Abples/Bananas/Cherribs",
+        HasteStringUtils.GetHighlightIndices("Abples/Bananas/Cherribs", new[] { "abc" }), "[", "]"),
+        Is.EqualTo("[A]bples/[B]ananas/[C]herribs"));
+
+      Assert.That(HasteStringUtils.BoldLabel("Mesh Collider",
+        HasteStringUtils.GetHighlightIndices("Mesh Collider", new[] { "mc" }), "[", "]"),
+        Is.EqualTo("[M]esh [C]ollider"));
     }
 
     [Test]

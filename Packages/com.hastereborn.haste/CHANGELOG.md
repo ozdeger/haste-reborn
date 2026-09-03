@@ -214,6 +214,11 @@ changelog for those releases is in the repository root.
   but are no longer the name. The row badge reads `MENU`.
 
 ### Fixed
+- A word that matches outright is highlighted in one piece. The matcher preferred
+  a capital letter further along over the character sitting right next to it, so
+  `InfoCollectionOverrideJson` bolded twelve characters and then jumped to the
+  `O` of `Override`. Acronym matching is unchanged — `mc` still finds
+  `Mesh Collider`.
 - The query line and its caret no longer move when you type the first character.
   Both the slot and the inner text element were sized by their content, and an
   empty text field measures differently from one with a character in it.

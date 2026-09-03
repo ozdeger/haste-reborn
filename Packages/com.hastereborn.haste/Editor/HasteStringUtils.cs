@@ -140,7 +140,10 @@ namespace Haste {
     }
 
     public static int[] GetWeightedSubsequence(string path, string query, int[] boundaryIndices) {
-      Stack<int> results = new Stack<int>(query.Length);
+      // A list rather than a stack: the rule below needs the last two choices, not just
+      // the last one. It is already in order, so the Reverse() this used to end with is
+      // gone too.
+      List<int> results = new List<int>(query.Length);
 
       List<List<int>> queryIndices = GetQueryMatchIndices(path, query, boundaryIndices);
 
@@ -156,28 +159,60 @@ namespace Haste {
 
         bool matchedSomething = false;
         int greatestResult = -1;
-        for (int j = 0; j < charIndices.Count; j++) {
-          if (charIndices[j] > greatestResult) {
-            greatestResult = charIndices[j];
-            if (results.Count == 0 || greatestResult > results.Peek()) {
-              matchedSomething = true;
-              break;
+
+        // An established run beats a word boundary.
+        //
+        // GetQueryMatchIndices lists boundary positions FIRST, so by default the loop
+        // below takes a boundary character even when the run could simply have continued.
+        // That is what highlighted "InfoCollectionOverrideJson" as "InfoCollecti" and then
+        // jumped to the capital O of "Override", and what made
+        // "Assets/InfoCollections/LiveCollections" highlight six characters of the first
+        // segment and the rest of the word in the second.
+        //
+        // ESTABLISHED, and that qualifier is the whole design. Preferring contiguity
+        // unconditionally breaks acronyms, which is the feature Haste is for: "abc"
+        // against "Abples/Bananas/Cherribs" would take the "b" sitting next to the "A"
+        // and never reach "Bananas". One adjacent character is ambiguous -- it could be
+        // the second letter of a word or the start of an acronym hop. Two consecutive
+        // already are a literal substring, and abandoning one of those for a boundary
+        // further along is never right.
+        //
+        // So: a run of two or more continues; anything shorter defers to the boundary
+        // preference, and acronym matching is untouched.
+        //
+        // Safe against the backtracker: the filter above has already removed the choice
+        // that failed, so a rejected index is not offered again and the search cannot loop.
+        var last = results.Count - 1;
+        var inRun = results.Count >= 2 && results[last] == results[last - 1] + 1;
+        var contiguous = inRun ? results[last] + 1 : -1;
+
+        if (contiguous != -1 && charIndices.Contains(contiguous)) {
+          greatestResult = contiguous;
+          matchedSomething = true;
+        } else {
+          for (int j = 0; j < charIndices.Count; j++) {
+            if (charIndices[j] > greatestResult) {
+              greatestResult = charIndices[j];
+              if (results.Count == 0 || greatestResult > results[results.Count - 1]) {
+                matchedSomething = true;
+                break;
+              }
             }
           }
         }
 
         if (matchedSomething) {
-          results.Push(greatestResult);
+          results.Add(greatestResult);
           i++;
           invalidResult = -1;
         } else {
-          results.Pop();
+          results.RemoveAt(results.Count - 1);
           i--;
           invalidResult = greatestResult;
         }
       }
 
-      return results.Reverse().ToArray();
+      return results.ToArray();
     }
 
     // Whether the '.' at `index` separates a file extension.

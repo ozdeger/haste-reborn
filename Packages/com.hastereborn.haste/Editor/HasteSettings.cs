@@ -22,6 +22,7 @@ namespace Haste {
     DoubleTapShiftEnabled,
     DoubleTapShiftWindowMs,
     DoubleTapShiftDiagnostics,
+    DoubleTapShiftIgnoreWhileTyping,
     // Suffixed with the kind name, like Source: "Haste:Weight:Hierarchy".
     Weight,
     // Suffixed with a MENU ROOT, like "Haste:MenuWeight:Tools". Deliberately not sharing
@@ -67,6 +68,28 @@ namespace Haste {
       }
       set {
         HasteSettings.SetBool(HasteSetting.DoubleTapShiftEnabled, value);
+      }
+    }
+
+    // Whether to refuse the gesture while a text field is being edited.
+    //
+    // OFF by default, which is a reversal. The suppression used to be unconditional and
+    // was justified as removing the largest false-positive class -- typing capitals --
+    // but it never was: a capital is Shift-then-letter, and the gesture's "any other key
+    // resets" rule kills that before this is ever consulted. The pre-consumption hook
+    // exists precisely so that rule still sees the letter inside a focused field.
+    //
+    // What is genuinely left is a BARE Shift-Shift with no key between, while typing:
+    // some IME layouts toggle input mode that way. That is narrow, and both recoveries
+    // are cheap -- Escape closes the palette and restores the selection, and the runaway
+    // breaker catches a storm. So it is a switch for the people who need it rather than a
+    // rule for everyone.
+    public static bool DoubleTapShiftIgnoreWhileTyping {
+      get {
+        return HasteSettings.GetBool(HasteSetting.DoubleTapShiftIgnoreWhileTyping, false);
+      }
+      set {
+        HasteSettings.SetBool(HasteSetting.DoubleTapShiftIgnoreWhileTyping, value);
       }
     }
 

@@ -300,10 +300,7 @@ namespace Haste {
       }
     }
 
-    // Everything the gesture itself cannot know. Suppressing while a text field is being
-    // edited removes the largest false-positive class outright -- Hierarchy renames,
-    // Inspector fields, search boxes, Haste's own query field, and IME input where a bare
-    // Shift is a mode toggle.
+    // Everything the gesture itself cannot know.
     //
     // Returns the REASON rather than a bool, because a silent suppression is
     // indistinguishable from a broken hook: the events still log, the gesture never fires,
@@ -321,7 +318,15 @@ namespace Haste {
       if (EditorApplication.isUpdating) {
         return "asset database is updating";
       }
-      if (EditorGUIUtility.editingTextField) {
+      // Off by default, and the reasoning is in HasteSettings: typing a capital is
+      // Shift-then-LETTER, and the gesture's "any other key resets" rule has already
+      // rejected it by the time this runs. Refusing every field on top of that only cost
+      // people the gesture in the Inspector, the Hierarchy and every search box.
+      //
+      // The switch is here for bare Shift-Shift while typing, which some IME layouts use
+      // as a mode toggle. HasteDoubleTapShiftTests pins the capital-typing case so the
+      // claim above is a test rather than a comment.
+      if (HasteSettings.DoubleTapShiftIgnoreWhileTyping && EditorGUIUtility.editingTextField) {
         return "a text field is being edited";
       }
 

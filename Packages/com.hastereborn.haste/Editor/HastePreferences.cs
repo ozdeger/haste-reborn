@@ -141,6 +141,15 @@ namespace Haste {
             HasteSettings.DoubleTapShiftWindowMs = window;
           }
 
+          var ignoreTyping = EditorGUILayout.Toggle(
+            Label("Ignore while typing",
+              "For IME layouts where a lone Shift toggles input mode. Typing capitals " +
+              "never triggers the gesture either way."),
+            HasteSettings.DoubleTapShiftIgnoreWhileTyping);
+          if (ignoreTyping != HasteSettings.DoubleTapShiftIgnoreWhileTyping) {
+            HasteSettings.DoubleTapShiftIgnoreWhileTyping = ignoreTyping;
+          }
+
           var diagnostics = EditorGUILayout.Toggle(
             Label("Log key events", "Writes every key Haste sees to the console."),
             HasteSettings.DoubleTapShiftDiagnostics);

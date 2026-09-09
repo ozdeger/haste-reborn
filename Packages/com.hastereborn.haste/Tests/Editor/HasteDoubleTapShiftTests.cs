@@ -42,6 +42,33 @@ namespace Haste {
       return fired;
     }
 
+    // A key that is not Shift, delivered while Shift is held -- which is what typing a
+    // capital looks like.
+    bool Key(KeyCode key) {
+      return gesture.Feed(EventType.KeyDown, key, EventModifiers.Shift, now, false);
+    }
+
+    [Test]
+    public void TypingCapitalsNeverFires() {
+      // The rule that makes it safe to run the gesture INSIDE a focused text field, which
+      // Haste now does: the suppression that used to refuse every field is a preference
+      // and off by default. This is the test that has to hold for that to be safe.
+      //
+      // A capital is Shift-down, LETTER, Shift-up. The letter's KeyDown resets, so the
+      // first tap never completes -- and the pre-consumption hook is what lets this rule
+      // see the letter at all, since a focused field would otherwise eat it.
+      Down(); Wait(0.04);
+      Assert.That(Key(KeyCode.M), Is.False);
+      Wait(0.04); Up();
+
+      Wait(0.08);
+
+      Down(); Wait(0.04);
+      Assert.That(Key(KeyCode.G), Is.False, "typing MyGameObject must not open the palette");
+      Wait(0.04);
+      Assert.That(Up(), Is.False);
+    }
+
     [Test]
     public void ACleanDoubleTapFires() {
       Assert.That(Tap(), Is.True);

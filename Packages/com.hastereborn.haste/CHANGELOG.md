@@ -36,6 +36,15 @@ changelog for those releases is in the repository root.
   slider under Preferences > Haste > Weights by menu as soon as Haste sees it.
 
 ### Changed
+- Double-tap Shift now works while you are typing in a field. It was refused in
+  every text field to stop typing capitals from opening the palette — but a
+  capital is Shift-then-*letter*, and the gesture's "any other key resets" rule
+  already rejected that. Bare Shift-Shift is what the guard actually covered, so
+  it is now a preference (*Ignore while typing*), off by default, for IME layouts
+  where a lone Shift toggles input mode.
+- `←` and `→` move the text caret, with `⌥` and `⌘` doing what they always do —
+  they are no longer intercepted at all. Moving sideways through the palette is
+  `⇧ + →` to open the actions pane or go deeper, `⇧ + ←` to come back.
 - The preferences page is regrouped into Search Sources, Opening Haste, Ignored
   Paths, Ranking and Browsing, with version and usage on one line at the top.
   Every control explains itself in a tooltip; the four multi-paragraph help boxes

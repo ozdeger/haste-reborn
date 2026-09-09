@@ -24,26 +24,26 @@ namespace Haste {
     }
 
     [Test]
-    public void ShiftArrowsMoveTheCaretBecausePlainArrowsAreTaken() {
-      // Left and Right drive the palette, so the caret gets the shifted pair.
-      Assert.That(Results(KeyCode.LeftArrow, shift: true), Is.EqualTo(HasteKeyIntent.CaretLeft));
-      Assert.That(Results(KeyCode.RightArrow, shift: true), Is.EqualTo(HasteKeyIntent.CaretRight));
+    public void PlainHorizontalArrowsAreLeftToTheTextField() {
+      // NOT claimed, rather than claimed and reimplemented. Returning None lets the event
+      // reach Unity's field, which already does a character, a word with Alt and the line
+      // with Cmd -- all of which a hand-rolled one-character move would have replaced with
+      // one behaviour.
+      Assert.That(Results(KeyCode.LeftArrow), Is.EqualTo(HasteKeyIntent.None));
+      Assert.That(Results(KeyCode.RightArrow), Is.EqualTo(HasteKeyIntent.None));
 
-      // Including while the actions pane is open -- the query field holds focus the whole
+      // Including while the actions pane is open: the query field holds focus the whole
       // time it is up, so the caret is still there to move.
-      Assert.That(Actions(KeyCode.LeftArrow, shift: true), Is.EqualTo(HasteKeyIntent.CaretLeft));
-      Assert.That(Actions(KeyCode.RightArrow, shift: true), Is.EqualTo(HasteKeyIntent.CaretRight));
-      Assert.That(Actions(KeyCode.LeftArrow, shift: true, atRoot: false),
-        Is.EqualTo(HasteKeyIntent.CaretLeft));
+      Assert.That(Actions(KeyCode.LeftArrow), Is.EqualTo(HasteKeyIntent.None));
+      Assert.That(Actions(KeyCode.RightArrow), Is.EqualTo(HasteKeyIntent.None));
+      Assert.That(Actions(KeyCode.RightArrow, atRoot: false), Is.EqualTo(HasteKeyIntent.None));
 
-      // The unshifted pair is untouched, which is the whole point of moving the caret to
-      // the shifted one.
-      Assert.That(Results(KeyCode.RightArrow), Is.EqualTo(HasteKeyIntent.ShowActions));
-      Assert.That(Actions(KeyCode.RightArrow), Is.EqualTo(HasteKeyIntent.EnterSubmenu));
-      Assert.That(Actions(KeyCode.LeftArrow), Is.EqualTo(HasteKeyIntent.HideActions));
-      Assert.That(Actions(KeyCode.LeftArrow, atRoot: false), Is.EqualTo(HasteKeyIntent.LeaveSubmenu));
+      // A modifier the palette does not want must not be swallowed either.
+      Assert.That(Results(KeyCode.LeftArrow, actionKey: true), Is.EqualTo(HasteKeyIntent.None));
 
-      // Up and Down are not caret keys -- there is one line -- so Shift leaves them alone.
+      // Up and Down are not caret keys -- the query is one line -- so they stay the
+      // palette's, shifted or not.
+      Assert.That(Results(KeyCode.UpArrow), Is.EqualTo(HasteKeyIntent.MoveUp));
       Assert.That(Results(KeyCode.UpArrow, shift: true), Is.EqualTo(HasteKeyIntent.MoveUp));
       Assert.That(Actions(KeyCode.DownArrow, shift: true), Is.EqualTo(HasteKeyIntent.ActionDown));
     }
@@ -52,12 +52,14 @@ namespace Haste {
     public void TheActionsPaneNestsWithTheArrowKeys() {
       // A context menu has submenus, so the pane has levels. Right goes deeper, mirroring
       // the key that opened it.
-      Assert.That(Actions(KeyCode.RightArrow), Is.EqualTo(HasteKeyIntent.EnterSubmenu));
-      Assert.That(Actions(KeyCode.RightArrow, atRoot: false), Is.EqualTo(HasteKeyIntent.EnterSubmenu));
+      Assert.That(Actions(KeyCode.RightArrow, shift: true), Is.EqualTo(HasteKeyIntent.EnterSubmenu));
+      Assert.That(Actions(KeyCode.RightArrow, shift: true, atRoot: false),
+        Is.EqualTo(HasteKeyIntent.EnterSubmenu));
 
       // Left retraces, and only closes the pane once there is nothing left to retrace.
-      Assert.That(Actions(KeyCode.LeftArrow, atRoot: false), Is.EqualTo(HasteKeyIntent.LeaveSubmenu));
-      Assert.That(Actions(KeyCode.LeftArrow), Is.EqualTo(HasteKeyIntent.HideActions));
+      Assert.That(Actions(KeyCode.LeftArrow, shift: true, atRoot: false),
+        Is.EqualTo(HasteKeyIntent.LeaveSubmenu));
+      Assert.That(Actions(KeyCode.LeftArrow, shift: true), Is.EqualTo(HasteKeyIntent.HideActions));
 
       // Escape closes the palette outright from any depth, rather than unwinding. Going
       // back is the left arrow's job and only the left arrow's.
@@ -70,9 +72,9 @@ namespace Haste {
     }
 
     [Test]
-    public void RightArrowAndCommandKOpenTheActionsPane() {
+    public void ShiftRightAndCommandKOpenTheActionsPane() {
       // The binding that was missing.
-      Assert.That(Results(KeyCode.RightArrow), Is.EqualTo(HasteKeyIntent.ShowActions));
+      Assert.That(Results(KeyCode.RightArrow, shift: true), Is.EqualTo(HasteKeyIntent.ShowActions));
       Assert.That(Results(KeyCode.K, actionKey: true), Is.EqualTo(HasteKeyIntent.ShowActions));
 
       // A bare "k" is a character to type, not a command.
@@ -119,7 +121,7 @@ namespace Haste {
     public void TheActionsPaneOwnsTheKeyboardWhileItIsOpen() {
       Assert.That(Actions(KeyCode.UpArrow), Is.EqualTo(HasteKeyIntent.ActionUp));
       Assert.That(Actions(KeyCode.DownArrow), Is.EqualTo(HasteKeyIntent.ActionDown));
-      Assert.That(Actions(KeyCode.LeftArrow), Is.EqualTo(HasteKeyIntent.HideActions));
+      Assert.That(Actions(KeyCode.LeftArrow, shift: true), Is.EqualTo(HasteKeyIntent.HideActions));
       Assert.That(Actions(KeyCode.Return), Is.EqualTo(HasteKeyIntent.RunAction));
 
       // Escape means one thing everywhere in the palette: put it away. It is deliberately

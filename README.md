@@ -70,11 +70,11 @@ Open Haste | ⌘ + ⇧ + K (Ctrl + Shift + K on Windows), or tap ⇧ twice | Cli
 Navigate search results | ↑ or ↓ | Click a search result
 Reveal highlighted result | Enter | Double-click a search result
 Open highlighted result | ⇧ + Enter |
-Show item actions | → (or ⌘/Ctrl + K) | Click "Item actions"
-Go into a submenu | → or Enter | Click the row
-Go back one level | ← | Click "←"
+Show item actions | ⇧ + → (or ⌘/Ctrl + K) | Click "Item actions"
+Go into a submenu | ⇧ + → or Enter | Click the row
+Go back one level | ⇧ + ← | Click "←"
 Favorite / unfavorite | ⌥ + Enter (Alt + Enter on Windows) | Click "Favorite"
-Move the text caret | ⇧ + ← or ⇧ + → |
+Move the text caret | ← or → (with ⌥ or ⌘ as usual) |
 Clear the type filter | Backspace on an empty query | Click the × on the chip
 Go to beginning | Fn + ← (Home on Windows) |
 Go to end | Fn + → (End on Windows) |
@@ -83,8 +83,10 @@ Go down a page | Fn + ↓ (Page Down on Windows) |
 Multi-select highlighted result | ⌘ + Enter (Ctrl + Enter on Windows) | ⌘ + Click (Ctrl + Click on Windows)
 Dismiss Haste | ESC, from anywhere | Click anywhere outside of Haste
 
-The left arrow is the only way back: it steps out of a submenu, and closes the actions
-pane once there is nothing left to step out of. ESC always closes Haste outright.
+The plain arrows belong to the text, so ← and → move the caret exactly as they would in
+any field, modifiers included. ⇧ + ← is the only way back: it steps out of a submenu and
+closes the actions pane once there is nothing left to step out of. ESC always closes Haste
+outright.
 
 Configuring Haste
 ---

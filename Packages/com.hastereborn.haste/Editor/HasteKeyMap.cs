@@ -19,8 +19,6 @@ namespace Haste {
     ShowActions,        // Right arrow, or Cmd/Ctrl+K
     ClearScope,
     ToggleFavorite,     // Alt+Enter, from anywhere in the palette
-    CaretLeft,          // Shift+Left
-    CaretRight,         // Shift+Right
 
     HideActions,        // The left arrow at the top level of the pane
     ActionUp,
@@ -49,20 +47,17 @@ namespace Haste {
       // the same thing whether or not its actions are showing, and a chord that works
       // everywhere but one place is worse than one that works nowhere.
       //
-      // Plain Left and Right belong to the palette -- they open and close the actions
-      // pane and walk its levels -- so moving the caret through the query moves to
-      // Shift+Left and Shift+Right.
+      // The horizontal arrows belong to the TEXT when they are unmodified, and they are
+      // not claimed at all -- so they reach Unity's field and do everything it already
+      // does: a character, a word with Alt, the line with Cmd. Claiming them and
+      // reimplementing one of those behaviours is what this used to do, and it cost the
+      // other two.
       //
-      // These have to be resolved here rather than left to the text field. Unhandled,
-      // Shift+arrow reaches Unity's field and EXTENDS THE SELECTION, which is the normal
-      // meaning of that chord but not what is wanted when it is standing in for the plain
-      // arrows: the window collapses the selection so it behaves like an unmodified
-      // caret move.
-      if (shift && key == KeyCode.LeftArrow) {
-        return HasteKeyIntent.CaretLeft;
-      }
-      if (shift && key == KeyCode.RightArrow) {
-        return HasteKeyIntent.CaretRight;
+      // Moving sideways through the palette is the shifted pair instead. Shift+arrow no
+      // longer extends the selection, which is the trade: the palette is a one-line field
+      // where selecting a range matters far less than reaching the actions pane.
+      if (!shift && (key == KeyCode.LeftArrow || key == KeyCode.RightArrow)) {
+        return HasteKeyIntent.None;
       }
 
       // A modified Enter rather than a letter: any letter chord is a character the text
@@ -81,13 +76,15 @@ namespace Haste {
           case KeyCode.UpArrow:     return HasteKeyIntent.ActionUp;
           case KeyCode.DownArrow:   return HasteKeyIntent.ActionDown;
 
-          // Right goes deeper, mirroring the way it opened the pane in the first place.
-          // Enter on a submenu row does the same -- RunAction resolves that -- because a
-          // submenu is not something that can be run.
+          // Shift is guaranteed on both of these: the unmodified pair returned above.
+          //
+          // Shift+Right goes deeper, mirroring the way it opened the pane. Enter on a
+          // submenu row does the same -- RunAction resolves that -- because a submenu is
+          // not something that can be run.
           case KeyCode.RightArrow:  return HasteKeyIntent.EnterSubmenu;
 
-          // Left is the ONLY way back: it retraces one level, and closes the pane once
-          // there is nothing left to retrace.
+          // Shift+Left is the ONLY way back: it retraces one level, and closes the pane
+          // once there is nothing left to retrace.
           case KeyCode.LeftArrow:
             return actionsAtRoot ? HasteKeyIntent.HideActions : HasteKeyIntent.LeaveSubmenu;
 
@@ -102,7 +99,7 @@ namespace Haste {
         return HasteKeyIntent.None;
       }
 
-      // Cmd/Ctrl+K opens the pane as well as the right arrow, which is what the design
+      // Cmd/Ctrl+K opens the pane as well as Shift+Right, which is what the design
       // shows. It does not collide with the chord that opens Haste: the palette already
       // has focus by the time this runs.
       if (key == KeyCode.K && actionKey) {
@@ -111,6 +108,7 @@ namespace Haste {
 
       switch (key) {
         case KeyCode.Escape:      return HasteKeyIntent.Dismiss;
+        // Shift+Right, guaranteed by the early return above.
         case KeyCode.RightArrow:  return HasteKeyIntent.ShowActions;
         case KeyCode.UpArrow:     return HasteKeyIntent.MoveUp;
         case KeyCode.DownArrow:   return HasteKeyIntent.MoveDown;

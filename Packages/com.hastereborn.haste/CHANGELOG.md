@@ -4,6 +4,39 @@ Changelog
 All notable changes to this package. This project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+Every change ships a version. Anything that alters behaviour — a new feature, a changed
+default, a rebound key — bumps the **minor**; a fix that only makes existing behaviour
+work as described bumps the **patch**. `package.json`, `Haste.VERSION` and the git tag
+move together, and a test fails if the first two disagree, because the Package Manager
+reads one and the reindex-on-upgrade check reads the other.
+
+## [2.1.0] - 2026-09-09
+
+### Changed
+- Double-tap Shift now works while you are typing in a field. It was refused in
+  every text field to stop typing capitals from opening the palette — but a
+  capital is Shift-then-*letter*, and the gesture's "any other key resets" rule
+  already rejected that. Bare Shift-Shift is what the guard actually covered, so
+  it is now a preference (*Ignore while typing*), off by default, for IME layouts
+  where a lone Shift toggles input mode.
+- `←` and `→` move the text caret, with `⌥` and `⌘` doing what they always do —
+  they are no longer intercepted at all. Moving sideways through the palette is
+  `⇧ + →` to open the actions pane or go deeper, `⇧ + ←` to come back.
+- The preferences page is regrouped into Search Sources, Opening Haste, Ignored
+  Paths, Ranking and Browsing, with version and usage on one line at the top.
+  Every control explains itself in a tooltip; the four multi-paragraph help boxes
+  that used to sit between them are gone.
+
+### Fixed
+- A word that matches outright is highlighted in one piece. The matcher preferred
+  a capital letter further along over the character sitting right next to it, so
+  `InfoCollectionOverrideJson` bolded twelve characters and then jumped to the
+  `O` of `Override`. Acronym matching is unchanged — `mc` still finds
+  `Mesh Collider`.
+- The caret no longer sits high while the placeholder is showing. It is drawn from
+  the top-left of the query's inner text element, which was being stretched to the
+  row's height instead of centred in it.
+
 ## [2.0.0] - 2026-09-02
 The Unity 6 revival. Haste last shipped as 1.8.6 for Unity 5.1 in 2019; the historical
 changelog for those releases is in the repository root.
@@ -36,19 +69,6 @@ changelog for those releases is in the repository root.
   slider under Preferences > Haste > Weights by menu as soon as Haste sees it.
 
 ### Changed
-- Double-tap Shift now works while you are typing in a field. It was refused in
-  every text field to stop typing capitals from opening the palette — but a
-  capital is Shift-then-*letter*, and the gesture's "any other key resets" rule
-  already rejected that. Bare Shift-Shift is what the guard actually covered, so
-  it is now a preference (*Ignore while typing*), off by default, for IME layouts
-  where a lone Shift toggles input mode.
-- `←` and `→` move the text caret, with `⌥` and `⌘` doing what they always do —
-  they are no longer intercepted at all. Moving sideways through the palette is
-  `⇧ + →` to open the actions pane or go deeper, `⇧ + ←` to come back.
-- The preferences page is regrouped into Search Sources, Opening Haste, Ignored
-  Paths, Ranking and Browsing, with version and usage on one line at the top.
-  Every control explains itself in a tooltip; the four multi-paragraph help boxes
-  that used to sit between them are gone.
 - **Vendored and generated folders are ignored out of the box.** `Assets/Plugins`, the
   External Dependency Manager's folders, the common mobile SDKs and Unity's own magic
   folders no longer appear in results, so a search for "manager" returns your managers
@@ -223,14 +243,9 @@ changelog for those releases is in the repository root.
   but are no longer the name. The row badge reads `MENU`.
 
 ### Fixed
-- A word that matches outright is highlighted in one piece. The matcher preferred
-  a capital letter further along over the character sitting right next to it, so
-  `InfoCollectionOverrideJson` bolded twelve characters and then jumped to the
-  `O` of `Override`. Acronym matching is unchanged — `mc` still finds
-  `Mesh Collider`.
-- The query line and its caret no longer move when you type the first character.
-  Both the slot and the inner text element were sized by their content, and an
-  empty text field measures differently from one with a character in it.
+- The query line no longer moves when you type the first character. Its slot was
+  sized by the text field, and an empty one measures differently from one with a
+  character in it.
 - The actions pane scrolls with the arrow keys at all — it was scrolling rows
   that had no size yet, which does nothing.
 

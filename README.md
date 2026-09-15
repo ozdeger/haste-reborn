@@ -223,6 +223,10 @@ So the walk happens as the palette opens, streaming in behind whatever it found 
 you can type immediately, and the status line reads *Indexing…* until the scene is fully
 caught up. **Preferences > Haste** shows `Hierarchy (on open)` until the first walk.
 
+Whatever it is indexing, Haste works to a budget: a slice of one editor frame, shared by
+everything it has running, and a smaller slice when the palette is closed than when it is
+open and you are waiting on it.
+
 Ignoring Assets
 ---
 

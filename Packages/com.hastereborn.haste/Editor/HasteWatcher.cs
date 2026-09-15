@@ -1,4 +1,3 @@
-using UnityEditor;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -111,8 +110,9 @@ namespace Haste {
     }
 
     public IEnumerator GetEnumerator() {
-      double startTime = EditorApplication.timeSinceStartup;
-
+      // Yields on the frame's shared budget rather than on a stopwatch of its own. The
+      // private one was reset on every yield, so each crawl claimed a full slice per
+      // frame no matter how many other coroutines had already spent it.
       foreach (HasteItem item in factory()) {
         if (!currentCollection.Contains(item)) {
           OnCreated(item);
@@ -120,13 +120,10 @@ namespace Haste {
 
         nextCollection.Add(item);
 
-        if (EditorApplication.timeSinceStartup - startTime >= Haste.MAX_ITER_TIME) {
-          startTime = EditorApplication.timeSinceStartup;
+        if (Haste.IsOverBudget) {
           yield return null;
         }
       }
-
-      startTime = EditorApplication.timeSinceStartup;
 
       // Check for deleted paths
       foreach (HasteItem item in currentCollection) {
@@ -136,8 +133,7 @@ namespace Haste {
           OnDeleted(item);
         }
 
-        if (EditorApplication.timeSinceStartup - startTime >= Haste.MAX_ITER_TIME) {
-          startTime = EditorApplication.timeSinceStartup;
+        if (Haste.IsOverBudget) {
           yield return null;
         }
       }

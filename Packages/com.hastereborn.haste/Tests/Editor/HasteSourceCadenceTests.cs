@@ -20,18 +20,23 @@ namespace Haste {
 
     HasteWatcherManager watchers;
     string sourceName;
+    string otherName;
     int crawls;
+    int fastItems;
 
     [SetUp]
     public void SetUp() {
       watchers = new HasteWatcherManager();
       sourceName = "HasteCadenceFixture:" + System.Guid.NewGuid().ToString("N");
+      otherName = "HasteCadenceOther:" + System.Guid.NewGuid().ToString("N");
       crawls = 0;
+      fastItems = 0;
     }
 
     [TearDown]
     public void TearDown() {
       watchers.RemoveSource(sourceName);
+      watchers.RemoveSource(otherName);
     }
 
     // A source whose every enumeration is counted, so "did it crawl?" is a fact rather
@@ -42,14 +47,25 @@ namespace Haste {
       yield return new HasteItem("Fixture/Two", 0, sourceName);
     }
 
-    // A source that is guaranteed to still be mid-walk after one tick: HasteWatcher
-    // yields as soon as it has spent MAX_ITER_TIME, so overrunning it once puts the
-    // crawl into exactly the state Refresh must not restart.
+    // A source guaranteed to overrun whatever budget is open: HasteWatcher yields as soon
+    // as the frame's budget is spent, so this leaves the crawl mid-walk after one tick,
+    // which is the state Refresh must not restart. Sleeping past MAX_ITER_TIME is what
+    // makes it deterministic -- the editor's own Update runs between ticks here and opens
+    // budgets of its own.
     IEnumerable<HasteItem> SlowSource() {
       crawls++;
       System.Threading.Thread.Sleep((int)(Haste.MAX_ITER_TIME * 1000) + 8);
       yield return new HasteItem("Fixture/One", 0, sourceName);
       yield return new HasteItem("Fixture/Two", 0, sourceName);
+    }
+
+    // Long enough that a coroutine with a slice of its own to spend would get well past
+    // the first item.
+    IEnumerable<HasteItem> FastSource() {
+      for (int i = 0; i < 200; i++) {
+        fastItems++;
+        yield return new HasteItem("Fast/" + i, 0, otherName);
+      }
     }
 
     // Ticks the scheduler the way Haste.Update does across frames, so a coroutine that
@@ -182,6 +198,34 @@ namespace Haste {
       watchers.Refresh();
       Drain();
       Assert.That(crawls, Is.EqualTo(2));
+    }
+
+    // The other half of what made Haste.Update expensive: the budget was per coroutine,
+    // not per frame. Each one held a stopwatch of its own and reset it on every yield, so
+    // a frame with three coroutines in it cost three full slices.
+    [Test]
+    public void OneFramesBudgetIsSharedAcrossEveryCoroutine() {
+      // Registered first so it is ticked second: HasteScheduler.Start pushes to the front.
+      watchers.AddSource(otherName, true, FastSource);
+      watchers.AddSource(sourceName, true, SlowSource);
+
+      // A frame opens, and the slow source spends all of it before the fast one is
+      // reached. The fast one must then get one item and yield, not a slice of its own.
+      Haste.OpenFrameBudget(0.001f);
+      Haste.Scheduler.Tick();
+
+      Assert.That(crawls, Is.EqualTo(1), "the slow source ran first");
+      Assert.That(fastItems, Is.EqualTo(1),
+        "a coroutine reached after the budget is gone gets one item, not a fresh slice");
+    }
+
+    [Test]
+    public void BudgetOutlivesNoFrameOfItsOwn() {
+      // Nothing may run away with the editor between frames either: with no budget open,
+      // every yield point is immediately over budget.
+      Haste.OpenFrameBudget(0f);
+
+      Assert.That(Haste.IsOverBudget, Is.True);
     }
 
     [Test]

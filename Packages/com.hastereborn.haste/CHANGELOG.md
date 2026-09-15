@@ -10,6 +10,27 @@ work as described bumps the **patch**. `package.json`, `Haste.VERSION` and the g
 move together, and a test fails if the first two disagree, because the Package Manager
 reads one and the reindex-on-upgrade check reads the other.
 
+## [2.3.0] - 2026-09-15
+
+### Changed
+- **Haste's frame budget is now per frame.** It claimed to be, and was not: every
+  coroutine the scheduler ran held a private stopwatch and reset it on each yield, so a
+  frame cost a full slice once per *running coroutine* — and the update loop tested its
+  own budget *before* each tick, so a tick starting at 15.9 ms of a 16 ms budget still
+  ran a whole slice on top. That is why the frame that started this work measured
+  20.27 ms against a constant that said 16. There is now one deadline per frame, opened
+  by `Haste.Update` and shared by every coroutine it drives.
+- The budget depends on who is waiting: **8 ms while the palette is open**, because then
+  the work is what you are waiting for and the editor behind it is idle, and **2 ms while
+  it is closed**, which still finishes the project walk (0.85 ms here) inside one frame.
+  It was a flat 16 ms of a 16.7 ms frame either way.
+- Measured on a 100,000-GameObject scene, a full crawl with the palette closed: the
+  median `Haste.Update` call is **2.01 ms** against its 2 ms budget, and the 99th
+  percentile is 7.9 ms. Ten of 713 calls exceed 5 ms — a single item can still trigger a
+  hash rehash or a collection, and the first call of a crawl carries
+  `Resources.FindObjectsOfTypeAll`, which is one atomic native call over the whole scene.
+  Before this, *every* busy call was a deliberate ~16 ms.
+
 ## [2.2.0] - 2026-09-15
 
 ### Changed

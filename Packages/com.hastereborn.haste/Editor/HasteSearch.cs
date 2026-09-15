@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEditor;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -57,7 +56,6 @@ namespace Haste {
       var bucketArr = new HasteItem[bucket.Count];
       bucket.CopyTo(bucketArr);
 
-      double startTime = EditorApplication.timeSinceStartup;
 
       var matches = new List<HasteItem>();
       HasteItem m;
@@ -88,8 +86,7 @@ namespace Haste {
 
         matches.Add(m);
 
-        if (EditorApplication.timeSinceStartup - startTime >= Haste.MAX_ITER_TIME) {
-          startTime = EditorApplication.timeSinceStartup;
+        if (Haste.IsOverBudget) {
           yield return null;
         }
       }
@@ -98,7 +95,6 @@ namespace Haste {
     }
 
     IEnumerator Map(HasteItem[] matches, string[] terms, IPromise<IHasteResult[]> promise) {
-      double startTime = EditorApplication.timeSinceStartup;
 
       var results = new List<IHasteResult>(matches.Length);
       HasteItem m;
@@ -128,8 +124,7 @@ namespace Haste {
           results.Add(m.GetResult(score, terms));
         }
 
-        if (EditorApplication.timeSinceStartup - startTime >= Haste.MAX_ITER_TIME) {
-          startTime = EditorApplication.timeSinceStartup;
+        if (Haste.IsOverBudget) {
           yield return null;
         }
       }

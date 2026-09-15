@@ -21,7 +21,7 @@ namespace Haste {
     // because nothing else notices when they drift: this one is what HasteSettings.Version
     // compares against to decide whether an upgrade should reindex, so a stale value means
     // upgrading silently keeps the old index.
-    public static readonly string VERSION = "2.2.0";
+    public static readonly string VERSION = "2.3.0";
 
     private static Version version;
     public static Version Version {
@@ -269,8 +269,38 @@ namespace Haste {
     //   HasteShortcutHandler();
     // }
 
-    // The maximum time an iteration can spend working per update
-    public const float MAX_ITER_TIME = 16.0f / 1000.0f;
+    // How much of one editor frame Haste may spend, and it is per FRAME: every coroutine
+    // the scheduler runs shares the one deadline below.
+    //
+    // It did not used to be. Each coroutine held a private stopwatch and reset it on
+    // every yield, so a frame cost a full slice once per RUNNING COROUTINE -- and Update
+    // checked its own budget BEFORE each tick, so a tick beginning at 15.9 ms of a 16 ms
+    // budget still ran a whole slice on top of that. Two watchers and a search made a
+    // nominal 16 ms cost upwards of 48, which is how a background crawl took a 60 FPS
+    // editor down to 15. The measured frame that started this was 20.27 ms with a
+    // constant that claimed 16.
+    //
+    // Two values, because the right amount depends on who is waiting. With the palette
+    // open the work IS what the user is waiting for and the editor behind it is idle, so
+    // it gets half a frame. With the palette closed nothing is waiting on it, so it gets
+    // a sip -- still enough to finish the project walk (0.85 ms on this machine) inside a
+    // single frame, and small enough to disappear into the editor's own frame time.
+    public const float MAX_ITER_TIME = 8.0f / 1000.0f;
+    public const float BACKGROUND_ITER_TIME = 2.0f / 1000.0f;
+
+    static double budgetUntil;
+
+    // Whether this frame's share is spent. Everything that yields checks this instead of
+    // timing itself, which is the whole of what makes it a frame budget.
+    public static bool IsOverBudget {
+      get { return EditorApplication.timeSinceStartup >= budgetUntil; }
+    }
+
+    // Opens a frame's budget. Update calls this once per editor frame; it is public so a
+    // test can drive the scheduler the way the editor loop does, and for no other reason.
+    public static void OpenFrameBudget(float seconds) {
+      budgetUntil = EditorApplication.timeSinceStartup + seconds;
+    }
 
     // Main update loop in Haste—run's scheduler
     static void Update() {
@@ -302,21 +332,13 @@ namespace Haste {
           Watchers.RestartSource(HasteLayoutSource.NAME);
         }
 
-        // The condition measures elapsed time from `start` on every pass. It used to
-        // accumulate (now - start) into a running total each iteration, which sums
-        // t + 2t + 3t + ... rather than n*t -- a triangular series that reached the 16 ms
-        // budget after about sqrt(2 * MAX_ITER_TIME / t) iterations instead of
-        // MAX_ITER_TIME / t. At a 0.1 ms tick that is ~18 iterations per frame where the
-        // budget allows ~160, so indexing and search ran close to an order of magnitude
-        // slower than this constant says they do.
-        //
-        // Fixing the arithmetic makes MAX_ITER_TIME mean what it claims, which is a real
-        // increase in work done per frame. If that proves too aggressive in a live editor,
-        // MAX_ITER_TIME is the dial -- do not reintroduce the bug to get the old feel.
-        var start = EditorApplication.timeSinceStartup;
+        // One deadline for the frame, opened here and shared by every coroutine the ticks
+        // below advance. Wider while the palette is open: see the constants.
+        OpenFrameBudget(HasteSpotlightWindow.Instance != null
+          ? MAX_ITER_TIME
+          : BACKGROUND_ITER_TIME);
 
-        while (Scheduler.IsRunning &&
-               (EditorApplication.timeSinceStartup - start) < MAX_ITER_TIME) {
+        while (Scheduler.IsRunning && !IsOverBudget) {
           Scheduler.Tick();
         }
       }

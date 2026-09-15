@@ -43,7 +43,13 @@ namespace Haste {
         HideFlags.HideInInspector |
         HideFlags.HideInHierarchy;
 
-      Scene.Clear();
+      // Built aside and published whole at the end, rather than cleared and refilled in
+      // place. HasteHierarchyResult resolves a result's GameObject through this map, and
+      // the crawl now runs while the palette is open -- so clearing it up front left
+      // every hierarchy result on screen unable to find its object until the walk
+      // happened to reach it again. A map from the previous crawl is stale at worst; an
+      // empty one is broken.
+      var next = new Dictionary<int, UnityEngine.Object>();
 
       foreach (GameObject go in Resources.FindObjectsOfTypeAll<GameObject>()) {
         if (go == null) {
@@ -72,9 +78,13 @@ namespace Haste {
         var id = go.transform.GetSiblingIndex(); // go.GetInstanceID();
         var item = new HasteItem(path, id, NAME);
         var hash = item.GetHashCode();
-        Scene[hash] = go;
+        next[hash] = go;
         yield return item;
       }
+
+      // Only on a completed walk. An abandoned one keeps the previous map, for the same
+      // reason it does not clear it up front.
+      Scene = next;
     }
 
     IEnumerator IEnumerable.GetEnumerator() {

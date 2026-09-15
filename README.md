@@ -207,6 +207,22 @@ Favourite anything with `Alt+Enter` and it scores double, on top of all of that.
 Adjust the weights under **Preferences > Haste**. They are yours rather than the project's,
 so they stay on your machine.
 
+Indexing
+---
+
+Your project files, the menu tree and your saved layouts are indexed in the background and
+kept warm, because they are cheap to walk and rarely change.
+
+Your scene hierarchy is not. It is walked when you open Haste and at no other time — a
+scene is the one thing that changes constantly and costs real time to walk (about 40 ms for
+10,000 GameObjects, and closer to half a second for 100,000), so keeping it warm meant
+re-walking the whole scene every time anything in it moved. Editing a big hierarchy could
+hold the editor at a fraction of its frame rate with Haste closed.
+
+So the walk happens as the palette opens, streaming in behind whatever it found last time —
+you can type immediately, and the status line reads *Indexing…* until the scene is fully
+caught up. **Preferences > Haste** shows `Hierarchy (on open)` until the first walk.
+
 Ignoring Assets
 ---
 

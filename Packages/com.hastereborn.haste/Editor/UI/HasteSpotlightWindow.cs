@@ -108,6 +108,11 @@ namespace Haste {
         return;
       }
 
+      // The hierarchy is not indexed in the background; opening the palette is what asks
+      // for it. Cheap when nothing has changed since the last crawl, and never blocking:
+      // the walk streams in behind whatever is already indexed.
+      Haste.PrepareSources();
+
       var window = CreateInstance<HasteSpotlightWindow>();
       Instance = window;
       window.position = GetPosition();
@@ -1322,6 +1327,15 @@ namespace Haste {
       if (wasIndexing != Haste.IsIndexing) {
         wasIndexing = Haste.IsIndexing;
         SyncStatus();
+
+        // The hierarchy crawl starts as the palette opens and finishes while it is
+        // already up, so a query typed in the meantime was answered from an index that
+        // did not have the scene's newest objects in it yet. Ask again now it does.
+        // Only with a query: an empty one is showing recommendations, and rebuilding
+        // that list under the cursor would move the highlight while it is being read.
+        if (!wasIndexing && !string.IsNullOrEmpty(query.Trim())) {
+          Research();
+        }
       }
 
       // Close on focus loss. OnLostFocus is avoided here for the same reason the IMGUI

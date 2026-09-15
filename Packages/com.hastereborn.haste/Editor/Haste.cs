@@ -21,7 +21,7 @@ namespace Haste {
     // because nothing else notices when they drift: this one is what HasteSettings.Version
     // compares against to decide whether an upgrade should reindex, so a stale value means
     // upgrading silently keeps the old index.
-    public static readonly string VERSION = "2.1.0";
+    public static readonly string VERSION = "2.2.0";
 
     private static Version version;
     public static Version Version {
@@ -90,9 +90,12 @@ namespace Haste {
       Watchers.AddSource(HasteProjectSource.NAME,
         EditorPrefs.GetBool(HasteSettings.GetPrefKey(HasteSetting.Source, HasteProjectSource.NAME), true),
         () => new HasteProjectSource());
+      // On demand, unlike every other source: see HasteSourceCadence. The hierarchy is
+      // walked when the palette opens and at no other time.
       Watchers.AddSource(HasteHierarchySource.NAME,
         EditorPrefs.GetBool(HasteSettings.GetPrefKey(HasteSetting.Source, HasteHierarchySource.NAME), true),
-        () => new HasteHierarchySource());
+        () => new HasteHierarchySource(),
+        HasteSourceCadence.OnDemand);
       Watchers.AddSource(HasteMenuItemSource.NAME,
         EditorPrefs.GetBool(HasteSettings.GetPrefKey(HasteSetting.Source, HasteMenuItemSource.NAME), true),
         () => new HasteMenuItemSource());
@@ -212,6 +215,21 @@ namespace Haste {
 
     static void HandleSceneChanged(string currentScene, string previousScene) {
       Watchers.RestartSource(HasteHierarchySource.NAME);
+    }
+
+    // Brings the on-demand sources up to date. The palette calls this as it opens, and
+    // it is the only thing that makes the hierarchy crawl at all.
+    //
+    // It does not block: the crawl streams through the scheduler while the palette is
+    // already up, and the index it is patching is whatever the last crawl left behind, so
+    // there are results to search from the first keystroke. The palette re-runs its query
+    // when the crawl finishes, which is what makes the tail of a large scene appear.
+    public static void PrepareSources() {
+      if (IsApplicationBusy) {
+        return;
+      }
+
+      Watchers.Refresh();
     }
 
     public static void Rebuild() {

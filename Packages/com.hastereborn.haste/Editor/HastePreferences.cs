@@ -92,9 +92,20 @@ namespace Haste {
           EditorGUILayout.Space();
 
           foreach (var watcher in Haste.Watchers) {
+            // An on-demand source that has not been walked yet reads 0, which looks
+            // broken rather than deferred. Say what it is actually waiting for.
+            var pending =
+              Haste.Watchers.CadenceOf(watcher.Key) == HasteSourceCadence.OnDemand &&
+              watcher.Value.IndexedCount == 0;
+
             var label = Label(
-              String.Format("{0} ({1:N0})", watcher.Key, watcher.Value.IndexedCount),
-              "Include " + watcher.Key + " results. The number is how many are indexed.");
+              pending
+                ? String.Format("{0} (on open)", watcher.Key)
+                : String.Format("{0} ({1:N0})", watcher.Key, watcher.Value.IndexedCount),
+              pending
+                ? "Include " + watcher.Key + " results. Indexed when you open Haste, " +
+                  "not in the background."
+                : "Include " + watcher.Key + " results. The number is how many are indexed.");
 
             var watchedEnabled = EditorGUILayout.Toggle(label, watcher.Value.Enabled);
             if (watchedEnabled != watcher.Value.Enabled) {

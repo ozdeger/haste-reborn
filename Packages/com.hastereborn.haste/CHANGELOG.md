@@ -10,6 +10,35 @@ work as described bumps the **patch**. `package.json`, `Haste.VERSION` and the g
 move together, and a test fails if the first two disagree, because the Package Manager
 reads one and the reindex-on-upgrade check reads the other.
 
+## [2.2.0] - 2026-09-15
+
+### Changed
+- **The scene hierarchy is indexed when you open Haste, not continuously in the
+  background.** It was the one source being re-walked in full every time the editor
+  raised `hierarchyChanged` — which is every hierarchy mutation, delivered in bursts —
+  and a full walk cannot finish between two of them. Measured on 6000.3.17f1 against a
+  100,000-GameObject scene, eight seconds of ordinary hierarchy edits **started 46
+  crawls, completed none, and held 98% of the main thread, with the palette closed**.
+  The same eight seconds now start **zero** crawls; opening the palette starts exactly
+  one. Project files, the menu tree and layouts are cheap and stable, so they are still
+  indexed in the background and kept warm.
+- The walk streams in behind the index the previous one left, so there are results from
+  the first keystroke and the status line reads *Indexing…* until the scene has caught
+  up. The palette re-runs your query when it finishes, which is what makes the tail of a
+  very large scene appear without you typing again.
+- **Preferences > Haste** shows `Hierarchy (on open)` rather than a count of `0` before
+  the first walk.
+
+### Fixed
+- A hierarchy result could not resolve its GameObject while a walk was running:
+  `HasteHierarchySource.Scene` was cleared up front and refilled as the walk progressed,
+  so anything not yet re-reached resolved to nothing. The map is now built aside and
+  published whole when the walk completes — which matters now that walks happen with the
+  palette open rather than behind it.
+- `HasteWatcherManager` kept its registry of sources in statics, so two managers shared
+  one registry. Only ever one exists in a live editor, but it made the class impossible
+  to exercise in isolation.
+
 ## [2.1.0] - 2026-09-09
 
 ### Changed

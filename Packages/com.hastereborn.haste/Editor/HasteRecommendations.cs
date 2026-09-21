@@ -45,6 +45,12 @@ namespace Haste {
         dirty = true;
       }
 
+      // A list written by a version with the position bug can already contain the same
+      // item twice, which is what showed up as doubled rows on the launch screen.
+      if (Dedupe(recent)) {
+        dirty = true;
+      }
+
       EditorApplication.quitting -= Flush;
       EditorApplication.quitting += Flush;
     }
@@ -76,34 +82,86 @@ namespace Haste {
     }
 
     public void Add(HasteItem newItem) {
-      var index = recent.IndexOf(newItem);
-      if (index != -1 && newItem.userScore == 1.0f) {
-        return; // Do nothing if we just selected this item
+      if (Record(recent, newItem)) {
+        dirty = true;
+      }
+    }
+
+    // Pure, and static, so the rule can be exercised on a plain list.
+    //
+    // It used to work out a POSITION before removing the decayed entries and then write
+    // to that position afterwards:
+    //
+    //     var index = recent.IndexOf(newItem);   // here
+    //     recent.RemoveAll(dead);                // the list shrinks
+    //     recent[index] = newItem;               // and this is now the wrong slot
+    //
+    // Shrink by a little and `index` addresses a DIFFERENT entry: that one is overwritten
+    // and the original copy of newItem survives, so the item appears twice in the recents
+    // list and some unrelated recent is silently gone. Shrink by more than that and the
+    // index is past the end, which is the ArgumentOutOfRangeException this threw from
+    // HasteSpotlightWindow.Act.
+    //
+    // There is no index now. Any surviving copy is removed and the new one appended --
+    // order does not matter, because Get sorts by score.
+    public static bool Record(List<HasteItem> recent, HasteItem newItem) {
+      if (recent == null || newItem == null) {
+        return false;
       }
 
-      // Decay recent
-      var dead = new List<HasteItem>();
-      foreach (var item in recent) {
-        item.userScore *= DECAY;
+      // Already the most recent thing picked: nothing to decay and nothing to move.
+      if (newItem.userScore == 1.0f && recent.Contains(newItem)) {
+        return false;
+      }
 
-        if (item.userScore < THRESHOLD) {
-          dead.Add(item);
+      for (int i = 0; i < recent.Count; i++) {
+        recent[i].userScore *= DECAY;
+      }
+      recent.RemoveAll(item => item == null || item.userScore < THRESHOLD);
+
+      // Removing every equal copy rather than one also heals a list the old code had
+      // already duplicated into.
+      recent.RemoveAll(item => item.Equals(newItem));
+
+      newItem.userScore = 1.0f;
+      recent.Add(newItem);
+      return true;
+    }
+
+    // Collapses duplicates left behind by the bug above, keeping the highest score of
+    // each. Runs on load, because a list already written to disk does not repair itself:
+    // the fix above only heals the item you happen to pick next.
+    public static bool Dedupe(List<HasteItem> recent) {
+      if (recent == null) {
+        return false;
+      }
+
+      var best = new Dictionary<HasteItem, HasteItem>();
+      var order = new List<HasteItem>();
+
+      foreach (var item in recent) {
+        if (item == null) {
+          continue;
+        }
+
+        HasteItem kept;
+        if (!best.TryGetValue(item, out kept)) {
+          best.Add(item, item);
+          order.Add(item);
+        } else if (item.userScore > kept.userScore) {
+          best[item] = item;
         }
       }
 
-      // Remove dead recent
-      recent.RemoveAll((item) => dead.Contains(item));
-
-      if (index != -1) {
-        recent[index] = newItem; // Replace original instance
-      } else {
-        recent.Add(newItem); // Add new item
+      if (order.Count == recent.Count) {
+        return false;
       }
 
-      // Set item score
-      newItem.userScore = 1.0f;
-
-      dirty = true;
+      recent.Clear();
+      foreach (var item in order) {
+        recent.Add(best[item]);
+      }
+      return true;
     }
 
     // Exposed for the preferences page and for tests.

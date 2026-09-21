@@ -40,9 +40,10 @@ namespace Haste {
 
     [Test]
     public void AFavouriteSurvivesTheItemBeingReIndexed() {
-      // The reason the key is "source|path" and not the HasteItem. HasteItem.GetHashCode
-      // folds in `id`, which for a project asset is its position in enumeration order --
-      // so an equality-keyed favourite would be silently lost on the next reimport.
+      // The reason the key is "source|path" and not the HasteItem: HasteItem.GetHashCode
+      // folds in `id`, so an equality-keyed favourite is only as stable as whatever the
+      // source chose to put there. The project source passes 0 today; a hierarchy item
+      // carries an instance id that does not survive a scene reload.
       var before = new HasteItem("Assets/P/Popup.prefab", 17, HasteProjectSource.NAME);
       HasteFavorites.instance.Toggle(before);
 

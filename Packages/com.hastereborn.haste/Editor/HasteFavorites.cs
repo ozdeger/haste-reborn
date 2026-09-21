@@ -24,9 +24,11 @@ namespace Haste {
     [SerializeField]
     int schemaVersion;
 
-    // "source|path". Deliberately NOT the HasteItem: its GetHashCode folds in `id`, which
-    // for a project asset is its position in enumeration order and changes every time the
-    // source is re-indexed. A favourite has to outlive a reimport.
+    // "source|path". Deliberately NOT the HasteItem: its GetHashCode folds in `id`, and
+    // a hierarchy item's id is its instance id, which does not survive a scene reload.
+    // Project, menu and layout items all pass 0 today, so equality there happens to be
+    // path-only -- but a key that is only stable because of a value the sources are free
+    // to change is not a key. A favourite has to outlive a reimport.
     //
     // The source is part of the key because a path alone is not unique -- "Window/Layouts/
     // Tall" is yielded by both the Layout source and the Menu Item source.

@@ -10,6 +10,19 @@ work as described bumps the **patch**. `package.json`, `Haste.VERSION` and the g
 move together, and a test fails if the first two disagree, because the Package Manager
 reads one and the reindex-on-upgrade check reads the other.
 
+## [2.5.1] - 2026-09-21
+
+### Fixed
+- Recent items no longer appear twice, and picking one no longer throws
+  `ArgumentOutOfRangeException`. Both came from the same line: the recency list
+  worked out an item's position, *then* removed the entries that had decayed away,
+  then wrote to the position it had worked out before. A small shrink overwrote
+  the wrong entry — duplicating the item and silently dropping another recent — and
+  a larger one ran off the end.
+- Lists already written with duplicates are collapsed when Haste loads, keeping the
+  higher score of each, rather than staying doubled until you happen to pick each
+  item again.
+
 ## [2.5.0] - 2026-09-21
 
 ### Changed

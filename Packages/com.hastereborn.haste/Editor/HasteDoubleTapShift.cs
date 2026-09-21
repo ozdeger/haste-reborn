@@ -305,6 +305,98 @@ namespace Haste {
     // Returns the REASON rather than a bool, because a silent suppression is
     // indistinguishable from a broken hook: the events still log, the gesture never fires,
     // and nothing says why. That cost a full diagnostic round trip.
+    // Focus on a field is not the same as typing in one. A search box you have just
+    // clicked into is empty, and a double tap there is unambiguous -- so the guard only
+    // applies once there is something in the field to be in the middle of.
+    //
+    // One character is still allowed, because at one character you have typed a letter
+    // and not yet a word, and the gesture is far more likely to be deliberate than a
+    // capital you are part-way through.
+    public const int LongestFieldThatStillAllowsTheGesture = 1;
+
+    // `focusedLength` is the focused field's character count, or -1 for unknown.
+    //
+    // Pure, because it is the decision and the decision is the part worth testing --
+    // reading the focused field needs a live editor and reflection, and neither can be
+    // exercised under -batchmode.
+    public static bool ShouldSuppressForTyping(bool editingTextField, int focusedLength) {
+      if (!editingTextField) {
+        return false;
+      }
+      // Unknown counts as typing. Every lookup below can stop working on some future
+      // editor, and the cost of guessing wrong in this direction is a palette that opens
+      // in the middle of a rename -- so an unreadable field degrades to exactly the
+      // behaviour Haste had before any of this existed.
+      if (focusedLength < 0) {
+        return true;
+      }
+      return focusedLength > LongestFieldThatStillAllowsTheGesture;
+    }
+
+    static FieldInfo imguiActiveEditor;
+    static bool imguiActiveEditorResolved;
+
+    // Characters in the field that currently has focus, or -1 when that cannot be told.
+    //
+    // Two paths, because Unity has two of them. UI Toolkit is tried first: it is where
+    // this bug lives, since those fields never reach the IMGUI hook. An IMGUI window's
+    // focused element is its IMGUIContainer, which is not a text element, so it falls
+    // through to EditorGUI's own editor.
+    public static int FocusedTextLength() {
+      var fromPanel = UIToolkitTextLength();
+      if (fromPanel >= 0) {
+        return fromPanel;
+      }
+      return ImguiTextLength();
+    }
+
+    static int UIToolkitTextLength() {
+      try {
+        var window = EditorWindow.focusedWindow;
+        if (window == null) {
+          return -1;
+        }
+
+        var root = window.rootVisualElement;
+        var controller = root == null ? null : root.focusController;
+        var focused = controller == null ? null : controller.focusedElement;
+
+        // The focused element of a TextField is its inner TextElement, not the TextField
+        // -- verified against the element tree on 6000.3.17f1 -- so both are read.
+        var field = focused as UnityEngine.UIElements.TextField;
+        if (field != null) {
+          return (field.value ?? "").Length;
+        }
+
+        var element = focused as UnityEngine.UIElements.TextElement;
+        if (element != null) {
+          return (element.text ?? "").Length;
+        }
+      } catch (Exception) {
+        // A panel mid-teardown is not worth taking the gesture down for.
+      }
+      return -1;
+    }
+
+    static int ImguiTextLength() {
+      try {
+        if (!imguiActiveEditorResolved) {
+          imguiActiveEditorResolved = true;
+          imguiActiveEditor = typeof(EditorGUI).GetField("activeEditor",
+            BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);
+        }
+
+        if (imguiActiveEditor == null) {
+          return -1;
+        }
+
+        var editor = imguiActiveEditor.GetValue(null) as TextEditor;
+        return editor == null ? -1 : (editor.text ?? "").Length;
+      } catch (Exception) {
+        return -1;
+      }
+    }
+
     static string SuppressionReason() {
       if (EditorApplication.isPlayingOrWillChangePlaymode) {
         return "play mode";
@@ -325,7 +417,8 @@ namespace Haste {
       //
       // TypingCapitalsNeverFires proves the reset rule works on the events it CAN see.
       // It cannot prove the rule sees them, which is the part that failed.
-      if (HasteSettings.DoubleTapShiftIgnoreWhileTyping && EditorGUIUtility.editingTextField) {
+      if (HasteSettings.DoubleTapShiftIgnoreWhileTyping &&
+          ShouldSuppressForTyping(EditorGUIUtility.editingTextField, FocusedTextLength())) {
         return "a text field is being edited";
       }
 

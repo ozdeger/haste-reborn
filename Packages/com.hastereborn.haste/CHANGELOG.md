@@ -10,6 +10,15 @@ work as described bumps the **patch**. `package.json`, `Haste.VERSION` and the g
 move together, and a test fails if the first two disagree, because the Package Manager
 reads one and the reindex-on-upgrade check reads the other.
 
+## [2.5.0] - 2026-09-21
+
+### Changed
+- Double-tap Shift works again in an **empty** field. 2.4.0 refused it whenever a
+  field was focused at all, which also cost you the gesture in a search box you
+  had just clicked into. It now waits until the field has more than one character
+  in it — something to be in the middle of. A field Haste cannot read counts as
+  typing, so anything unexpected errs towards not opening.
+
 ## [2.4.0] - 2026-09-21
 
 ### Fixed

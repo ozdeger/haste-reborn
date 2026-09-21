@@ -49,6 +49,32 @@ namespace Haste {
     }
 
     [Test]
+    public void TypingSuppressionOnlyAppliesOnceTheFieldHasSomethingInIt() {
+      // Focus on a field is not the same as being mid-word. Clicking into an empty search
+      // box and tapping Shift twice is unambiguous, so the guard waits until there is
+      // something to be in the middle of.
+      Assert.That(HasteDoubleTapShift.ShouldSuppressForTyping(false, 40), Is.False,
+        "not editing at all -- nothing to suppress");
+
+      Assert.That(HasteDoubleTapShift.ShouldSuppressForTyping(true, 0), Is.False, "empty");
+      Assert.That(HasteDoubleTapShift.ShouldSuppressForTyping(true, 1), Is.False, "one character");
+      Assert.That(HasteDoubleTapShift.ShouldSuppressForTyping(true, 2), Is.True, "mid-word");
+      Assert.That(HasteDoubleTapShift.ShouldSuppressForTyping(true, 40), Is.True);
+    }
+
+    [Test]
+    public void AFieldThatCannotBeReadCountsAsTyping() {
+      // The polarity that makes this safe to ship. Reading the focused field needs a live
+      // editor and reflection into two different UI stacks; if either stops working the
+      // answer is -1, and -1 has to mean "assume typing". Guessing the other way puts the
+      // palette on top of a rename, which is the bug this whole guard exists for.
+      Assert.That(HasteDoubleTapShift.ShouldSuppressForTyping(true, -1), Is.True);
+
+      // And it is only reached while a field is being edited at all.
+      Assert.That(HasteDoubleTapShift.ShouldSuppressForTyping(false, -1), Is.False);
+    }
+
+    [Test]
     public void TypingCapitalsNeverFires() {
       // The rule that makes it safe to run the gesture INSIDE a focused text field, which
       // Haste now does: the suppression that used to refuse every field is a preference

@@ -154,8 +154,8 @@ namespace Haste {
 
           var ignoreTyping = EditorGUILayout.Toggle(
             Label("Ignore while typing",
-              "On by default: Haste cannot see keystrokes in every field, and without " +
-              "this it mistakes typing for the gesture in the ones it cannot."),
+              "Refuses the gesture while a field has something in it. An empty field " +
+              "still accepts it."),
             HasteSettings.DoubleTapShiftIgnoreWhileTyping);
           if (ignoreTyping != HasteSettings.DoubleTapShiftIgnoreWhileTyping) {
             HasteSettings.DoubleTapShiftIgnoreWhileTyping = ignoreTyping;

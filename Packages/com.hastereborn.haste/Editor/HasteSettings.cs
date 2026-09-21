@@ -73,20 +73,25 @@ namespace Haste {
 
     // Whether to refuse the gesture while a text field is being edited.
     //
-    // OFF by default, which is a reversal. The suppression used to be unconditional and
-    // was justified as removing the largest false-positive class -- typing capitals --
-    // but it never was: a capital is Shift-then-letter, and the gesture's "any other key
-    // resets" rule kills that before this is ever consulted. The pre-consumption hook
-    // exists precisely so that rule still sees the letter inside a focused field.
+    // ON by default. This was briefly off, on the argument that the "any other key
+    // resets" rule already covered typing: a capital is Shift-then-LETTER, and the letter
+    // resets the gesture. That argument has a hole, and it was found by renaming
+    // something: type "_" with Shift, reach for Shift again for a capital, and the
+    // palette opens mid-rename.
     //
-    // What is genuinely left is a BARE Shift-Shift with no key between, while typing:
-    // some IME layouts toggle input mode that way. That is narrow, and both recoveries
-    // are cheap -- Escape closes the palette and restores the selection, and the runaway
-    // breaker catches a storm. So it is a switch for the people who need it rather than a
-    // rule for everyone.
+    // The hole is that the reset rule only sees what HasteDoubleTapShift's hook sees, and
+    // that hook is GUIUtility.ProcessEvent -- IMGUI. A field that dispatches its own key
+    // events does not go through it, so the LETTERS are invisible while the Shift
+    // transitions still arrive, riding the modifier bits of every repaint. The gesture
+    // then sees two bare taps, because as far as it can tell nothing was typed between
+    // them.
+    //
+    // So the rule is not redundant while a field is being edited -- it is blind, which is
+    // exactly when this guard has to stand in for it. Turning this off is reasonable for
+    // anyone who does not hit it; it is not reasonable as the default.
     public static bool DoubleTapShiftIgnoreWhileTyping {
       get {
-        return HasteSettings.GetBool(HasteSetting.DoubleTapShiftIgnoreWhileTyping, false);
+        return HasteSettings.GetBool(HasteSetting.DoubleTapShiftIgnoreWhileTyping, true);
       }
       set {
         HasteSettings.SetBool(HasteSetting.DoubleTapShiftIgnoreWhileTyping, value);

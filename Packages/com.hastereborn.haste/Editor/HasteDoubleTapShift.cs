@@ -318,14 +318,13 @@ namespace Haste {
       if (EditorApplication.isUpdating) {
         return "asset database is updating";
       }
-      // Off by default, and the reasoning is in HasteSettings: typing a capital is
-      // Shift-then-LETTER, and the gesture's "any other key resets" rule has already
-      // rejected it by the time this runs. Refusing every field on top of that only cost
-      // people the gesture in the Inspector, the Hierarchy and every search box.
+      // On by default, and the reasoning is in HasteSettings. Short version: the "any
+      // other key resets" rule only sees events that reach GUIUtility.ProcessEvent, so in
+      // a field that dispatches its own keys the letters are invisible while the Shift
+      // transitions are not -- and the gesture reads ordinary typing as two bare taps.
       //
-      // The switch is here for bare Shift-Shift while typing, which some IME layouts use
-      // as a mode toggle. HasteDoubleTapShiftTests pins the capital-typing case so the
-      // claim above is a test rather than a comment.
+      // TypingCapitalsNeverFires proves the reset rule works on the events it CAN see.
+      // It cannot prove the rule sees them, which is the part that failed.
       if (HasteSettings.DoubleTapShiftIgnoreWhileTyping && EditorGUIUtility.editingTextField) {
         return "a text field is being edited";
       }

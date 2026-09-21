@@ -10,6 +10,21 @@ work as described bumps the **patch**. `package.json`, `Haste.VERSION` and the g
 move together, and a test fails if the first two disagree, because the Package Manager
 reads one and the reindex-on-upgrade check reads the other.
 
+## [2.4.0] - 2026-09-21
+
+### Fixed
+- Double-tap Shift no longer opens Haste while you are renaming something. Typing
+  `_` with Shift and then reaching for Shift again to type a capital read as two
+  taps of the gesture.
+
+### Changed
+- *Ignore while typing* is back on by default. 2.1.0 turned it off on the grounds
+  that the gesture's "any other key resets" rule already handled typing — but
+  that rule only sees keystrokes reaching Unity's IMGUI event path, and a field
+  that dispatches its own key events never gets there. The letters are invisible
+  while the Shift presses are not, so ordinary typing looks like two bare taps.
+  Turn it off under Preferences ▸ Haste if you do not hit it.
+
 ## [2.3.0] - 2026-09-15
 
 ### Changed

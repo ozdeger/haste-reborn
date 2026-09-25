@@ -10,6 +10,26 @@ work as described bumps the **patch**. `package.json`, `Haste.VERSION` and the g
 move together, and a test fails if the first two disagree, because the Package Manager
 reads one and the reindex-on-upgrade check reads the other.
 
+## [2.7.0] - 2026-09-25
+
+### Added
+- **Click a row to reveal it.** A single click selects the thing and pings it where it
+  lives — the Project window scrolls to the asset, the Hierarchy to the object — and
+  Haste stays open on top, so you can keep looking. It does not steal focus, which is
+  what Enter does and what would otherwise close the palette out from under you.
+- **Double-click to open it.** Same as Shift+Enter: the asset opens in whatever edits
+  it and Haste closes. A menu row runs and a layout switches, as they do on Enter.
+
+### Changed
+- What a click selects now survives the palette closing, however it closes. Previously
+  Haste always put the old selection back on the way out, which would have undone the
+  reveal the moment you clicked into the Project window to use what you had just
+  revealed. Arrowing past a row is still incidental and still undoable with Escape;
+  clicking one is now a decision.
+- A single click on a row with nothing to show — a menu item, a window layout — only
+  moves the cursor, and a click while you are assembling a Cmd/Ctrl+click
+  multi-selection no longer discards it.
+
 ## [2.6.0] - 2026-09-25
 
 ### Changed

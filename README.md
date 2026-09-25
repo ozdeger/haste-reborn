@@ -65,10 +65,11 @@ Reference
 
 Action | Keyboard | Mouse
 ---|---|---
-Open Haste | ⌘ + ⇧ + K (Ctrl + Shift + K on Windows), or tap ⇧ twice | Click "Window/Haste"
-Navigate search results | ↑ or ↓ | Click a search result
-Reveal highlighted result | Enter | Double-click a search result
-Open highlighted result | ⇧ + Enter |
+Open Haste | Tab | Click "Window/Haste"
+Navigate search results | ↑ or ↓ |
+Reveal a result, keeping Haste open | | Single-click it
+Reveal highlighted result, closing Haste | Enter |
+Open highlighted result, closing Haste | ⇧ + Enter | Double-click it
 Show item actions | ⇧ + → (or ⌘/Ctrl + K) | Click "Item actions"
 Go into a submenu | ⇧ + → or Enter | Click the row
 Go back one level | ⇧ + ← | Click "←"
@@ -81,6 +82,11 @@ Go up a page | Fn + ↑ (Page Up on Windows) |
 Go down a page | Fn + ↓ (Page Down on Windows) |
 Multi-select highlighted result | ⌘ + Enter (Ctrl + Enter on Windows) | ⌘ + Click (Ctrl + Click on Windows)
 Dismiss Haste | ESC, from anywhere | Click anywhere outside of Haste
+
+A single click reveals: it selects the thing and scrolls the Project or Hierarchy window to
+it without taking focus, so Haste stays open in front and you can keep looking. What you
+click stays selected after Haste closes. Arrowing to a row does not select anything unless
+you turn on soft selection in Preferences, and Escape undoes that.
 
 The plain arrows belong to the text, so ← and → move the caret exactly as they would in
 any field, modifiers included. ⇧ + ← is the only way back: it steps out of a submenu and
@@ -168,6 +174,9 @@ Haste will begin listing your search results immediately. Note that searches in 
 ##### Step 5. You can use the up (↑) / down (↓) arrows to navigate the search results. Use the arrows to highlight the GameObject named "first".
 
 ##### Step 6. Press Enter (↵) to select the highlighted GameObject.
+
+You can also click the row to select it without closing Haste, or double-click it to open
+it.
 
 Pressing enter will select the highlighted result.
 

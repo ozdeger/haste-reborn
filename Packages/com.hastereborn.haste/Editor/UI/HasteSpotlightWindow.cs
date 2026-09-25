@@ -822,13 +822,33 @@ namespace Haste {
 
       row.RegisterCallback<MouseDownEvent>(evt => {
         var index = (int)row.userData;
-        if (evt.actionKey) {
-          ToggleMultiSelection(index);
-        } else if (evt.clickCount >= 2) {
-          Act(index);
-        } else {
-          SetHighlighted(index, true);
+
+        // UI Toolkit sends the single click too, so a double click arrives as
+        // clickCount 1 and then 2 -- the row is revealed and then opened. That ordering is
+        // deliberate rather than tolerated: it is what double-clicking in the Project
+        // window does, and Open works from the object reference rather than the selection,
+        // so the reveal in front of it changes nothing about what opens.
+        switch (HasteMouseMap.Resolve(evt.clickCount, evt.actionKey,
+                                      HasObject(index), multiSelection.Count > 0)) {
+          case HasteClickIntent.ToggleMultiSelect:
+            ToggleMultiSelection(index);
+            break;
+
+          case HasteClickIntent.Open:
+            SetHighlighted(index, true);
+            Act(index, true);
+            break;
+
+          case HasteClickIntent.Reveal:
+            SetHighlighted(index, true);
+            Reveal(index);
+            break;
+
+          default:
+            SetHighlighted(index, true);
+            break;
         }
+
         evt.StopPropagation();
       });
 
@@ -1270,6 +1290,50 @@ namespace Haste {
       // Shift+Enter path is always safe even on a menu item.
       Haste.WindowAction += open ? (HasteWindowAction)result.Open : result.Action;
       Close();
+    }
+
+    bool HasObject(int index) {
+      return index >= 0 && index < results.Length && results[index].Object != null;
+    }
+
+    // Show the row's object where it lives, and leave the palette open on top of it.
+    //
+    // Deliberately NOT result.Action(), which is what Enter runs: that focuses the Project
+    // or Hierarchy window first, and Update() closes the palette the moment it is not the
+    // focused window -- so revealing that way would dismiss the thing the user is still
+    // reading. PingObject is the half that does the showing without the half that costs
+    // focus: read off 6000.3.17f1, it walks every EditorWindow implementing
+    // IFramableContainer, calls FrameObject on it, and never calls Focus. That is also why
+    // HasteProjectResult.Action has to call FocusProject separately rather than relying on
+    // the ping.
+    void Reveal(int index) {
+      if (index < 0 || index >= results.Length) {
+        return;
+      }
+
+      var obj = results[index].Object;
+      if (obj == null) {
+        return;
+      }
+
+      Selection.objects = new UnityEngine.Object[] { obj };
+      EditorGUIUtility.PingObject(obj);
+
+      // Deliberately NOT recorded as a use. Act records, so Enter and a double click both
+      // count; a single click is a look, and clicking down a list of five results to see
+      // what they are would otherwise put all five at the top of the recents.
+
+      // What a click selects outlives the palette, by whichever route it closes.
+      //
+      // prevSelection is what Dismiss puts back, so without this line the reveal would be
+      // undone the instant the palette went away -- including when it goes away because
+      // the user clicked into the Project window to use the thing they had just revealed.
+      // That reads as the reveal not having worked.
+      //
+      // It does mean Escape no longer restores what was selected before, once a row has
+      // been clicked. That is the trade, and it is the right way round: arrowing past a
+      // row is incidental and stays undoable, clicking one is a decision.
+      prevSelection = new UnityEngine.Object[] { obj };
     }
 
     void Dismiss() {

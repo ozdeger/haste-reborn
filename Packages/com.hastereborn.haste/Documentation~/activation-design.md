@@ -1,298 +1,118 @@
 Activation design
 ===
 
-> **Note.** Two constants in this document were later overturned by measurement on real
-> keyboards, and the code is right where they disagree: the tap window is **250 ms**, not
-> the 120 ms specified here, and the runaway breaker fires at **6 activations in 2 seconds**,
-> not 3 in 10. `HasteDoubleTapShiftGesture` records what was measured and why. The rest of
-> the design stands.
-
-
 How the palette gets opened, and why. Everything here was verified against the shipped
-assemblies of Unity 6000.0.80f1 and 6000.3.17f1 (Cecil metadata plus IL reads), not taken
-from documentation.
+assemblies of Unity 6000.0.80f1 and 6000.3.17f1 (Cecil metadata, IL reads, and runtime
+reflection), not taken from documentation.
 
 `Documentation~` is excluded from the AssetDatabase by the trailing tilde, so this file
 ships with the package but is never imported.
 
-Three tiers
+The contract
 ---
 
-**Tier 0 — the contract. Always present, zero reflection.**
+One way in, always present, zero reflection:
 
 ```csharp
-[Shortcut("Haste/Open Haste", null, KeyCode.K, ShortcutModifiers.Action | ShortcutModifiers.Shift)]
+[Shortcut("Haste/Open Haste", KeyCode.Tab, ShortcutModifiers.None)]
 ```
 
-Ctrl+Shift+K on Windows and Linux, Cmd+Shift+K on macOS, rebindable by the user in
-Edit > Shortcuts.
+A bare Tab, rebindable by the user in Edit > Shortcuts. A palette you reach for dozens of
+times an hour should cost one key; anything longer and you stop reaching for it.
 
+- The id is load-bearing. `ShortcutManager` keys user overrides by id, so renaming it
+  silently discards every rebinding anyone has made.
 - `ShortcutModifiers` is `None=0, Alt=1, Action=2, Shift=4, Control=8` — there is no
   `Command` member. `Action` resolves to Cmd on macOS and Ctrl elsewhere *at runtime*
   (`KeyCombination.ToKeyboardEvent`: `command = action && Application.platform ==
   RuntimePlatform.OSXEditor`), so one declaration is correct on both platforms with no
   branching. `ShortcutModifiers.Control` means the literal Ctrl key even on macOS — do not
-  use it.
-- The default is free on both platforms. Across all 167 shortcut attributes in 6000.0 and
-  172 in 6000.3: `KeyCode.K` is used twice, both by the Animation module and both without
-  `Action`; the `Action|Shift` combination is used only for `N` and `Mouse1`; and no
-  `MenuItem` uses `%#k` or `#%k`.
-- The old `[MenuItem("Window/Haste %k")]` must lose its `%k`. Unity 6 ships
-  `[MenuItem("Edit/Search/Search All... %k")]` on its own Search window — a direct
-  collision, and the only other `%k` in the editor. Dropping the suffix also leaves exactly
-  one rebindable entry in Edit > Shortcuts instead of two competing ones, and keeps
-  `HasteMenuItemSource`'s exact-string self-filter (`menuItem == "Window/Haste"`) working so
-  Haste does not index itself.
+  use it. None of that applies to the current default, which takes no modifiers, but it is
+  the trap anyone rebinding this will walk into.
+- `[MenuItem("Window/Haste")]` must stay exactly that, with no `%k` suffix. A shortcut baked
+  into a MenuItem string is not rebindable and would compete with the ShortcutManager entry,
+  giving two bindings for one command; the old `[MenuItem("Window/Haste %k")]` collided
+  head-on with Unity 6's own `[MenuItem("Edit/Search/Search All... %k")]`, and the loser of
+  that fight silently never opened. The exact string also keeps
+  `HasteMenuItemSource`'s self-filter (`menuItem == "Window/Haste"`) working, so Haste stays
+  out of its own results.
 
-**Tier 1 — double-tap Shift.** A toggleable extra, never the only way in. **Implemented**
-in `HasteDoubleTapShift` (the hook) and `HasteDoubleTapShiftGesture` (the recognition),
-split that way because the second half is pure and can therefore be tested — see below.
-
-**Tier 2 — degradation.** If the internal fields disappear, log once and offer
-`EditorApplication.modifierKeysChanged` (public, parameterless) as an explicitly less
-precise mode, or nothing. Tier 0 is unaffected either way because it is attribute-registered.
-
-Why double-tap Shift cannot use the public API
+Why Tab is safe to bind
 ---
 
-`ShortcutManager` can never express it. `BindingValidator.s_InvalidKeyCodes` contains every
-modifier keycode, and a malformed binding does not fail loudly — the id registers with an
-*empty* binding and only a discovery warning is logged. Verified at runtime with the literal
-editor log line: `Binding uses invalid key code LeftShift`. No `ShortcutAttribute`
-constructor accepts a key sequence either.
+Measured on 6000.3.17f1, because two of the three facts below are the opposite of what they
+look like.
 
-The hook that matters, and the trap
----
+**A rejected binding does not fail loudly.** `BindingValidator` refuses some keys outright,
+and a `[Shortcut]` that names one still *compiles*: the id registers with an **empty**
+binding and Unity writes a discovery warning nobody reads. The palette simply stops opening.
+This is why `HasteActivationTests` asserts on the registered binding and on the invalid-key
+list rather than on this file building.
 
-Use **`UnityEngine.GUIUtility.beforeEventProcessed`** as the primary detector:
+**The refused list is short, and Tab is not in it.** Read out of
+`BindingValidator.s_InvalidKeyCodes` at runtime, it is exactly twelve entries:
 
 ```
-internal static Action<EventType, KeyCode, EventModifiers> UnityEngine.GUIUtility.beforeEventProcessed
-// UnityEngine.IMGUIModule.dll — identical and non-obsolete in 6000.0.80f1 and 6000.3.17f1
+None, Escape, Return, CapsLock,
+LeftShift, RightShift, LeftAlt, RightAlt, LeftControl, RightControl, LeftMeta, RightMeta
 ```
 
-The obvious choice, `EditorApplication.globalEventHandler`, is **wrong for detection**, and
-this is the whole reason this document exists.
+Every modifier keycode, plus three keys the editor reserves. Escape and Return are the
+instructive ones: they look every bit as ordinary as Tab and are both refused.
 
-`globalEventHandler` is the *post-consumption* hook — Unity's own source comment describes it
-as "events that were not handled by anyone". Meanwhile
-`EditorGUI.MightBePrintableKey(Event)` decides whether a focused IMGUI text field consumes a
-KeyDown, and its jump table (base keyCode 273; indices 27–40, i.e. keyCodes 300–313, which
-include `LeftShift=304` and `RightShift=303`) returns **false** for every modifier.
+**Tab is effectively unclaimed.** Across the 749 shortcut ids a full editor registers, Tab
+appears exactly once besides Haste's: `Timeline/ToggleClipTrackArea`, declared with
+`typeof(UnityEditor.Timeline.TimelineWindow)` as its context. Unity resolves a
+context-scoped shortcut over a global one, so Timeline keeps Tab inside the Timeline window
+and Haste gets it everywhere else.
 
-Put together: a focused text field consumes the *letter* between two Shift taps but lets the
-bare Shift KeyDowns through. That is the exact inverse of what the gesture needs — the
-guard "reset on any other KeyDown" becomes a no-op precisely while the user is typing
-CamelCase. Typing `Hello World` in a rename field looks indistinguishable from Shift, Shift.
+That last point is why the collision test excludes context-scoped ids. A `ShortcutBinding`
+carries no context, so on a naive comparison Haste's Tab and Timeline's are indistinguishable
+— and failing the suite over a shortcut resolving exactly as designed is worse than not
+testing it. The test reads contexts back out of the `[Shortcut]` attributes instead, which is
+the only place they are visible.
 
-`beforeEventProcessed` is genuinely pre-consumption: in `GUIUtility.ProcessEvent(int,
-IntPtr, out bool)` it is invoked at `IL_003D`, after `m_Event.CopyFromPtr` at `IL_0014` and
-before `result = false` at `IL_0044` and the `processEvent` dispatch at `IL_0047`. It hands
-over `(type, keyCode, modifiers)` as raw native parameters.
+What is **not** settled here is how a global unmodified key interacts with focus navigation
+and with text fields. The routing that stops `W`/`E`/`R` firing while you type in the
+Inspector lives on the native side of `ShortcutIntegration` — `HasModifiers` and
+`HasAnyEntriesHandler` are both `[RequiredByNativeCode]` and are called *from* native, so
+there is nothing managed left to read. Anyone changing this default should try it in a real
+editor rather than reasoning about it.
 
-Unity itself splits these two hooks exactly this way: it *resets* shortcut state from
-`beforeEventProcessed` (`ShortcutIntegration.BeforeEventProcessedHandler →
-ShortcutController.ResetShortcutState`) and *acts* from `globalEventHandler`. Reset from the
-hook that sees everything; act on the hook that sees leftovers.
-
-Subscribe to both and deduplicate on `(type, keyCode, frameCount)`. Over-delivery is benign
-and testable; under-delivery is silent and fatal.
-
-False-positive rules
+Removed: double-tap Shift
 ---
 
-Shift is the most overloaded key in the editor: shift-click range-selects in the Hierarchy,
-shift-drag snaps in the SceneView, and Shift+letter is every capital letter.
+Versions 2.1.0 through 2.5.1 also opened the palette on a double tap of Shift, off the
+internal `GUIUtility.beforeEventProcessed` hook. It was removed in 2.6.0, along with its
+four preference keys, when the bare-Tab default made a second way in unnecessary.
 
-Suppress the gesture entirely while a text field is being edited, using public API —
-`EditorGUIUtility.editingTextField`, ~~`EditorGUIUtility.textFieldHasSelection`~~,
-`GUIUtility.keyboardControl`, `GUIUtility.hotControl` are all public, static and
-non-obsolete in both editors.
+It is recorded here because it was removed for cause, and the cause generalises: **Shift is
+the most overloaded key in the editor**, and every rule that made the gesture safe was a rule
+that made it not fire. Shift-click range-selects in the Hierarchy, shift-drag snaps in the
+SceneView, and Shift+letter is every capital letter there is. Three consecutive releases went
+into one false-positive class alone — the palette opening mid-rename — and the fix landed
+only when it stopped trying to infer intent from the event stream and started asking how much
+text was in the focused field.
 
-**Do not use `textFieldHasSelection`.** It reads as an obvious companion to
-`editingTextField` and it is not: it is *sticky*, reporting that some field somewhere still
-holds a selection long after focus has moved on — including after using Haste's own query
-field. Measured in a real editor it latched on and suppressed every subsequent gesture for
-the session, which presents as the feature simply breaking. Nothing is lost by dropping it:
-the case it covers, Shift extending a selection with the arrow keys, is Shift plus another
-key, which "reset on any other KeyDown" already handles. This removes the largest false-positive class outright:
-Hierarchy renames, Inspector fields, search boxes, Haste's own query field, and IME input
-where bare Shift is a mode toggle. Ctrl/Cmd+Shift+K still works everywhere.
+Two findings from it are durable and worth keeping:
 
-The remaining invariants, none of them user-configurable:
+**On macOS a bare Shift produces no key event at all.** It is an NSEvent `flagsChanged`, and
+it surfaces only as the modifier bits riding on whatever event comes next — typically a
+Repaint a millisecond later:
 
-- ~~fire on the second release, not the second press~~ — **reversed, on measurement.** It
-  fires on the second PRESS. See below
-- ~~require a KeyUp between the two KeyDowns~~ — subsumed. Reading the modifier BIT makes
-  key repeat structurally invisible: holding Shift leaves the bit set, so a repeat is not a
-  transition at all
-- each tap held under **250 ms**, not the ~120 ms first guessed at here — see the measured
-  numbers below; a longer press was a hold, not a tap
-- both taps must be the same physical Shift key — **best-effort only**, see below: modifier
-  bits cannot tell Left from Right
-- reject if `modifiers` contains anything but Shift, after masking off the incidental
-  `FunctionKey`, `Numeric` and `CapsLock` bits
-- reset on any MouseDown/MouseDrag/MouseUp/ScrollWheel, and on `focusChanged`
-- suppress in play mode and while `Haste.IsApplicationBusy`
-
-Only the timing window is configurable (`DoubleTapWindowMs`, default 250), because typing
-rhythm varies and the gesture cannot appear in Edit > Shortcuts, so Haste's own preferences
-page is the only place a user can tune or escape it.
-
-Never call `Event.current.Use()` on the Shift events — consuming them breaks shift-click and
-shift-drag. Observe only.
-
-Failing soft is mandatory, not polite
----
-
-Because `ShortcutIntegration` attaches lazily via `EditorApplication.delayCall`, an
-`[InitializeOnLoad]` subscriber lands **first** in the multicast list. An exception escaping
-our handler therefore aborts the remaining invocations — killing Unity's own
-`ShortcutIntegration.EventHandler`, the shortcut helper bar, the maximize gesture, and the
-trailing `Event.current = null`. Every shortcut in the editor dies, and it presents as a
-Unity bug.
-
-So:
-
-1. Resolve each `FieldInfo` in a try/catch and require the exact expected `FieldType`. A
-   type mismatch means unavailable, not cast-and-pray.
-2. Wrap the whole handler body in try/catch. Reset gesture state in the catch.
-3. Second consecutive exception → unsubscribe permanently, log once.
-4. Runaway breaker: more than **6 fires in 2 s** → self-disable and log once with the
-   settings path. This is the net for whatever false-positive class we did not anticipate,
-   and it is headlessly testable. **Not the 3-in-10 s originally specified here** — that
-   figure was picked without data, and it is a heavy-use detector rather than a
-   false-positive detector. See below.
-5. Combine, never assign. `Delegate.Remove` then `Delegate.Combine`. Assigning would wipe
-   Unity's own subscribers — the actual failure mode seen in careless plugins.
-6. Defer the open through `EditorApplication.delayCall`; opening a window during event
-   dispatch corrupts Unity layout state.
-
-`[InitializeOnLoad]` re-hooks every domain reload, and statics reset, so cross-reload
-duplicates are structurally impossible. Guard against double-hooking within one domain.
-
-How the invariants are actually tested
----
-
-Every rule in this document is a *rejection* rule, and a rejection rule that silently does
-not apply is only discovered by a user whose palette keeps opening mid-sentence. So the
-recognition is a pure state machine with an injected clock —
-`HasteDoubleTapShiftGesture.Feed(type, key, modifiers, time, suppressed)` — and
-`HasteDoubleTapShiftTests` drives it directly: key repeat from holding Shift, a tap held too
-long, taps too far apart, mismatched Shift keys, an intervening letter, a chord modifier,
-incidental CapsLock/NumLock/fn bits, mouse activity, suppression mid-gesture, and the
-runaway breaker.
-
-What that does **not** cover is the hook: whether the events arrive at all, in that order,
-with those keycodes. That is the part below.
-
-What is still unproven
----
-
-Two things could not be settled from a Windows machine in batch mode, and both are why
-Tier 0 exists. The first is now partly answered — the fields are confirmed present on
-6000.3.17f1 with the exact expected types, checked by reflection on the running editor —
-but delivery of real keystrokes is not, and cannot be:
-
-- **No physical keystroke has ever been observed.** `-batchmode -nographics` cannot inject
-  input. That a bare Shift press produces `EventType.KeyDown` with `keyCode ==
-  KeyCode.LeftShift` rests on the documented event sequence, on
-  `KeyCombination.k_KeyCodeToEventModifiers` mapping LeftShift/RightShift to
-  `EventModifiers.Shift`, and on `Trigger.HandleKeyEvent` being gated on KeyDown/KeyUp.
-  High confidence, not observation.
-- ~~**macOS delivery is still unobserved.**~~ **Settled by observation, and it changed the
-  design.** On 6000.3.17f1/macOS a bare Shift produces **no key event at all** — the
-  suspicion about `NSEvent flagsChanged` was right. What it does produce, captured from a
-  real editor:
-
-  ```
-  [Haste] modifierKeysChanged                            t=12153.246
-  [Haste] repaint  key=None  mods=Shift  (was None)      t=12153.247
-  ```
-
-  So the press is observable, just not as a keystroke: it surfaces as the **modifier bits
-  on whatever event arrives next**, one millisecond later. `HasteDoubleTapShiftGesture`
-  therefore recognises **transitions of the Shift bit** rather than KeyDown/KeyUp, which
-  works on every platform since a real Shift KeyDown carries the bit too.
-
-  Two consequences worth knowing:
-
-  - "Both taps must be the same physical Shift key" is now **best-effort**. Modifier bits
-    cannot distinguish Left from Right, so the rule is enforced when the events happen to
-    carry a keycode and waived when they do not — which on macOS is always. Enforcing it
-    there would disable the gesture outright.
-  - Key repeat stops being a rule and becomes structural: holding Shift leaves the bit
-    set, so a repeat is not a transition and nothing happens. The old "require a KeyUp
-    between the two KeyDowns" rule is subsumed.
-
-  `EditorApplication.modifierKeysChanged` fires too, and is subscribed for diagnostics
-  only. It is parameterless — it cannot say which modifier or which direction — so it
-  cannot drive the gesture. Its real use is that it appears to *provoke* the repaint that
-  carries the bits.
-
-Also: `UnityEngine.Event` carries no timestamp — only the internal `Event.GetDoubleClickTime()`
-exists — so the window is measured on the dispatch clock with
-`EditorApplication.timeSinceStartup`, and an editor stall can coalesce two far-apart presses.
-Reject implausibly long gaps rather than trusting the clock.
-
-What a real editor log measured
----
-
-Both timing constants in this document were guesses, and both were wrong in the same
-direction — too tight. From 154 Shift transitions captured in one session on
-6000.3.17f1/macOS:
-
-| | measured |
-|---|---|
-| tap hold, median | 82 ms |
-| tap hold, p90 | **117 ms** |
-| genuine holds (Shift used as a modifier) | 1300–1600 ms |
-| taps rejected by the original 120 ms limit | **6%** (5 of 77) |
-| gap between taps, median | 93 ms |
-
-Firing on the release was the other guess this document got wrong, and it was the one the
-user could feel. Across 105 completed gestures in the same log:
-
-| | fire on release | fire on press |
-|---|---|---|
-| opened correctly | 104 | 105 |
-| opened wrongly | 0 | **1** |
-| median latency | +88 ms | 0 |
-
-88 ms is most of the gap between tapping and being able to type, and it is why the palette
-appeared to "miss the first characters". The single wrong open is a Shift tap followed
-within the window by a Shift press held for something else; Escape closes the palette and
-restores the selection. Double-click has always fired on the second press for exactly this
-trade.
-
-The cost, stated plainly: **the second tap's hold is no longer checked, because it cannot
-be.** The decision is made before the key comes up. Only the first tap proves it was a tap.
-
-The 120 ms tap limit sat directly on top of the distribution it was meant to be clear of,
-so roughly one tap in sixteen was silently discarded. 250 ms sits in the wide gap between
-real taps and real holds. The 250 ms *window* between taps needed no change — it already
-covered the median comfortably.
-
-The breaker was worse, and was the main cause of "it works, then it stops": the log
-contains its degrade message **twice**, both times because someone was testing the gesture.
-34 legitimate fires occurred over 338 s, but four of them landed inside one ten-second
-stretch, which is ordinary use — and the penalty was disabling the feature for the rest of
-the session. A human double tap takes 250–400 ms end to end, so seven inside two seconds is
-not something deliberate use reaches, while a gesture firing on ordinary typing clears it
-easily.
-
-The lesson generalises past this feature: a safety net whose threshold is set by intuition
-will catch the user before it catches the bug.
-
-Acceptance test, runnable headlessly
----
-
-Assert on the *binding*, not on compilation, because a malformed `[Shortcut]` compiles
-cleanly:
-
-```csharp
-ShortcutManager.instance.GetShortcutBinding("Haste/Open Haste")  // non-empty
-ShortcutManager.instance.GetAvailableShortcutIds()               // contains the id
+```
+[Haste] modifierKeysChanged
+[Haste] repaint  key=None  mods=Shift  (was None)
 ```
 
-Wrap every `GetShortcutBinding` call — an unknown id throws `ArgumentException`.
+Any future gesture on a modifier key has to read modifier *transitions*, not KeyDown/KeyUp,
+and consequently cannot tell LeftShift from RightShift.
+
+**An exception in a `beforeEventProcessed` subscriber kills every shortcut in the editor.**
+`ShortcutIntegration` attaches lazily via `EditorApplication.delayCall`, so an
+`[InitializeOnLoad]` subscriber lands *first* in the multicast list, and anything escaping
+it aborts the remaining invocations — including Unity's own. It presents as a Unity bug.
+Nothing may escape a handler on that hook.
+
+The honest summary is that the gesture cost more than it earned. One key, in the place the
+editor already puts every other shortcut, does the same job with none of it.

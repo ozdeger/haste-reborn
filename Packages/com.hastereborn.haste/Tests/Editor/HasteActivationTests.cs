@@ -45,6 +45,12 @@ namespace Haste {
       // README tells people to. Asserting the chord here made a developer's own rebinding
       // fail the suite. The declared default is checked below, where an override cannot
       // reach it.
+      //
+      // Which is not a stylistic preference: an override MASKS a broken default here.
+      // Measured by binding the shortcut to Escape, which BindingValidator refuses -- the
+      // editor logged "Binding uses invalid key code Escape." and this test still passed,
+      // because the developer's own Tab override was supplying the binding. Only the two
+      // tests below, which read the attribute, caught it.
       var combos = BindingOf(HasteShortcut.ShortcutId).keyCombinationSequence.ToList();
 
       Assert.That(combos, Is.Not.Empty,
@@ -54,7 +60,7 @@ namespace Haste {
     }
 
     [Test]
-    public void OpenShortcut_DeclaresCommandShiftKAsItsDefault() {
+    public void OpenShortcut_DeclaresABareTabAsItsDefault() {
       // Read from the attribute rather than from ShortcutManager, so a user override in
       // Edit > Shortcuts cannot change the answer.
       var method = typeof(HasteShortcut).GetMethod("OpenShortcut",
@@ -71,29 +77,87 @@ namespace Haste {
       var modifiers = args.Where(a => a.ArgumentType == typeof(ShortcutModifiers))
         .Select(a => (ShortcutModifiers)a.Value).ToList();
 
-      Assert.That(keyCode, Is.EqualTo(new[] { KeyCode.K }));
+      Assert.That(keyCode, Is.EqualTo(new[] { KeyCode.Tab }));
 
-      // Action is the cross-platform modifier: Cmd on macOS, Ctrl everywhere else.
-      // ShortcutModifiers.Control would mean the literal Ctrl key even on a Mac, which is
-      // the whole reason this is asserted rather than assumed.
-      Assert.That(modifiers, Is.EqualTo(new[] { ShortcutModifiers.Action | ShortcutModifiers.Shift }));
-      Assert.That(modifiers[0].HasFlag(ShortcutModifiers.Control), Is.False,
-        "must not bind the literal Control key");
-      Assert.That(modifiers[0].HasFlag(ShortcutModifiers.Alt), Is.False);
+      // Passed explicitly rather than left to the constructor's default, so that "no
+      // modifiers" is a stated intent in the attribute and not an omission that could be
+      // read either way.
+      Assert.That(modifiers, Is.EqualTo(new[] { ShortcutModifiers.None }),
+        "the default is a bare Tab -- one key, no chord");
     }
 
     [Test]
-    public void OpenShortcut_DoesNotCollideWithAnyOtherShortcut() {
+    public void OpenShortcut_DefaultKeyIsOneShortcutManagerWillAccept() {
+      // A [Shortcut] whose key is rejected does NOT fail the build. The id registers with
+      // an empty binding and Unity writes a discovery warning nobody reads, so the palette
+      // just stops opening. BindingValidator holds the list; this reads it rather than
+      // trusting that Tab looks ordinary, because Escape and Return look ordinary too and
+      // are both refused.
+      var validator = typeof(ShortcutManager).Assembly
+        .GetType("UnityEditor.ShortcutManagement.BindingValidator");
+      if (validator == null) {
+        Assert.Ignore("BindingValidator is internal and has moved; " +
+          "OpenShortcut_RegistersANonEmptyBinding still covers the outcome.");
+      }
+
+      var field = validator.GetField("s_InvalidKeyCodes",
+        System.Reflection.BindingFlags.Static |
+        System.Reflection.BindingFlags.NonPublic |
+        System.Reflection.BindingFlags.Public);
+      if (field == null) {
+        Assert.Ignore("s_InvalidKeyCodes has moved; " +
+          "OpenShortcut_RegistersANonEmptyBinding still covers the outcome.");
+      }
+
+      var invalid = new List<KeyCode>();
+      foreach (KeyCode code in (System.Collections.IEnumerable)field.GetValue(null)) {
+        invalid.Add(code);
+      }
+
+      // Non-vacuity: if this list ever comes back empty the assertion below would pass on
+      // any key at all, including the ones Unity definitely refuses.
+      Assert.That(invalid, Contains.Item(KeyCode.Escape),
+        "the invalid-key list did not contain Escape, so it is not the list this test thinks it is");
+      Assert.That(invalid, Has.No.Member(DefaultKey()));
+    }
+
+    static KeyCode DefaultKey() {
+      var method = typeof(HasteShortcut).GetMethod("OpenShortcut",
+        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+      var attribute = System.Reflection.CustomAttributeData.GetCustomAttributes(method)
+        .First(a => a.AttributeType == typeof(ShortcutAttribute));
+      return attribute.ConstructorArguments
+        .Where(a => a.ArgumentType == typeof(KeyCode))
+        .Select(a => (KeyCode)a.Value)
+        .First();
+    }
+
+    [Test]
+    public void OpenShortcut_DoesNotCollideWithAnyGlobalShortcut() {
       // The regression test for the bug this replaced: Haste shipped
       // [MenuItem("Window/Haste %k")] while Unity 6 ships
       // [MenuItem("Edit/Search/Search All... %k")] on its own Search window. Ctrl/Cmd+K
       // was owned twice, and the loser just silently never opened.
+      //
+      // Only GLOBAL shortcuts can collide, which is why this does not simply compare every
+      // binding. A ShortcutBinding carries no context, so on the raw comparison Haste's Tab
+      // looks identical to Timeline/ToggleClipTrackArea -- and that one is declared with
+      // typeof(TimelineWindow), so it only applies while Timeline has focus. Unity resolves
+      // context-specific over global, which is the behaviour we want, so counting it as a
+      // clash would fail the suite over something working exactly as intended.
       var ours = BindingOf(HasteShortcut.ShortcutId);
       Assert.That(ours.keyCombinationSequence.ToList(), Is.Not.Empty);
 
+      var scoped = ContextScopedShortcutIds();
+
+      // Non-vacuity: if the attribute sweep below finds nothing, every id would look
+      // global and the exclusion would be doing no work at all.
+      Assert.That(scoped, Is.Not.Empty,
+        "found no context-scoped shortcuts at all, so the attribute sweep is not working");
+
       var clashes = new List<string>();
       foreach (var id in ShortcutManager.instance.GetAvailableShortcutIds()) {
-        if (id == HasteShortcut.ShortcutId) {
+        if (id == HasteShortcut.ShortcutId || scoped.Contains(id)) {
           continue;
         }
         if (BindingOf(id).Equals(ours)) {
@@ -102,7 +166,80 @@ namespace Haste {
       }
 
       Assert.That(clashes, Is.Empty,
-        "Haste's default chord is already claimed by: " + string.Join(", ", clashes.ToArray()));
+        "Haste's default chord is already claimed globally by: " +
+        string.Join(", ", clashes.ToArray()));
+    }
+
+    // Ids of every [Shortcut] that names a context type, read from the attributes rather
+    // than from ShortcutManager -- which exposes bindings but not their context.
+    static HashSet<string> ContextScopedShortcutIds() {
+      var scoped = new HashSet<string>();
+
+      foreach (var assembly in System.AppDomain.CurrentDomain.GetAssemblies()) {
+        System.Type[] types;
+        try {
+          types = assembly.GetTypes();
+        } catch (System.Reflection.ReflectionTypeLoadException e) {
+          types = e.Types.Where(t => t != null).ToArray();
+        } catch (System.Exception) {
+          continue;
+        }
+
+        foreach (var type in types) {
+          var methods = type.GetMethods(
+            System.Reflection.BindingFlags.Public |
+            System.Reflection.BindingFlags.NonPublic |
+            System.Reflection.BindingFlags.Static |
+            System.Reflection.BindingFlags.DeclaredOnly);
+
+          foreach (var method in methods) {
+            System.Collections.Generic.IList<System.Reflection.CustomAttributeData> attributes;
+            try {
+              attributes = System.Reflection.CustomAttributeData.GetCustomAttributes(method);
+            } catch (System.Exception) {
+              continue;
+            }
+
+            foreach (var attribute in attributes) {
+              if (!typeof(ShortcutAttribute).IsAssignableFrom(attribute.AttributeType)) {
+                continue;
+              }
+
+              var args = attribute.ConstructorArguments;
+              var id = args.Where(a => a.ArgumentType == typeof(string))
+                .Select(a => (string)a.Value).FirstOrDefault();
+              var context = args.Where(a => a.ArgumentType == typeof(System.Type))
+                .Select(a => a.Value).FirstOrDefault();
+
+              if (!string.IsNullOrEmpty(id) && context != null) {
+                scoped.Add(id);
+              }
+            }
+          }
+        }
+      }
+
+      return scoped;
+    }
+
+    [Test]
+    public void Label_DescribesTheLiveBindingAndIsNeverBlank() {
+      // The palette prints this as "<label> to reopen" and Preferences shows it beside
+      // "Shortcut". It reads the live binding so a rebinding is reflected rather than the
+      // window naming a chord that no longer works -- which means a blank or stale answer
+      // here is a user telling us Haste "can't be reopened".
+      var label = HasteShortcut.Label;
+
+      Assert.That(label, Is.Not.Null.And.Not.Empty,
+        "an empty label renders as \" to reopen\", which reads as a missing shortcut");
+      Assert.That(label.Trim(), Is.EqualTo(label), "leading or trailing space would show");
+
+      var binding = BindingOf(HasteShortcut.ShortcutId).ToString();
+      if (!string.IsNullOrEmpty(binding)) {
+        Assert.That(label, Is.EqualTo(binding),
+          "the label must be the binding ShortcutManager actually holds, including any " +
+          "override the developer has set in Edit > Shortcuts");
+      }
     }
 
     [Test]

@@ -132,53 +132,7 @@ namespace Haste {
 
         EditorGUILayout.LabelField(
           Label("Shortcut", "Rebind it under Edit > Shortcuts, like any other."),
-          new GUIContent(Application.platform == RuntimePlatform.OSXEditor
-            ? "\u2318\u21e7K" : "Ctrl+Shift+K"));
-
-        var doubleTap = EditorGUILayout.Toggle(
-          Label("Double-tap Shift",
-            "Tap Shift twice quickly to open Haste. Ignored while typing, dragging, " +
-            "in play mode, and while indexing."),
-          HasteSettings.DoubleTapShiftEnabled);
-        if (doubleTap != HasteSettings.DoubleTapShiftEnabled) {
-          HasteSettings.DoubleTapShiftEnabled = doubleTap;
-        }
-
-        using (new HasteDisabled(!doubleTap)) {
-          var window = EditorGUILayout.IntSlider(
-            Label("Tap window (ms)", "How long between the two taps still counts as one gesture."),
-            HasteSettings.DoubleTapShiftWindowMs, 120, 600);
-          if (window != HasteSettings.DoubleTapShiftWindowMs) {
-            HasteSettings.DoubleTapShiftWindowMs = window;
-          }
-
-          var ignoreTyping = EditorGUILayout.Toggle(
-            Label("Ignore while typing",
-              "Refuses the gesture while a field has something in it. An empty field " +
-              "still accepts it."),
-            HasteSettings.DoubleTapShiftIgnoreWhileTyping);
-          if (ignoreTyping != HasteSettings.DoubleTapShiftIgnoreWhileTyping) {
-            HasteSettings.DoubleTapShiftIgnoreWhileTyping = ignoreTyping;
-          }
-
-          var diagnostics = EditorGUILayout.Toggle(
-            Label("Log key events", "Writes every key Haste sees to the console."),
-            HasteSettings.DoubleTapShiftDiagnostics);
-          if (diagnostics != HasteSettings.DoubleTapShiftDiagnostics) {
-            HasteSettings.DoubleTapShiftDiagnostics = diagnostics;
-          }
-        }
-
-        // Conditional and genuinely surprising, so it stays a box -- but one line of it.
-        if (HasteDoubleTapShift.IsDisabled) {
-          EditorGUILayout.Space();
-          EditorGUILayout.HelpBox(
-            "Double-tap Shift switched itself off this session. The shortcut still works.",
-            MessageType.Warning);
-          if (GUILayout.Button("Reset double-tap state", GUILayout.Width(180))) {
-            HasteDoubleTapShift.ResetState();
-          }
-        }
+          new GUIContent(HasteShortcut.Label));
 
         // ------------------------------------------------------------------ ignoring
         Section("Ignored Paths");

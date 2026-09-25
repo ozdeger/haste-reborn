@@ -1136,10 +1136,11 @@ namespace Haste {
       }
     }
 
+    // Reads the live binding rather than naming a chord, so rebinding Haste in
+    // Edit > Shortcuts changes the hint too. It used to hard-code the default, which meant
+    // the window told anyone who had rebound it the wrong way to get back in.
     static string HasteShortcutLabel() {
-      return Application.platform == RuntimePlatform.OSXEditor
-        ? "⌘⇧K to reopen"
-        : "Ctrl+Shift+K to reopen";
+      return HasteShortcut.Label + " to reopen";
     }
 
     void SyncStatus() {

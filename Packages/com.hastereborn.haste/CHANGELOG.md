@@ -10,6 +10,26 @@ work as described bumps the **patch**. `package.json`, `Haste.VERSION` and the g
 move together, and a test fails if the first two disagree, because the Package Manager
 reads one and the reindex-on-upgrade check reads the other.
 
+## [2.6.0] - 2026-09-25
+
+### Changed
+- **Haste opens with `Tab`.** One key, where the shortcut used to be
+  `Ctrl/Cmd+Shift+K`. Rebind it in Edit > Shortcuts as before — and if you had
+  already rebound it there, your binding is untouched, because overrides are keyed
+  by shortcut id and the id has not moved.
+- The shortcut hint in the palette and in Preferences now reports the binding you
+  actually have, instead of naming the default. Rebinding Haste used to leave the
+  window telling you the wrong way to get back in.
+
+### Removed
+- **Double-tap Shift is gone**, along with its four preference keys (the toggle, the
+  tap window, "ignore while typing" and the key log). Tab does the same job for one
+  keystroke and none of the ambiguity: Shift is the most overloaded key in the
+  editor, and three releases in a row went into one false-positive class alone — the
+  palette opening while you were renaming something. The stored preferences are left
+  orphaned rather than reused, so nothing else adopts their values.
+  `Documentation~/activation-design.md` records what was learned from it.
+
 ## [2.5.1] - 2026-09-21
 
 ### Fixed

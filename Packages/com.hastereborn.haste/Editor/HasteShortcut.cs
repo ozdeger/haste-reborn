@@ -73,6 +73,56 @@ namespace Haste {
       return HasteSettings.Enabled;
     }
 
+    // The character the shortcut's key types, when it types one -- or null.
+    //
+    // Only for a bare key: with a modifier held the key is a chord, not typing. And only
+    // for the printable-ASCII range, where a KeyCode's value IS its character (A is 97,
+    // DoubleQuote 34, BackQuote 96); anything outside it types nothing we can predict.
+    // Reads the live binding, so a rebinding to another bare key is handled the same way.
+    public static char? TypedCharacter {
+      get {
+        try {
+          var combos = ShortcutManager.instance.GetShortcutBinding(ShortcutId).keyCombinationSequence;
+          foreach (var combo in combos) {
+            var code = (int)combo.keyCode;
+            if (combo.modifiers != ShortcutModifiers.None || code < 33 || code > 126) {
+              return null;
+            }
+            return (char)code;
+          }
+        } catch (System.ArgumentException) {
+          // Unknown id; nothing to protect.
+        }
+        return null;
+      }
+    }
+
+    // Whether an edit to the query only typed the shortcut's own character into an empty
+    // field -- the key that opened the palette leaking into it.
+    //
+    // A bare printable key opens the palette on KeyDown, so the same key's repeats while
+    // it is held, the press itself if the field is focused before the key is handled,
+    // and every press after the palette is already open all arrive as TEXT. Guarding the
+    // value rather than the key event is deliberate: it catches all of those the same way,
+    // and does not depend on whether stopping a KeyDown in trickle-down stops UI Toolkit's
+    // text field from inserting the character -- which cannot be tested headlessly.
+    //
+    // Only while the field is empty. Once anything else has been typed, the character is
+    // just a character; the rule is that the query cannot START with it. Pasting "\"foo"
+    // is not only the character, so it goes through.
+    public static bool IsOnlyTheShortcutCharacter(string before, string after, char? typed) {
+      if (!typed.HasValue || !string.IsNullOrEmpty(before) || string.IsNullOrEmpty(after)) {
+        return false;
+      }
+      var c = char.ToLowerInvariant(typed.Value);
+      foreach (var ch in after) {
+        if (char.ToLowerInvariant(ch) != c) {
+          return false;
+        }
+      }
+      return true;
+    }
+
     // What to call the shortcut in the UI. Reads the LIVE binding, so a rebinding in
     // Edit > Shortcuts is reflected in the hints instead of the window confidently naming
     // a chord that no longer opens it.

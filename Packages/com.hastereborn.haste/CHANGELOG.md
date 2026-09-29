@@ -10,6 +10,16 @@ work as described bumps the **patch**. `package.json`, `Haste.VERSION` and the g
 move together, and a test fails if the first two disagree, because the Package Manager
 reads one and the reindex-on-upgrade check reads the other.
 
+## [2.8.1] - 2026-09-29
+
+### Fixed
+- Holding the shortcut key no longer types it into the search field. The key opens
+  Haste as it goes down, so its repeats — and any press while Haste is already open —
+  arrived as text, and the query started with `"`. Whatever the shortcut's key types
+  can no longer be the **first** character of a query; once you have typed anything
+  else it types normally, and pasting text that happens to start with it is untouched.
+  Applies to whatever bare key Haste is bound to, not only the default.
+
 ## [2.8.0] - 2026-09-29
 
 ### Changed

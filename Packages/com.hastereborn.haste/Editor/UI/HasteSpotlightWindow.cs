@@ -244,7 +244,17 @@ namespace Haste {
 
       queryField = new TextField();
       queryField.AddToClassList("haste-query");
-      queryField.RegisterValueChangedCallback(evt => OnQueryChanged(evt.newValue));
+      queryField.RegisterValueChangedCallback(evt => {
+        // Holding or re-pressing the shortcut would otherwise start every query with its
+        // character. See HasteShortcut.IsOnlyTheShortcutCharacter.
+        if (string.IsNullOrEmpty(evt.previousValue) &&
+            HasteShortcut.IsOnlyTheShortcutCharacter(evt.previousValue, evt.newValue,
+                                                     HasteShortcut.TypedCharacter)) {
+          queryField.SetValueWithoutNotify(evt.previousValue ?? "");
+          return;
+        }
+        OnQueryChanged(evt.newValue);
+      });
       queryField.RegisterCallback<FocusOutEvent>(OnQueryFocusOut);
       slot.Add(queryField);
 

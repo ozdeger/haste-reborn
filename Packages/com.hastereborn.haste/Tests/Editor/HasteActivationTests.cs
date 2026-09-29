@@ -250,6 +250,48 @@ namespace Haste {
     }
 
     [Test]
+    public void ThePrintableKeyCodesAreTheirOwnCharacters() {
+      // TypedCharacter rests on this: for printable ASCII a KeyCode's value IS the
+      // character. Both defaults are checked, and a letter, because a bare-letter
+      // rebinding goes through the same path.
+      Assert.That((char)(int)KeyCode.DoubleQuote, Is.EqualTo('"'));
+      Assert.That((char)(int)KeyCode.BackQuote, Is.EqualTo('`'));
+      Assert.That((char)(int)KeyCode.Q, Is.EqualTo('q'));
+    }
+
+    [Test]
+    public void TheShortcutsCharacterCannotStartTheQuery() {
+      // One press leaking in, and key repeat while held -- the field may take several
+      // repeats in one edit.
+      Assert.That(HasteShortcut.IsOnlyTheShortcutCharacter("", "\"", '"'), Is.True);
+      Assert.That(HasteShortcut.IsOnlyTheShortcutCharacter("", "\"\"\"", '"'), Is.True);
+      Assert.That(HasteShortcut.IsOnlyTheShortcutCharacter(null, "\"", '"'), Is.True);
+    }
+
+    [Test]
+    public void TheShortcutsCharacterTypesNormallyOnceTheQueryHasStarted() {
+      Assert.That(HasteShortcut.IsOnlyTheShortcutCharacter("a", "a\"", '"'), Is.False);
+      Assert.That(HasteShortcut.IsOnlyTheShortcutCharacter("\"", "\"\"", '"'), Is.False,
+        "only an EMPTY field is guarded -- a quote someone kept on purpose stays");
+    }
+
+    [Test]
+    public void OtherInputIntoAnEmptyQueryIsUntouched() {
+      Assert.That(HasteShortcut.IsOnlyTheShortcutCharacter("", "r", '"'), Is.False);
+      // A paste that merely starts with the character is not the key leaking in.
+      Assert.That(HasteShortcut.IsOnlyTheShortcutCharacter("", "\"foo", '"'), Is.False);
+      Assert.That(HasteShortcut.IsOnlyTheShortcutCharacter("", "", '"'), Is.False);
+      // A shortcut that types nothing -- Tab, or a chord -- protects nothing.
+      Assert.That(HasteShortcut.IsOnlyTheShortcutCharacter("", "\"", null), Is.False);
+    }
+
+    [Test]
+    public void ABareLetterShortcutIsMatchedWhateverItsCase() {
+      // KeyCode.Q is 'q', but Caps Lock types 'Q'.
+      Assert.That(HasteShortcut.IsOnlyTheShortcutCharacter("", "Q", 'q'), Is.True);
+    }
+
+    [Test]
     public void MenuItem_CarriesNoShortcutSuffix() {
       // A shortcut baked into the MenuItem string is not rebindable and would compete
       // with the ShortcutManager entry, giving two bindings for one command. It also has

@@ -5,7 +5,8 @@ A Spotlight-style search palette for the Unity editor. Navigate your project wit
 
 > "It’s like Spotlight or Alfred for Unity", said by a friend of ours.
 
-**Usage: Press Tab to open Haste, then begin typing to search.**
+**Usage: Press the key above Tab (`"` on a Turkish-Q Mac, `` ` `` on Windows) to open Haste,
+then begin typing to search.**
 
 Thank you, Barking Mouse Studio
 ---
@@ -65,7 +66,7 @@ Reference
 
 Action | Keyboard | Mouse
 ---|---|---
-Open Haste | Tab | Click "Window/Haste"
+Open Haste | The key above Tab | Click "Window/Haste"
 Navigate search results | ↑ or ↓ |
 Reveal a result, keeping Haste open | | Single-click it
 Reveal highlighted result, closing Haste | Enter |
@@ -100,14 +101,20 @@ Haste's shortcut is registered with Unity's shortcut system, so you rebind it th
 you rebind anything else in the editor: **Edit > Shortcuts**, then search for `Haste`.
 There is no need to edit any source file.
 
-The default is a bare `Tab`. A palette you reach for dozens of times an hour should cost one
-key, and Tab is free: the only other shortcut bound to it in a full editor is Timeline's, and
-that one only applies while the Timeline window has focus.
+The default is the bare key above Tab, left of 1. A palette you reach for dozens of times an
+hour should cost one key. On macOS Unity names that key by the character it types, so the
+default there is `"` — right for a Turkish-Q keyboard. On Windows it is named by position,
+`` ` ``, and works on any layout. On a US Mac the key types `` ` `` and the default will not
+fire: rebind it in Edit > Shortcuts by pressing the key, which records what your platform
+actually reports.
+
+**If you have ever rebound Haste, your binding wins over any new default.** Changing the
+default in a release does nothing for you until you reset Haste's entry in Edit > Shortcuts.
 
 It is not the `Ctrl/Cmd+K` older versions of Haste used, because Unity 6 binds that to its
 own Search window (`Edit > Search > Search All...`), and two commands on one chord means one
-of them silently never opens. Earlier releases of Haste Reborn used `Ctrl/Cmd+Shift+K`; if
-you want either of those back, set it in Edit > Shortcuts.
+of them silently never opens. Earlier releases of Haste Reborn used `Ctrl/Cmd+Shift+K`, then `Tab`; if
+you want any of those back, set it in Edit > Shortcuts.
 
 (Additional settings are available in the "Haste" tab of "Unity Preferences".)
 
@@ -161,7 +168,7 @@ Step-By-Step Tutorial
 
 ##### Step 2. Open the included tutorial scene @ `Assets/Tutorial/Tutorial.unity` (available when you clone this repository)
 
-##### Step 3. Press Tab to open Haste.
+##### Step 3. Press the key above Tab to open Haste.
 
 This is Haste. You can open it at any time.
 

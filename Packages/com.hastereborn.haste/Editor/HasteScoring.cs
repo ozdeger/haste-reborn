@@ -38,6 +38,25 @@ namespace Haste {
 
       var boundaryMatchCount = HasteStringUtils.LongestCommonSubsequenceLength(queryLower, item.boundariesLower);
       var boundaryQueryRatio = boundaryMatchCount / (float)queryLen;
+
+      // Where the query occurs in the name as a word, or the start of one: "recipe" in
+      // "..._Recipe", "panel" in "ItemPanel". -1 when it does not. Three characters or
+      // more, like every other substring rung -- below that a "word" is one or two letters
+      // and the acronym half already says everything there is to say.
+      var wordStart = queryLen >= 3
+        ? HasteStringUtils.IndexOfWordStart(item.name, item.nameLower, queryLower)
+        : -1;
+
+      // A word the user typed verbatim is the strongest thing the acronym half measures:
+      // every query character lands on word structure, it just happens to be one word's
+      // worth. Without this, the acronym half only credits the word's FIRST letter, and
+      // an accidental acronym elsewhere wins. Measured: "recipe" spelled
+      // R-e-C-I-P-E out of RewardCanvasItemPanelMergeEnd for 5/6 of the query and 70
+      // points, while PopupItem_..._Recipe, the one item actually containing the word,
+      // got 3/6 and 54 -- and ranked below every RewardCanvas script in the project.
+      if (wordStart >= 0) {
+        boundaryQueryRatio = 1.0f;
+      }
       var boundaryLen = item.boundariesLower.Length;
       var boundaryUtilization = boundaryLen > 0 ? boundaryMatchCount / (float)boundaryLen : 0.0f;
 
@@ -72,6 +91,13 @@ namespace Haste {
       // Favor prefix name matches
       if (queryLen >= 3 && item.nameLower.IndexOf(queryLower, StringComparison.Ordinal) == 0) {
         score += 40.0f;
+        return score * userScore;
+      }
+
+      // Favor a word inside the name. The prefix rung above is this at position 0, and
+      // stays five points ahead: "RecipeBook" should edge "Workshop_Recipe" for "recipe".
+      if (wordStart > 0) {
+        score += 35.0f;
         return score * userScore;
       }
 

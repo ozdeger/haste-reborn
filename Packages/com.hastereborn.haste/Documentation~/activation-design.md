@@ -14,11 +14,21 @@ The contract
 One way in, always present, zero reflection:
 
 ```csharp
-[Shortcut("Haste/Open Haste", KeyCode.Tab, ShortcutModifiers.None)]
+[Shortcut("Haste/Open Haste", DefaultKey, ShortcutModifiers.None)]
+// DefaultKey: KeyCode.DoubleQuote on macOS, KeyCode.BackQuote elsewhere
 ```
 
-A bare Tab, rebindable by the user in Edit > Shortcuts. A palette you reach for dozens of
-times an hour should cost one key; anything longer and you stop reaching for it.
+The bare key above Tab, rebindable by the user in Edit > Shortcuts. A palette you reach for
+dozens of times an hour should cost one key; anything longer and you stop reaching for it.
+It was a bare Tab in 2.6.0 and 2.7.x, and the reasoning below about Tab still stands.
+
+The KeyCode differs by platform, and it is the one claim here that was not measured. macOS
+reports punctuation by the character it types, so on a Turkish-Q keyboard that key arrives as
+`"`. Windows reports the physical key (`VK_OEM_3`), which Unity names `BackQuote` on every
+common layout. A US Mac types `` ` `` in that position and gets nothing from the default. If
+the Turkish-Q assumption turns out wrong, rebind by *pressing* the key in Edit > Shortcuts,
+then read the `m_KeyCode` the profile JSON recorded in
+`~/Library/Preferences/Unity/Editor-5.x/shortcuts/` — that number is the ground truth.
 
 - The id is load-bearing. `ShortcutManager` keys user overrides by id, so renaming it
   silently discards every rebinding anyone has made.

@@ -10,6 +10,31 @@ work as described bumps the **patch**. `package.json`, `Haste.VERSION` and the g
 move together, and a test fails if the first two disagree, because the Package Manager
 reads one and the reindex-on-upgrade check reads the other.
 
+## [2.8.0] - 2026-09-29
+
+### Changed
+- **Haste opens with the key above Tab** instead of Tab: `"` on macOS, where Unity names
+  keys by the character they type (right for a Turkish-Q keyboard), and `` ` `` on
+  Windows, where it names them by position. On a US Mac the key types `` ` `` and the
+  default will not fire; rebind it in Edit > Shortcuts. **If you have rebound Haste
+  before, your binding still wins** — reset Haste's entry there to pick up the new one.
+- **A word you type verbatim now outranks an accidental acronym.** Searching `recipe`
+  listed every `RewardCanvasItemPanel…` script first and the prefab ending in `_Recipe`
+  below them all: the query spells R-e-C-I-P-E out of the word starts of
+  *R*eward*C*anvas*I*tem*P*anel*M*erge*E*nd, which scored as five sixths of an acronym,
+  while the name that actually contains the word got a flat substring bonus. When the
+  query occurs in a name at the start of a word, it now counts as fully landing on word
+  structure, and a word inside the name ranks just below a name that begins with it.
+  Acronym search is unaffected for queries that are not in the name as a word, and for
+  queries under three characters.
+- One visible reorder from that: `mainc` now puts `MainCamera.mat` above the `Main
+  Camera` object, since only the material contains `mainc` verbatim.
+
+### Fixed
+- The shortcut collision test checked the live binding, so on a machine where Haste had
+  been rebound it tested the override and never the key being shipped. It now checks the
+  declared default.
+
 ## [2.7.0] - 2026-09-25
 
 ### Added

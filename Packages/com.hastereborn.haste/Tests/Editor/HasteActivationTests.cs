@@ -60,7 +60,7 @@ namespace Haste {
     }
 
     [Test]
-    public void OpenShortcut_DeclaresABareTabAsItsDefault() {
+    public void OpenShortcut_DeclaresTheKeyAboveTabAsItsDefault() {
       // Read from the attribute rather than from ShortcutManager, so a user override in
       // Edit > Shortcuts cannot change the answer.
       var method = typeof(HasteShortcut).GetMethod("OpenShortcut",
@@ -77,13 +77,18 @@ namespace Haste {
       var modifiers = args.Where(a => a.ArgumentType == typeof(ShortcutModifiers))
         .Select(a => (ShortcutModifiers)a.Value).ToList();
 
-      Assert.That(keyCode, Is.EqualTo(new[] { KeyCode.Tab }));
+      // The key above Tab reports differently per platform -- by character on macOS, by
+      // physical key on Windows. See HasteShortcut.DefaultKey.
+      var expected = Application.platform == RuntimePlatform.OSXEditor
+        ? KeyCode.DoubleQuote
+        : KeyCode.BackQuote;
+      Assert.That(keyCode, Is.EqualTo(new[] { expected }));
 
       // Passed explicitly rather than left to the constructor's default, so that "no
       // modifiers" is a stated intent in the attribute and not an omission that could be
       // read either way.
       Assert.That(modifiers, Is.EqualTo(new[] { ShortcutModifiers.None }),
-        "the default is a bare Tab -- one key, no chord");
+        "the default is one bare key, no chord");
     }
 
     [Test]
@@ -145,8 +150,10 @@ namespace Haste {
       // typeof(TimelineWindow), so it only applies while Timeline has focus. Unity resolves
       // context-specific over global, which is the behaviour we want, so counting it as a
       // clash would fail the suite over something working exactly as intended.
-      var ours = BindingOf(HasteShortcut.ShortcutId);
-      Assert.That(ours.keyCombinationSequence.ToList(), Is.Not.Empty);
+      // The DECLARED default, not the live binding. The live one carries the developer's
+      // own override, and a suite run on a machine that had rebound Haste would check
+      // that override for collisions and never look at the key being shipped.
+      var ours = new ShortcutBinding(new KeyCombination(DefaultKey(), ShortcutModifiers.None));
 
       var scoped = ContextScopedShortcutIds();
 

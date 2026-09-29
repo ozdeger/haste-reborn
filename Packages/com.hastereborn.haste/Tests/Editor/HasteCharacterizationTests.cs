@@ -179,9 +179,12 @@ namespace Haste {
     [Test]
     [Category("Ranking")]
     public void Ranking_PartialWordThenAcronym_mainc() {
+      // Reordered in 2.8.0, deliberately. "mainc" occurs verbatim at the start of
+      // "MainCamera", so the material is a word match; "Main Camera" has a space in the
+      // way and matches as an acronym only. It used to win on that acronym.
       AssertRanking("mainc",
+        "93.3333|Assets/Materials/MainCamera.mat",
         "76|Main Camera",
-        "69.3333|Assets/Materials/MainCamera.mat",
         "49.3333|Assets/Prefabs/Main Camera.prefab");
     }
 
@@ -189,8 +192,10 @@ namespace Haste {
     [Category("Ranking")]
     public void Ranking_Word_player() {
       AssertRanking("player",
-        "53.3333|Assets/Scripts/PlayerController.cs",
-        "52.381|Assets/Scripts/Player/PlayerMovement.cs",
+        // Both names begin with the word, which since 2.8.0 counts the whole query as
+        // landing on word structure. Order unchanged. "Mesh" does not contain it.
+        "86.6667|Assets/Scripts/PlayerController.cs",
+        "85.7143|Assets/Scripts/Player/PlayerMovement.cs",
         "50|Player/Model/Mesh");
     }
 
@@ -223,11 +228,11 @@ namespace Haste {
       // literally in the path. Paths almost never contain one, so typing a space silently
       // emptied the list -- "main camera" could not find "MainCamera.mat".
       AssertRanking("main camera",
-        "60.8333|Main Camera",
+        "97.5|Main Camera",
         // Unreachable before: "maincamera" has no space, so the one-subsequence matcher
         // could never get past the space in the query.
-        "54.1667|Assets/Materials/MainCamera.mat",
-        "54.1667|Assets/Prefabs/Main Camera.prefab");
+        "87.5|Assets/Materials/MainCamera.mat",
+        "87.5|Assets/Prefabs/Main Camera.prefab");
     }
 
     [Test]
@@ -410,6 +415,54 @@ namespace Haste {
         "8|GameObject/Create Empty Child");
     }
 
+    [Test]
+    [Category("Ranking")]
+    public void Ranking_AVerbatimWordBeatsAnAccidentalAcronym() {
+      // Reported from a real project: "recipe" listed every RewardCanvas script first and
+      // the one prefab ending in "_Recipe" below all of them. The query spells
+      // R-e-C-I-P-E out of the word starts of RewardCanvasItemPanelMergeEnd, which the
+      // acronym half scored as 5/6 of the query, while the verbatim word earned a flat
+      // substring bonus on top of 3/6. "_recipe" worked, which is how it was noticed.
+      var index = new HasteIndex();
+      foreach (var path in new[] {
+        "Assets/Scripts/RewardCanvas/RewardCanvasItemPanelMergeEnd.cs",
+        "Assets/Scripts/RewardCanvas/RewardCanvasItemPanel.cs",
+        "Assets/Prefabs/UI/RewardCanvas_Effect_CoinOnly.prefab",
+        "Assets/Scripts/RewardCanvas/RewardCanvasItemPanelCrafting.cs",
+        "Assets/Prefabs/UI/RoomTooltipCanvas.prefab",
+        "Assets/Prefabs/UI/PopupItem_Event_SinglePlayer_ColonelsWorkshop_Recipe.prefab",
+        "Assets/Scripts/Crafting/RecipeBook.cs",
+      }) {
+        index.Add(new HasteItem(path, 0, ""));
+      }
+
+      var promise = new Promise<IHasteResult[]>();
+      HasteScheduler.Sync(new HasteSearch(index).Search("recipe", 100, promise));
+      var ranked = promise.Value.Select(r => r.Item.name).ToArray();
+
+      // A name that STARTS with the word first, then a name containing it as a word, then
+      // the accidental acronyms.
+      Assert.That(ranked.Take(2), Is.EqualTo(new[] {
+        "RecipeBook",
+        "PopupItem_Event_SinglePlayer_ColonelsWorkshop_Recipe",
+      }), "ranked: " + string.Join(", ", ranked));
+    }
+
+    [Test]
+    [Category("Primitives")]
+    public void IndexOfWordStart_FindsTheWordNotTheFirstOccurrence() {
+      Assert.That(HasteStringUtils.IndexOfWordStart("Workshop_Recipe", "workshop_recipe", "recipe"), Is.EqualTo(9));
+      Assert.That(HasteStringUtils.IndexOfWordStart("ItemPanel", "itempanel", "panel"), Is.EqualTo(4));
+      Assert.That(HasteStringUtils.IndexOfWordStart("Recipe Book", "recipe book", "book"), Is.EqualTo(7));
+      Assert.That(HasteStringUtils.IndexOfWordStart("RecipeBook", "recipebook", "recipe"), Is.EqualTo(0));
+
+      // Mid-word only: "ecipe" is inside "Recipe", not the start of anything.
+      Assert.That(HasteStringUtils.IndexOfWordStart("Recipe", "recipe", "ecipe"), Is.EqualTo(-1));
+
+      // The first occurrence is mid-word, the second is a word -- the second is found.
+      Assert.That(HasteStringUtils.IndexOfWordStart("Prerecipe_Recipe", "prerecipe_recipe", "recipe"), Is.EqualTo(10));
+    }
+
     // ----------------------------------------------------------------- scoring
 
     [Test]
@@ -417,13 +470,15 @@ namespace Haste {
     public void Score_ExactMatchesOutrankAcronyms() {
       // Exact name match adds 60 on top of the boundary component and short-circuits.
       var camera = new HasteItem("Main Camera", 0, "");
-      Assert.That(HasteScoring.Score(camera, "main camera", 11), Is.EqualTo(107.2727f).Within(0.001f));
+      Assert.That(HasteScoring.Score(camera, "main camera", 11), Is.EqualTo(140.0f).Within(0.001f));
 
       // Exact full-path match adds 50.
       var mesh = new HasteItem("Component/Physics/Mesh Collider", 0, "");
       Assert.That(HasteScoring.Score(mesh, "component/physics/mesh collider", 31), Is.EqualTo(95.1613f).Within(0.001f));
-      // Prefix-of-name match adds 40.
-      Assert.That(HasteScoring.Score(mesh, "mesh collider", 13), Is.EqualTo(86.1539f).Within(0.001f));
+      // The item's NAME is "Mesh Collider", so this is the exact-name rung (+60), not the
+      // prefix-of-name one this comment used to claim. 40 query coverage (a verbatim word,
+      // since 2.8.0) + 20 utilization ("mc" of "cpmc") + 60.
+      Assert.That(HasteScoring.Score(mesh, "mesh collider", 13), Is.EqualTo(120.0f).Within(0.001f));
 
       // A two-boundary path fully consumed by a two-character acronym is the ideal case:
       // both the query ratio and the boundary utilization saturate.

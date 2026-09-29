@@ -425,6 +425,39 @@ namespace Haste {
 
     // It's faster to lowercase each char during iteration rather
     // than ToLowerInvariant at the end.
+    // Whether str[i] begins a word, by exactly the rules GetBoundaries uses -- so "a word
+    // start" means the same thing to the scorer's acronym half and to its ladder.
+    public static bool IsWordStart(string str, int i) {
+      if (i == 0) {
+        return str.Length > 0 && !char.IsPunctuation(str[0]);
+      }
+      var c = str[i];
+      var previous = str[i - 1];
+      if (char.IsUpper(c) && !char.IsUpper(previous)) {
+        return true;
+      }
+      return char.IsLetterOrDigit(c) && (char.IsPunctuation(previous) || previous == ' ');
+    }
+
+    // The first position at which `queryLower` occurs in `lower` AND begins a word of
+    // `original`, or -1. `lower` must be `original` lowercased, which preserves length.
+    //
+    // Every occurrence is tried, not just the first: in "PopupRecipe_Recipe" the first
+    // "recipe" is mid-word and the second is not.
+    public static int IndexOfWordStart(string original, string lower, string queryLower) {
+      if (string.IsNullOrEmpty(queryLower)) {
+        return -1;
+      }
+      for (var i = lower.IndexOf(queryLower, StringComparison.Ordinal);
+           i >= 0;
+           i = lower.IndexOf(queryLower, i + 1, StringComparison.Ordinal)) {
+        if (IsWordStart(original, i)) {
+          return i;
+        }
+      }
+      return -1;
+    }
+
     public static string GetBoundaries(string str) {
       int len = str.Length;
       if (len == 0) {

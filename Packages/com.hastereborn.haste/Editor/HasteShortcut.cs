@@ -16,23 +16,24 @@ namespace Haste {
   //   2. A shortcut baked into a MenuItem string is not rebindable. ShortcutManager is,
   //      and it puts Haste in Edit > Shortcuts alongside everything else.
   //
-  // The default is a bare Tab, because a palette you reach for constantly should cost one
-  // key. It replaced Ctrl/Cmd+Shift+K, which was free but needed three fingers, and the
-  // double-tap-Shift gesture that used to sit alongside it -- see the CHANGELOG for 2.6.0
-  // and Documentation~/activation-design.md for why the gesture went.
+  // The default is one bare key: the one above Tab, left of 1. A palette you reach for
+  // constantly should cost one key, and this one types nothing anyone needs mid-flow.
+  // It replaced a bare Tab (2.6.0-2.7.x), which replaced Ctrl/Cmd+Shift+K; see the
+  // CHANGELOG, and Documentation~/activation-design.md for the removed Shift gesture.
   //
-  // Tab is a legal binding, which is worth stating because most keys that feel like this
-  // one are not: BindingValidator.s_InvalidKeyCodes on 6000.3.17f1 is exactly
-  // { None, Escape, Return, CapsLock, and the ten modifier keycodes }, and Tab is in
-  // none of it. A rejected binding does not fail loudly -- the id registers with an EMPTY
-  // binding and only a discovery warning is logged -- so HasteActivationTests asserts on
-  // the registered binding rather than on this file compiling.
+  // WHICH KeyCode that is depends on the platform, and it is the one part of this that
+  // was not measured. macOS reports punctuation by the character it types, so on a
+  // Turkish-Q keyboard -- the one this was asked for on -- the key arrives as '"',
+  // DoubleQuote. Windows reports the physical key, VK_OEM_3, which Unity names BackQuote
+  // on every common layout. A US Mac types '`' there and so gets nothing from this
+  // default; that is what Edit > Shortcuts is for, and rebinding by pressing the key
+  // records whatever the platform actually reports.
   //
-  // It is also effectively unclaimed. Across the 749 shortcut ids a full editor registers,
-  // Tab appears exactly once more: Timeline/ToggleClipTrackArea, which is declared with
-  // typeof(TimelineWindow) as its context and therefore only applies while the Timeline
-  // window has focus. Haste's is global, so Timeline wins inside Timeline and Haste wins
-  // everywhere else, which is the right way round.
+  // Both are legal bindings: BindingValidator.s_InvalidKeyCodes on 6000.3.17f1 is exactly
+  // { None, Escape, Return, CapsLock, and the ten modifier keycodes }. A rejected binding
+  // does not fail loudly -- the id registers with an EMPTY binding and only a discovery
+  // warning is logged -- so HasteActivationTests asserts on the declared key rather than
+  // on this file compiling.
   //
   // No modifiers is deliberate and is passed explicitly rather than left to the default,
   // so that the intent is in the attribute and a test can read it back.
@@ -42,7 +43,13 @@ namespace Haste {
     // ShortcutManager keys user overrides by id.
     public const string ShortcutId = "Haste/Open Haste";
 
-    [Shortcut(ShortcutId, KeyCode.Tab, ShortcutModifiers.None)]
+#if UNITY_EDITOR_OSX
+    public const KeyCode DefaultKey = KeyCode.DoubleQuote;
+#else
+    public const KeyCode DefaultKey = KeyCode.BackQuote;
+#endif
+
+    [Shortcut(ShortcutId, DefaultKey, ShortcutModifiers.None)]
     public static void OpenShortcut() {
       Open();
     }
@@ -84,7 +91,7 @@ namespace Haste {
         } catch (System.ArgumentException) {
           // Unknown id: the attribute was rejected at discovery. Fall through.
         }
-        return Application.platform == RuntimePlatform.OSXEditor ? "⇥" : "Tab";
+        return DefaultKey == KeyCode.DoubleQuote ? "\"" : "`";
       }
     }
   }

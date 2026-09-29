@@ -21,7 +21,7 @@ namespace Haste {
     // because nothing else notices when they drift: this one is what HasteSettings.Version
     // compares against to decide whether an upgrade should reindex, so a stale value means
     // upgrading silently keeps the old index.
-    public static readonly string VERSION = "2.7.0";
+    public static readonly string VERSION = "2.8.0";
 
     private static Version version;
     public static Version Version {
